@@ -1,0 +1,23 @@
+{
+  "name": "@rxflow/medicine-intelligence",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@rxflow/db": "workspace:*",
+    "@rxflow/types": "workspace:*",
+    "fuse.js": "^7.0.0",
+    "natural": "^6.12.0",
+    "leven": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/natural": "^5.1.5",
+    "typescript": "^5.4.5"
+  }
+}

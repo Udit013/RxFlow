@@ -1,0 +1,44 @@
+{
+  "name": "@rxflow/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --env-file=.env src/server.ts",
+    "build": "cd ../../packages/db && pnpm exec prisma generate",
+    "start": "tsx src/server.ts",
+    "start:local": "tsx --env-file=.env src/server.ts",
+    "deploy:migrate": "cd ../../packages/db && prisma migrate deploy",
+    "deploy:seed": "cd ../../packages/db && tsx prisma/seed.ts",
+    "type-check": "tsc --noEmit",
+    "db:generate": "cd ../../packages/db && prisma generate",
+    "db:migrate": "cd ../../packages/db && prisma migrate dev",
+    "db:seed": "cd ../../packages/db && ts-node --esm prisma/seed.ts",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@rxflow/db": "workspace:*",
+    "@rxflow/types": "workspace:*",
+    "@rxflow/medicine-intelligence": "workspace:*",
+    "@fastify/cors": "^9.0.1",
+    "@fastify/helmet": "^11.1.1",
+    "@fastify/jwt": "^8.0.1",
+    "@fastify/multipart": "^8.3.0",
+    "@fastify/rate-limit": "^9.1.0",
+    "@fastify/swagger": "^8.14.0",
+    "@fastify/swagger-ui": "^3.0.0",
+    "fastify": "^4.28.0",
+    "zod": "^3.23.8",
+    "bcryptjs": "^2.4.3",
+    "dayjs": "^1.11.11",
+    "nanoid": "^5.0.7",
+    "pino": "^9.2.0",
+    "pino-pretty": "^11.2.1",
+    "tsx": "^4.15.5"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20.14.0",
+    "typescript": "^5.4.5"
+  }
+}

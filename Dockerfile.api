@@ -1,0 +1,32 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# RxFlow API — production container (Fastify + Prisma)
+# Build context = repo root.  Used by Render / Fly / any Docker host.
+# ─────────────────────────────────────────────────────────────────────────────
+FROM node:20-slim AS base
+RUN apt-get update -y && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN corepack enable && corepack prepare pnpm@9.1.0 --activate
+WORKDIR /app
+
+# ── Install dependencies (cached layer) ──────────────────────────────────────
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml turbo.json tsconfig.base.json ./
+COPY apps/api/package.json apps/api/
+COPY packages/db/package.json packages/db/
+COPY packages/types/package.json packages/types/
+COPY packages/medicine-intelligence/package.json packages/medicine-intelligence/
+# Include devDependencies — we run via tsx (a dev dep) in production.
+RUN pnpm install --frozen-lockfile
+
+# ── Copy source ──────────────────────────────────────────────────────────────
+COPY packages/ packages/
+COPY apps/api/ apps/api/
+
+# ── Generate Prisma client ───────────────────────────────────────────────────
+RUN cd packages/db && pnpm exec prisma generate
+
+ENV NODE_ENV=production
+ENV PORT=3001
+EXPOSE 3001
+
+WORKDIR /app/apps/api
+# tsx runs the TypeScript entrypoint directly (no separate build step needed)
+CMD ["pnpm", "exec", "tsx", "src/server.ts"]

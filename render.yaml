@@ -1,0 +1,45 @@
+# Render.com blueprint — deploy the API as a free web service.
+# Steps:
+#   1. Push the repo to GitHub
+#   2. On Render: New + → Blueprint → connect this repo
+#   3. Set the secret env vars when prompted (DATABASE_URL, CORS_ORIGIN)
+#   4. First deploy runs `prisma db push` which creates the full schema on Neon.
+#
+# Why db push (not migrate deploy): the schema was evolved with hand-applied SQL,
+# so there is no clean Prisma migration history. `db push` syncs the live schema
+# directly from schema.prisma — correct + complete for a fresh database.
+
+services:
+  - type: web
+    name: rxflow-api
+    runtime: node
+    plan: free            # sleeps after 15 min idle → ~50s cold start. ~$7/mo removes this.
+    region: singapore     # closest free region to India (also: oregon, frankfurt)
+    branch: main
+    rootDir: .
+    buildCommand: |
+      corepack enable
+      pnpm install --frozen-lockfile=false
+      cd packages/db && pnpm exec prisma generate && pnpm exec prisma db push --accept-data-loss
+    startCommand: pnpm --filter @rxflow/api start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: DATABASE_URL
+        sync: false   # set in dashboard — paste your Neon POOLED connection string
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: CORS_ORIGIN
+        sync: false   # set to https://your-app.vercel.app once the frontend is live
+      - key: STORAGE_PROVIDER
+        value: local
+      - key: STORAGE_BASE_URL
+        sync: false   # the URL Render gives you, e.g. https://rxflow-api.onrender.com
+      # ── Optional (set when you add these integrations) ──
+      - key: RESEND_API_KEY
+        sync: false   # free email for password reset / OTP

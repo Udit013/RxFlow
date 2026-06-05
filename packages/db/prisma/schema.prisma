@@ -1,0 +1,1084 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// RxFlow — Prisma Schema
+// Connected Pharma Distribution Network
+// ─────────────────────────────────────────────────────────────────────────────
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearch", "multiSchema"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  SUPER_ADMIN
+  TENANT_ADMIN
+  STORE_MANAGER
+  PHARMACIST
+  SALES_REP
+  ACCOUNTANT
+  DELIVERY_STAFF
+  VIEWER
+}
+
+enum TenantType {
+  RETAIL_PHARMACY
+  WHOLESALE_DISTRIBUTOR
+  CHAIN_PHARMACY
+  HOSPITAL
+  CLINIC
+  SUPPLIER
+}
+
+enum SubscriptionPlan {
+  STARTER
+  GROWTH
+  PRO
+  ENTERPRISE
+}
+
+enum OrderStatus {
+  DRAFT
+  PENDING
+  CONFIRMED
+  PROCESSING
+  PARTIALLY_SHIPPED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  RETURNED
+}
+
+enum OrderType {
+  SALE
+  PURCHASE
+}
+
+enum PaymentStatus {
+  PENDING
+  PARTIAL
+  PAID
+  OVERDUE
+  REFUNDED
+  WAIVED
+}
+
+enum PaymentMethod {
+  CASH
+  UPI
+  NEFT
+  RTGS
+  CHEQUE
+  CREDIT
+  CARD
+}
+
+enum InvoiceType {
+  SALE
+  PURCHASE
+  CREDIT_NOTE
+  DEBIT_NOTE
+  RETURN
+}
+
+enum DrugSchedule {
+  OTC
+  SCHEDULE_H
+  SCHEDULE_H1
+  SCHEDULE_X
+  SCHEDULE_G
+}
+
+enum DosageForm {
+  TABLET
+  CAPSULE
+  SYRUP
+  INJECTION
+  CREAM
+  OINTMENT
+  DROPS
+  INHALER
+  PATCH
+  SUPPOSITORY
+  POWDER
+  SUSPENSION
+  GEL
+  LOTION
+  SPRAY
+  OTHER
+}
+
+enum PrescriptionStatus {
+  PENDING
+  VERIFIED
+  DISPENSED
+  REJECTED
+}
+
+enum AlertType {
+  LOW_STOCK
+  EXPIRY_SOON
+  EXPIRED
+  PRICE_CHANGE
+  ORDER_UPDATE
+  PAYMENT_DUE
+  REORDER_SUGGESTION
+}
+
+enum LedgerEntryType {
+  DEBIT
+  CREDIT
+}
+
+enum StockTakeStatus {
+  DRAFT
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum StockTransferStatus {
+  DRAFT
+  IN_TRANSIT
+  COMPLETED
+  CANCELLED
+}
+
+enum CashDirection {
+  IN
+  OUT
+}
+
+enum SalaryType {
+  MONTHLY
+  DAILY
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  HALF_DAY
+  PAID_LEAVE
+  UNPAID_LEAVE
+  HOLIDAY
+  WEEK_OFF
+}
+
+enum PayrollStatus {
+  DRAFT
+  FINALIZED
+  PAID
+}
+
+enum PayslipStatus {
+  PENDING
+  PAID
+}
+
+// ─── Tenant (Multi-tenant root) ───────────────────────────────────────────────
+
+model Tenant {
+  id                String           @id @default(cuid())
+  name              String
+  slug              String           @unique
+  type              TenantType
+  gstin             String?
+  drugLicenseNumber String?
+  drugLicenseExpiryDate DateTime?
+  phone             String
+  email             String           @unique
+  addressLine1      String?
+  city              String?
+  state             String?
+  pincode           String?
+  logoUrl           String?
+  plan              SubscriptionPlan @default(STARTER)
+  isActive          Boolean          @default(true)
+  trialEndsAt       DateTime?
+  // Operations flags
+  allowNegativeStock Boolean         @default(false)
+  settings          Json             @default("{}")
+  metadata          Json             @default("{}")
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  // Relations
+  users         User[]
+  stores        Store[]
+  suppliers     Supplier[]
+  customers     Customer[]
+  orders        Order[]
+  invoices      Invoice[]
+  payments      Payment[]
+  ledgerEntries LedgerEntry[]
+  inventory     InventoryItem[]
+  prescriptions Prescription[]
+  alerts        Alert[]
+  auditLogs     AuditLog[]
+  salesReps     SalesRep[]
+  expenses      Expense[]
+  employees     Employee[]
+  payrollRuns   PayrollRun[]
+  medicineCategories MedicineCategory[]
+
+  @@index([slug])
+  @@index([type])
+}
+
+// ─── Store / Branch ───────────────────────────────────────────────────────────
+
+model Store {
+  id                String  @id @default(cuid())
+  tenantId          String
+  name              String
+  code              String
+  drugLicenseNumber String?
+  gstin             String?
+  phone             String?
+  email             String?
+  addressLine1      String
+  addressLine2      String?
+  city              String
+  state             String
+  pincode           String
+  latitude          Float?
+  longitude         Float?
+  isActive          Boolean @default(true)
+  isHeadOffice      Boolean @default(false)
+  settings          Json    @default("{}")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  tenant        Tenant          @relation(fields: [tenantId], references: [id])
+  users         UserStore[]
+  inventory     InventoryItem[]
+  orders        Order[]
+  invoices      Invoice[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+// ─── User ─────────────────────────────────────────────────────────────────────
+
+model User {
+  id           String    @id @default(cuid())
+  tenantId     String
+  name         String
+  email        String
+  phone        String
+  passwordHash String
+  role         UserRole
+  isActive     Boolean   @default(true)
+  isEmailVerified Boolean @default(false)
+  lastLoginAt  DateTime?
+  refreshToken String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  // Relations
+  tenant    Tenant      @relation(fields: [tenantId], references: [id])
+  stores    UserStore[]
+  auditLogs AuditLog[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@index([email])
+}
+
+model UserStore {
+  userId    String
+  storeId   String
+  isPrimary Boolean @default(false)
+
+  user  User  @relation(fields: [userId], references: [id])
+  store Store @relation(fields: [storeId], references: [id])
+
+  @@id([userId, storeId])
+}
+
+// ─── Medicine Master ──────────────────────────────────────────────────────────
+
+model Medicine {
+  id                   String       @id @default(cuid())
+  // Core identity
+  name                 String
+  genericName          String
+  brandName            String
+  manufacturerName     String
+  manufacturerId       String?
+  // Classification
+  dosageForm           DosageForm
+  category             String?
+  strength             String
+  strengthNumeric      Float?
+  strengthUnit         String?
+  packSize             String
+  packSizeNumeric      Int?
+  packUnit             String       @default("tablets")
+  // Pricing & Tax
+  mrp                  Float
+  hsn                  String
+  gstRate              Float        @default(12)
+  // Regulatory
+  schedule             DrugSchedule @default(OTC)
+  requiresPrescription Boolean      @default(false)
+  // Search & Mapping
+  searchTokens         String[]
+  aliases              String[]
+  barcodes             String[]
+  // Flags
+  isActive             Boolean      @default(true)
+  isVerified           Boolean      @default(false)
+  thumbnailUrl         String?
+  // Metadata
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  // Relations
+  compositions    MedicineComposition[]
+  substitutes     MedicineSubstitute[]  @relation("MedicineSubstitutes")
+  substituteFor   MedicineSubstitute[]  @relation("SubstituteFor")
+  inventoryItems  InventoryItem[]
+  orderItems      OrderItem[]
+  invoiceItems    InvoiceItem[]
+  manufacturer    Manufacturer?         @relation(fields: [manufacturerId], references: [id])
+
+  @@index([genericName])
+  @@index([manufacturerName])
+  @@index([dosageForm])
+  @@index([hsn])
+  @@index([barcodes])
+}
+
+model MedicineComposition {
+  id           String  @id @default(cuid())
+  medicineId   String
+  ingredient   String
+  strength     String
+  strengthNum  Float?
+  unit         String
+  isActive     Boolean @default(true)
+
+  medicine Medicine @relation(fields: [medicineId], references: [id])
+
+  @@index([medicineId])
+  @@index([ingredient])
+}
+
+model MedicineSubstitute {
+  medicineId    String
+  substituteId  String
+  confidence    Float   @default(1.0)
+  reason        String?
+
+  medicine    Medicine @relation("MedicineSubstitutes", fields: [medicineId], references: [id])
+  substitute  Medicine @relation("SubstituteFor", fields: [substituteId], references: [id])
+
+  @@id([medicineId, substituteId])
+}
+
+model Manufacturer {
+  id          String     @id @default(cuid())
+  name        String     @unique
+  aliases     String[]
+  country     String     @default("India")
+  website     String?
+  medicines   Medicine[]
+  createdAt   DateTime   @default(now())
+
+  @@index([name])
+}
+
+// ─── Inventory ────────────────────────────────────────────────────────────────
+
+model InventoryItem {
+  id                String   @id @default(cuid())
+  tenantId          String
+  storeId           String
+  medicineId        String
+  totalQuantity     Int      @default(0)
+  availableQuantity Int      @default(0)
+  reservedQuantity  Int      @default(0)
+  reorderLevel      Int      @default(10)
+  reorderQuantity   Int      @default(50)
+  sellingPrice      Float
+  discountPercent   Float    @default(0)
+  rackNumber        String?
+  shelfNumber       String?
+  isActive          Boolean  @default(true)
+  lastUpdated       DateTime @updatedAt
+  createdAt         DateTime @default(now())
+
+  // Relations
+  tenant    Tenant    @relation(fields: [tenantId], references: [id])
+  store     Store     @relation(fields: [storeId], references: [id])
+  medicine  Medicine  @relation(fields: [medicineId], references: [id])
+  batches   Batch[]
+
+  @@unique([tenantId, storeId, medicineId])
+  @@index([tenantId, storeId])
+  @@index([medicineId])
+}
+
+model Batch {
+  id                  String    @id @default(cuid())
+  inventoryItemId     String
+  batchNumber         String
+  expiryDate          DateTime
+  manufacturingDate   DateTime?
+  quantity            Int
+  purchasePrice       Float
+  mrp                 Float
+  supplierId          String?
+  purchaseOrderId     String?
+  isQuarantined       Boolean   @default(false)
+  quarantineReason    String?
+  // Write-off tracking
+  writeOffQuantity    Int       @default(0)
+  writeOffReason      String?
+  writtenOffAt        DateTime?
+  createdAt           DateTime  @default(now())
+
+  inventoryItem InventoryItem @relation(fields: [inventoryItemId], references: [id])
+
+  @@index([inventoryItemId])
+  @@index([expiryDate])
+  @@index([batchNumber])
+}
+
+// ─── Supplier ─────────────────────────────────────────────────────────────────
+
+model Supplier {
+  id                String   @id @default(cuid())
+  tenantId          String
+  name              String
+  companyName       String
+  gstin             String?
+  panNumber         String?
+  drugLicenseNumber String?
+  drugLicenseExpiryDate DateTime?
+  phone             String
+  email             String?
+  addressLine1      String?
+  city              String?
+  state             String?
+  pincode           String?
+  creditDays        Int      @default(30)
+  creditLimit       Float    @default(0)
+  outstandingBalance Float   @default(0)
+  totalPurchases    Float    @default(0)
+  isActive          Boolean  @default(true)
+  tags              String[]
+  notes             String?
+  // CSV column-mapping preset for purchase imports from this supplier
+  csvPreset         Json?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  tenant        Tenant        @relation(fields: [tenantId], references: [id])
+  orders        Order[]
+  invoices      Invoice[]
+  payments      Payment[]
+  ledgerEntries LedgerEntry[]
+
+  @@index([tenantId])
+  @@index([gstin])
+}
+
+// ─── Customer ─────────────────────────────────────────────────────────────────
+
+model Customer {
+  id                 String    @id @default(cuid())
+  tenantId           String
+  name               String
+  phone              String
+  email              String?
+  dateOfBirth        DateTime?
+  addressLine1       String?
+  city               String?
+  state              String?
+  pincode            String?
+  gstin              String?
+  outstandingBalance Float     @default(0)
+  creditLimit        Float     @default(0)
+  totalPurchases     Float     @default(0)
+  totalOrders        Int       @default(0)
+  tags               String[]
+  notes              String?
+  isActive           Boolean   @default(true)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  // Relations
+  tenant        Tenant        @relation(fields: [tenantId], references: [id])
+  orders        Order[]
+  invoices      Invoice[]
+  payments      Payment[]
+  prescriptions Prescription[]
+  ledgerEntries LedgerEntry[]
+
+  @@unique([tenantId, phone])
+  @@index([tenantId])
+  @@index([phone])
+}
+
+// ─── Order ────────────────────────────────────────────────────────────────────
+
+model Order {
+  id              String        @id @default(cuid())
+  orderNumber     String
+  tenantId        String
+  storeId         String
+  type            OrderType
+  status          OrderStatus   @default(DRAFT)
+  customerId      String?
+  supplierId      String?
+  prescriptionId  String?
+  subtotal        Float         @default(0)
+  discountAmount  Float         @default(0)
+  taxAmount       Float         @default(0)
+  total           Float         @default(0)
+  paymentStatus   PaymentStatus @default(PENDING)
+  paymentMethod   PaymentMethod?
+  notes           String?
+  deliveryAddress Json?
+  expectedAt      DateTime?
+  createdBy       String
+  // Parked-sale support
+  parkedAt        DateTime?
+  parkedLabel     String?
+  // Salesman commission
+  salesRepId         String?
+  commissionPercent  Float?
+  commissionAmount   Float?
+  commissionStatus   String?  @default("PENDING") // PENDING | APPROVED | PAID
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relations
+  tenant       Tenant      @relation(fields: [tenantId], references: [id])
+  store        Store       @relation(fields: [storeId], references: [id])
+  customer     Customer?   @relation(fields: [customerId], references: [id])
+  supplier     Supplier?   @relation(fields: [supplierId], references: [id])
+  salesRep     SalesRep?   @relation(fields: [salesRepId], references: [id])
+  items        OrderItem[]
+  invoices     Invoice[]
+  payments     Payment[]
+
+  @@unique([tenantId, orderNumber])
+  @@index([tenantId])
+  @@index([storeId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([salesRepId])
+}
+
+// ─── Sales Representative ─────────────────────────────────────────────────────
+
+model SalesRep {
+  id                String   @id @default(cuid())
+  tenantId          String
+  name              String
+  phone             String
+  email             String?
+  employeeCode      String?
+  territory         String?
+  // Commission config — default % applied if order doesn't override
+  defaultCommissionPercent Float    @default(2)
+  // Flat per-order bonus (optional)
+  flatBonusAmount   Float?
+  isActive          Boolean  @default(true)
+  notes             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id])
+  orders Order[]
+
+  @@unique([tenantId, phone])
+  @@index([tenantId])
+  @@index([isActive])
+}
+
+model OrderItem {
+  id              String  @id @default(cuid())
+  orderId         String
+  medicineId      String
+  batchId         String?
+  quantity        Int
+  unitPrice       Float
+  discountPercent Float   @default(0)
+  taxRate         Float   @default(12)
+  taxAmount       Float
+  total           Float
+
+  order    Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  medicine Medicine @relation(fields: [medicineId], references: [id])
+
+  @@index([orderId])
+  @@index([medicineId])
+}
+
+// ─── Invoice ──────────────────────────────────────────────────────────────────
+
+model Invoice {
+  id            String        @id @default(cuid())
+  invoiceNumber String
+  tenantId      String
+  storeId       String
+  type          InvoiceType
+  orderId       String?
+  customerId    String?
+  supplierId    String?
+  // For credit/debit notes — points back to the original invoice being adjusted
+  originalInvoiceId String?
+  subtotal      Float
+  discountAmount Float        @default(0)
+  cgst          Float         @default(0)
+  sgst          Float         @default(0)
+  igst          Float         @default(0)
+  totalTax      Float         @default(0)
+  total         Float
+  roundOff      Float         @default(0)
+  grandTotal    Float
+  paymentStatus PaymentStatus @default(PENDING)
+  dueDate       DateTime?
+  // GST e-invoicing
+  irn           String?
+  qrCode        String?
+  eWayBillNumber String?
+  pdfUrl        String?
+  notes         String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Relations
+  tenant   Tenant        @relation(fields: [tenantId], references: [id])
+  store    Store         @relation(fields: [storeId], references: [id])
+  order    Order?        @relation(fields: [orderId], references: [id])
+  customer Customer?     @relation(fields: [customerId], references: [id])
+  supplier Supplier?     @relation(fields: [supplierId], references: [id])
+  items    InvoiceItem[]
+  payments Payment[]
+  originalInvoice  Invoice?  @relation("InvoiceAdjustments", fields: [originalInvoiceId], references: [id])
+  adjustments      Invoice[] @relation("InvoiceAdjustments")
+
+  @@unique([tenantId, invoiceNumber])
+  @@index([tenantId])
+  @@index([storeId])
+  @@index([createdAt])
+  @@index([originalInvoiceId])
+}
+
+model InvoiceItem {
+  id              String   @id @default(cuid())
+  invoiceId       String
+  medicineId      String
+  medicineName    String
+  batchNumber     String
+  expiryDate      DateTime
+  hsn             String
+  quantity        Int
+  unitPrice       Float
+  discountPercent Float    @default(0)
+  discountAmount  Float    @default(0)
+  taxableAmount   Float
+  cgstRate        Float    @default(6)
+  cgstAmount      Float    @default(0)
+  sgstRate        Float    @default(6)
+  sgstAmount      Float    @default(0)
+  igstRate        Float    @default(0)
+  igstAmount      Float    @default(0)
+  total           Float
+
+  invoice  Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  medicine Medicine @relation(fields: [medicineId], references: [id])
+
+  @@index([invoiceId])
+}
+
+// ─── Payment ──────────────────────────────────────────────────────────────────
+
+model Payment {
+  id                String        @id @default(cuid())
+  tenantId          String
+  invoiceId         String?
+  orderId           String?
+  customerId        String?
+  supplierId        String?
+  amount            Float
+  method            PaymentMethod
+  reference         String?
+  upiTransactionId  String?
+  status            String        @default("SUCCESS")
+  notes             String?
+  createdBy         String
+  createdAt         DateTime      @default(now())
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id])
+  invoice  Invoice?  @relation(fields: [invoiceId], references: [id])
+  order    Order?    @relation(fields: [orderId], references: [id])
+  customer Customer? @relation(fields: [customerId], references: [id])
+  supplier Supplier? @relation(fields: [supplierId], references: [id])
+
+  @@index([tenantId])
+  @@index([invoiceId])
+  @@index([createdAt])
+}
+
+// ─── Ledger ───────────────────────────────────────────────────────────────────
+
+model LedgerEntry {
+  id          String           @id @default(cuid())
+  tenantId    String
+  entityType  String           // 'CUSTOMER' | 'SUPPLIER'
+  entityId    String
+  type        LedgerEntryType
+  amount      Float
+  balance     Float
+  reference   String
+  description String
+  invoiceId   String?
+  paymentId   String?
+  createdAt   DateTime         @default(now())
+
+  tenant    Tenant    @relation(fields: [tenantId], references: [id])
+  customer  Customer? @relation(fields: [entityId], references: [id], map: "ledger_customer")
+  supplier  Supplier? @relation(fields: [entityId], references: [id], map: "ledger_supplier")
+
+  @@index([tenantId])
+  @@index([entityId])
+  @@index([createdAt])
+}
+
+// ─── Prescription ─────────────────────────────────────────────────────────────
+
+model Prescription {
+  id                   String             @id @default(cuid())
+  tenantId             String
+  customerId           String
+  doctorName           String?
+  doctorRegistrationNo String?
+  uploadedFileUrl      String
+  extractedData        Json?
+  verifiedBy           String?
+  verifiedAt           DateTime?
+  status               PrescriptionStatus @default(PENDING)
+  notes                String?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id])
+  customer Customer @relation(fields: [customerId], references: [id])
+
+  @@index([tenantId])
+  @@index([customerId])
+  @@index([status])
+}
+
+// ─── StockTake — physical count ──────────────────────────────────────────────
+
+model StockTake {
+  id          String           @id @default(cuid())
+  tenantId    String
+  storeId     String
+  code        String
+  status      StockTakeStatus  @default(DRAFT)
+  notes       String?
+  createdBy   String
+  completedBy String?
+  createdAt   DateTime         @default(now())
+  completedAt DateTime?
+  updatedAt   DateTime         @updatedAt
+
+  lines StockTakeLine[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([storeId])
+  @@index([status])
+}
+
+model StockTakeLine {
+  id          String   @id @default(cuid())
+  stockTakeId String
+  medicineId  String
+  batchId     String?
+  systemQty   Int
+  actualQty   Int?
+  variance    Int?
+  notes       String?
+  countedAt   DateTime?
+
+  stockTake StockTake @relation(fields: [stockTakeId], references: [id], onDelete: Cascade)
+
+  @@index([stockTakeId])
+  @@index([medicineId])
+  @@index([batchId])
+}
+
+// ─── Stock Transfer — between stores ────────────────────────────────────────
+
+model StockTransfer {
+  id          String              @id @default(cuid())
+  tenantId    String
+  code        String
+  fromStoreId String
+  toStoreId   String
+  status      StockTransferStatus @default(DRAFT)
+  notes       String?
+  createdBy   String
+  completedBy String?
+  createdAt   DateTime            @default(now())
+  completedAt DateTime?
+  updatedAt   DateTime            @updatedAt
+
+  items StockTransferItem[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@index([status])
+}
+
+model StockTransferItem {
+  id          String  @id @default(cuid())
+  transferId  String
+  medicineId  String
+  fromBatchId String?
+  quantity    Int
+
+  transfer StockTransfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+
+  @@index([transferId])
+}
+
+// ─── Expense / Other Income (Accounts) ──────────────────────────────────────
+
+model Expense {
+  id            String        @id @default(cuid())
+  tenantId      String
+  storeId       String?
+  direction     CashDirection @default(OUT)
+  category      String
+  amount        Float
+  paymentMethod PaymentMethod @default(CASH)
+  paidTo        String?
+  reference     String?
+  notes         String?
+  incurredAt    DateTime      @default(now())
+  createdBy     String
+  createdAt     DateTime      @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([incurredAt])
+  @@index([category])
+  @@index([direction])
+}
+
+// ─── HR: Employee / Attendance / Payroll ─────────────────────────────────────
+
+model Employee {
+  id            String     @id @default(cuid())
+  tenantId      String
+  userId        String?
+  storeId       String?
+  name          String
+  phone         String
+  email         String?
+  employeeCode  String?
+  designation   String?
+  department    String?
+  joiningDate   DateTime?
+  salaryType    SalaryType @default(MONTHLY)
+  monthlySalary Float      @default(0)
+  dailyRate     Float      @default(0)
+  bankAccount   String?
+  bankIfsc      String?
+  notes         String?
+  isActive      Boolean    @default(true)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  tenant     Tenant       @relation(fields: [tenantId], references: [id])
+  attendance Attendance[]
+  payslips   Payslip[]
+
+  @@unique([tenantId, phone])
+  @@index([tenantId])
+  @@index([userId])
+  @@index([isActive])
+}
+
+model Attendance {
+  id          String           @id @default(cuid())
+  tenantId    String
+  employeeId  String
+  date        DateTime         @db.Date
+  status      AttendanceStatus @default(PRESENT)
+  checkIn     String?
+  checkOut    String?
+  workedHours Float?
+  notes       String?
+  markedBy    String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  employee Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@unique([employeeId, date])
+  @@index([tenantId])
+  @@index([date])
+}
+
+model PayrollRun {
+  id              String        @id @default(cuid())
+  tenantId        String
+  period          String
+  status          PayrollStatus @default(DRAFT)
+  totalGross      Float         @default(0)
+  totalDeductions Float         @default(0)
+  totalNet        Float         @default(0)
+  notes           String?
+  generatedBy     String
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  tenant   Tenant    @relation(fields: [tenantId], references: [id])
+  payslips Payslip[]
+
+  @@unique([tenantId, period])
+  @@index([tenantId])
+}
+
+model Payslip {
+  id            String         @id @default(cuid())
+  payrollRunId  String
+  employeeId    String
+  employeeName  String
+  baseSalary    Float          @default(0)
+  totalDays     Int            @default(0)
+  presentDays   Float          @default(0)
+  absentDays    Float          @default(0)
+  leaveDays     Float          @default(0)
+  lopDays       Float          @default(0)
+  earnedSalary  Float          @default(0)
+  bonus         Float          @default(0)
+  allowances    Float          @default(0)
+  deductions    Float          @default(0)
+  deductionNote String?
+  netPay        Float          @default(0)
+  status        PayslipStatus  @default(PENDING)
+  paidAt        DateTime?
+  paymentMethod PaymentMethod?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  payrollRun PayrollRun @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
+  employee   Employee   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@index([payrollRunId])
+  @@index([employeeId])
+}
+
+// ─── Medicine Category (tenant-managed list) ─────────────────────────────────
+
+model MedicineCategory {
+  id          String   @id @default(cuid())
+  tenantId    String
+  name        String
+  description String?
+  color       String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+}
+
+// ─── Alert ────────────────────────────────────────────────────────────────────
+
+model Alert {
+  id         String    @id @default(cuid())
+  tenantId   String
+  storeId    String?
+  type       AlertType
+  title      String
+  message    String
+  entityId   String?
+  entityType String?
+  isRead     Boolean   @default(false)
+  readAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+  @@index([isRead])
+  @@index([type])
+}
+
+// ─── Audit Log ────────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  tenantId   String
+  userId     String
+  action     String
+  entityType String
+  entityId   String?
+  oldValues  Json?
+  newValues  Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([tenantId])
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+// ─── Medicine Intelligence ────────────────────────────────────────────────────
+
+model MedicineAlias {
+  id         String  @id @default(cuid())
+  medicineId String?
+  alias      String
+  aliasType  String  // 'brand', 'generic', 'short', 'misspell', 'regional'
+  confidence Float   @default(1.0)
+  language   String  @default("en")
+  createdAt  DateTime @default(now())
+
+  @@index([alias])
+  @@index([medicineId])
+}
+
+model MedicineSyncLog {
+  id          String   @id @default(cuid())
+  source      String   // 'manual', 'ocr', 'barcode', 'api', 'import'
+  inputText   String
+  normalizedName String?
+  resolvedMedicineId String?
+  confidence  Float?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  @@index([source])
+  @@index([createdAt])
+}
