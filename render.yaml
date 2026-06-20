@@ -29,7 +29,9 @@ services:
       - key: PORT
         value: 3001
       - key: DATABASE_URL
-        sync: false   # set in dashboard — paste your Neon POOLED connection string
+        sync: false   # Neon POOLED string (host ends in -pooler) — runtime queries
+      - key: DIRECT_URL
+        sync: false   # Neon DIRECT string (NO -pooler) — used by prisma db push at build
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_REFRESH_SECRET

@@ -10,7 +10,11 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // Runtime queries go through the pooled connection (handles serverless conn limits)
+  url       = env("DATABASE_URL")
+  // Migrations / `db push` need a DIRECT (non-pooled) connection — PgBouncer can't
+  // run the DDL/session operations they require. For local dev, set DIRECT_URL = DATABASE_URL.
+  directUrl = env("DIRECT_URL")
 }
 
 // ─── Enums ────────────────────────────────────────────────────────────────────

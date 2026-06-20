@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { Search, Trash2, Plus, Minus, ShoppingCart, Receipt, UserCheck, Pause, Play, X } from 'lucide-react'
@@ -35,6 +35,14 @@ interface SalesRep { id: string; name: string; defaultCommissionPercent: number 
 const PAYMENT_METHODS = ['CASH', 'UPI', 'CARD', 'CREDIT'] as const
 
 export default function BillingPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-surface-400">Loading POS…</div>}>
+      <BillingPageInner />
+    </Suspense>
+  )
+}
+
+function BillingPageInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [storeId, setStoreId] = useState<string | null>(null)

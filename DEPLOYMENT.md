@@ -38,12 +38,16 @@ Everything below runs on **free tiers or open-source** software. No card require
 ## 1. Database — Neon
 
 1. Create a project at neon.tech → it gives you a Postgres database.
-2. Copy the **pooled** connection string (Dashboard → Connection Details → toggle "Pooled connection"). It looks like:
-   ```
-   postgresql://user:pass@ep-xxxx-pooler.ap-southeast-1.aws.neon.tech/rxflow?sslmode=require
-   ```
-   Use the **-pooler** host — it handles serverless connection limits.
-3. Keep this string; you'll paste it into Render as `DATABASE_URL`.
+2. You need **TWO** connection strings from Neon (Dashboard → Connection Details):
+   - **Pooled** (toggle "Pooled connection" ON) — host ends in `-pooler`. This is `DATABASE_URL` (runtime queries).
+     ```
+     postgresql://user:pass@ep-xxxx-pooler.REGION.aws.neon.tech/rxflow?sslmode=require
+     ```
+   - **Direct** (toggle "Pooled connection" OFF) — host has **no** `-pooler`. This is `DIRECT_URL` (migrations).
+     ```
+     postgresql://user:pass@ep-xxxx.REGION.aws.neon.tech/rxflow?sslmode=require
+     ```
+3. You'll paste **both** into Render. **Why two?** `prisma db push` runs DDL (CREATE TABLE) that Neon's connection pooler (PgBouncer) can't handle — it needs the direct connection. The running app uses the pooled one. Getting this wrong is the #1 cause of a failed first deploy.
 
 The schema is created automatically on first API deploy (see step 2). No manual SQL needed.
 
@@ -55,8 +59,11 @@ The schema is created automatically on first API deploy (see step 2). No manual 
 
 1. Render → **New + → Blueprint** → connect your GitHub repo. Render reads [`render.yaml`](render.yaml).
 2. When prompted, set the secret env vars:
-   - `DATABASE_URL` → your Neon pooled string from step 1
+   - `DATABASE_URL` (pooled, runtime) → `postgresql://neondb_owner:npg_xyjke6shf3TQ@ep-winter-recipe-ai80mjpq-pooler.c-4.us-east-1.aws.neon.tech/neondb?sslmode=require`
+   - `DIRECT_URL` (direct, for db push — same string minus `-pooler`) → `postgresql://neondb_owner:npg_xyjke6shf3TQ@ep-winter-recipe-ai80mjpq.c-4.us-east-1.aws.neon.tech/neondb?sslmode=require`
    - `CORS_ORIGIN` → leave as `https://your-app.vercel.app` for now; update after step 3
+   > ⚠️ I dropped `&channel_binding=require` from both — it commonly breaks Prisma's `db push`. `sslmode=require` alone is secure.
+   > 🔒 **Security:** this file is committed to your repo with a real DB password. After deploy, rotate the Neon password (Neon → Settings → Reset password) and keep secrets only in the Render/Vercel dashboards, not in the repo.
    - `STORAGE_BASE_URL` → `https://rxflow-api.onrender.com` (Render shows your real URL after first deploy — come back and fix it)
    - `JWT_SECRET` / `JWT_REFRESH_SECRET` → Render auto-generates these (`generateValue: true`)
 3. Deploy. The build runs `prisma db push` and creates every table on Neon.
