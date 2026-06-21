@@ -17,9 +17,13 @@ services:
     region: singapore     # closest free region to India (also: oregon, frankfurt)
     branch: main
     rootDir: .
+    # NOTE: NODE_ENV=production makes pnpm skip devDeps by default, but we run via
+    # tsx (a devDep) and need the Prisma CLI — so force them with --prod=false.
+    # We install pnpm via npm (Render's global prefix is writable) instead of
+    # `corepack enable`, which fails with EROFS on Render's read-only /usr/bin.
     buildCommand: |
-      corepack enable
-      pnpm install --frozen-lockfile=false
+      npm install -g pnpm@9.1.0
+      pnpm install --prod=false --frozen-lockfile=false
       cd packages/db && pnpm exec prisma generate && pnpm exec prisma db push --accept-data-loss
     startCommand: pnpm --filter @rxflow/api start
     healthCheckPath: /health

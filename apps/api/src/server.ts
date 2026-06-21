@@ -45,11 +45,19 @@ const app = Fastify({
 await app.register(helmet, { contentSecurityPolicy: false })
 
 // CORS — support comma-separated exact origins AND a wildcard '*' for LAN deployments.
-// For LAN use: set CORS_ORIGIN=* in apps/api/.env. The server still listens on 0.0.0.0
-// so devices on the same network can reach it via the host's LAN IP.
-const corsOrigins = env.CORS_ORIGIN.split(',').map((s) => s.trim()).filter(Boolean)
+// Trailing slashes are normalized away on BOTH sides, since browsers send the Origin
+// header without one (e.g. https://app.vercel.app) but env vars often include it.
+const stripSlash = (s: string) => s.trim().replace(/\/+$/, '')
+const corsOrigins = env.CORS_ORIGIN.split(',').map(stripSlash).filter(Boolean)
+const allowAllOrigins = corsOrigins.includes('*')
 await app.register(cors, {
-  origin: corsOrigins.includes('*') ? true : corsOrigins,
+  origin: allowAllOrigins
+    ? true
+    : (origin, cb) => {
+        // Non-browser / same-origin requests have no Origin header — allow them.
+        if (!origin) return cb(null, true)
+        cb(null, corsOrigins.includes(stripSlash(origin)))
+      },
   credentials: true,
 })
 
