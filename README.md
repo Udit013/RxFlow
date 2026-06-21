@@ -1,19 +1,57 @@
-# RxFlow — Connected Pharma Distribution Network
+# RxFlow — Pharmacy Management & Distribution Platform
 
-> Modern pharmacy management, AI-powered medicine intelligence, and medicine distribution — built for Indian pharma.
+> A modern, full-featured pharmacy ERP for the Indian market — inventory, GST billing, multi-store, accounts, payroll, and compliance — built to replace legacy tools like Marg, Tally, and Pharmarack.
+
+**Live demo:** [rx-flow-web.vercel.app](https://rx-flow-web.vercel.app) — click **Create account** to spin up your own pharmacy workspace.
+
+> ⏳ The API runs on a free tier that sleeps after inactivity, so the **first** request after a while can take ~50s to wake. Subsequent requests are instant.
 
 ---
 
 ## What is RxFlow?
 
-RxFlow is a cloud-native, AI-assisted pharmacy management and medicine distribution platform designed to replace legacy tools like Marg ERP, Tally, and Pharmarack with a modern, fast, mobile-first system.
+A cloud-native, multi-tenant pharmacy management system. Each signup creates an isolated pharmacy workspace with its own stores, staff, inventory, and books.
 
-**Who it's for:**
-- Retail pharmacies
-- Wholesale distributors
-- Chain pharmacies
-- Hospitals & clinics
-- Pharma suppliers
+**Built for:** retail pharmacies · wholesale distributors · chain pharmacies · hospitals · clinics · suppliers.
+
+---
+
+## Feature overview
+
+### Operations
+- **Inventory** — per-store stock, batch tracking, expiry monitoring, barcode, rack/shelf location, min-stock alerts, CSV export, valuation
+- **POS / Billing** — fast retail billing, barcode, discounts, multiple payment modes, park/recall sales, thermal 80mm receipt, A4 GST invoice PDF, WhatsApp share
+- **Purchases** — purchase entry, bulk **CSV import** (with per-supplier column presets + fuzzy medicine matching), pending tracking, history
+- **Stock takes** — physical count with autosave, variance, one-shot reconciliation
+- **Stock transfers** — move stock between stores with full audit trail
+- **Returns** — customer credit notes *and* dedicated supplier purchase-returns (debit notes), both adjust stock + ledgers
+
+### Catalog
+- Medicine master catalog with composition, substitutes, schedules, HSN, GST
+- **Category management** and fuzzy medicine search / normalization (Pharmarack-style)
+
+### Stakeholders
+- **Customers** — registration, purchase history, credit/dues, ledger, B2B GSTIN, refill suggestions
+- **Suppliers** — registration, ledger, payment tracking, dues, license-expiry tracking
+- **Sales reps** — commission tracking (percentage + flat bonus), monthly settlement
+- **Staff & Payroll (HR)** — employees, attendance grid, monthly payroll from salary + attendance, performance, employee↔login linking
+- **Stores** — multi-branch CRUD
+
+### Finance & compliance
+- **GST invoicing** — CGST/SGST/IGST, inter-state IGST routing, round-off
+- **GST reports** — GSTR-1 (B2B/B2C + CDNR/CDNUR), GSTR-3B, sales/purchase registers
+- **Accounts** — expense/income tracking, **Profit & Loss**, cash-flow statement
+- **Compliance** — Schedule H/H1/X register, drug-license expiry alerts
+- **Reports** — stock valuation, PDF + **Excel (.xlsx)** + CSV export
+
+### Platform
+- **Auth** — email/password (bcrypt) + JWT access/refresh, role-based access (Admin, Store Manager, Pharmacist, Sales Rep, Accountant, etc.), self-serve signup
+- **Live multi-device sync** — SSE push so the counter PC, a tablet, and a phone stay in sync in real time
+- **Notification center** + persistent unread state
+- **Cmd+K global search** across every entity
+- **Audit log** — who did what, when, from which device
+- **Backup & import** — full JSON export (optionally AES-256 encrypted), restore, and CSV import from other apps
+- **LAN mode** — run on one machine, access from devices on the same network
 
 ---
 
@@ -22,263 +60,147 @@ RxFlow is a cloud-native, AI-assisted pharmacy management and medicine distribut
 ```
 rxflow/                         ← Monorepo (pnpm workspaces + Turborepo)
 ├── apps/
-│   ├── api/                    ← Fastify backend (Node.js + TypeScript)
+│   ├── api/                    ← Fastify backend (Node + TypeScript, run via tsx)
 │   └── web/                    ← Next.js 14 frontend (App Router)
 ├── packages/
 │   ├── db/                     ← Prisma ORM + PostgreSQL schema
 │   ├── types/                  ← Shared TypeScript types
-│   ├── medicine-intelligence/  ← Pharmarack-like medicine engine
-│   └── ui/                     ← Shared UI components
-├── docker-compose.yml          ← PostgreSQL, Meilisearch, Redis, MinIO
-└── scripts/setup.sh            ← One-command setup
+│   └── medicine-intelligence/  ← Medicine normalization + fuzzy matching
+├── render.yaml                 ← Render blueprint (API)
+├── DEPLOYMENT.md               ← Full free-tier deploy guide
+└── docker-compose.yml          ← Local Postgres / Redis / Meilisearch
 ```
 
-### Tech Stack
+### Tech stack
 
-| Layer | Technology | Why |
-|-------|-----------|-----|
-| **Backend** | Fastify + TypeScript | Fast, schema-first, great DX |
-| **Frontend** | Next.js 14 (App Router) | SSR + RSC + great ecosystem |
-| **Database** | PostgreSQL + Prisma | Relational, multi-tenant, type-safe |
-| **Search** | Meilisearch + Fuse.js | Typo-tolerant, offline fallback |
-| **State** | Zustand + React Query | Minimal, fast, server sync |
-| **Styling** | Tailwind CSS | Rapid UI development |
-| **Auth** | JWT (access + refresh) | Stateless, scalable |
-| **Build** | Turborepo + pnpm | Monorepo with smart caching |
+| Layer | Technology |
+|-------|-----------|
+| Backend | Fastify + TypeScript (SSE for live sync) |
+| Frontend | Next.js 14 (App Router) + Tailwind + GSAP |
+| Database | PostgreSQL + Prisma |
+| State | React Query + Zustand |
+| Auth | JWT (access + refresh), bcrypt |
+| Search | Fuse.js (in-memory) with optional Meilisearch |
+| Exports | jsPDF (invoices), SheetJS (Excel), papaparse (CSV) |
+| Build | Turborepo + pnpm |
+
+### Production hosting (all free tier)
+
+| Layer | Service |
+|-------|---------|
+| Frontend | **Vercel** |
+| API | **Render** (free web service) |
+| Database | **Neon** (serverless Postgres) |
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for the complete step-by-step guide, including the pooled-vs-direct Neon connection gotcha.
 
 ---
 
-## Quick Start
+## Quick start (local)
 
 ### Prerequisites
-- Node.js 20+
-- pnpm 9+
-- Docker Desktop
+- Node.js 20+ · pnpm 9+ · Docker Desktop
 
-### Setup (one command)
-
+### Setup
 ```bash
-git clone <repo>
-cd rxflow
-bash scripts/setup.sh
-```
-
-### Manual setup
-
-```bash
-# 1. Install dependencies
 pnpm install
 
-# 2. Start infrastructure
-docker compose up -d postgres meilisearch redis
+# Start local infrastructure (Postgres + Redis)
+docker compose up -d postgres redis
 
-# 3. Setup API environment
-cp apps/api/.env.example apps/api/.env
-# Edit apps/api/.env and set JWT secrets
-
-# 4. Setup frontend environment
+# Env files
+cp apps/api/.env.example apps/api/.env          # set JWT secrets, DATABASE_URL, DIRECT_URL
 cp apps/web/.env.local.example apps/web/.env.local
 
-# 5. Run database migrations
-cd packages/db
-npx prisma migrate dev --name init
-npx ts-node --esm prisma/seed.ts
-cd ../..
+# Create the schema (the project uses prisma db push, not migrate)
+cd packages/db && pnpm exec prisma generate && pnpm exec prisma db push && cd ../..
 
-# 6. Start development
+# (optional) seed sample medicines + a demo tenant
+pnpm --filter @rxflow/api deploy:seed
+
+# Run everything
 pnpm dev
 ```
+
+> **Note:** the schema is managed via `prisma db push` against `schema.prisma` (the source of truth). Historical hand-applied SQL lives in `packages/db/prisma/manual-migrations/` for reference. Set `DIRECT_URL` = `DATABASE_URL` for local dev.
 
 ### Access
-
 | Service | URL |
 |---------|-----|
-| Web App | http://localhost:3000 |
+| Web app | http://localhost:3000 |
 | API | http://localhost:3001 |
-| API Docs | http://localhost:3001/docs |
-| Meilisearch | http://localhost:7700 |
-| MinIO Console | http://localhost:9001 |
+| API docs (Swagger) | http://localhost:3001/docs |
 
-**Demo credentials:** `admin@rxflow.in` / `admin123`
+Create your account from the **Create account** link on the login page.
 
 ---
 
-## API Overview
+## API overview
 
-All endpoints prefixed with `/api/v1`
+All routes are prefixed with `/api/v1`. Interactive docs at `/docs`.
 
-| Resource | Endpoints |
-|----------|-----------|
-| Auth | `POST /auth/login` `POST /auth/register` `POST /auth/refresh` `GET /auth/me` |
-| Dashboard | `GET /dashboard` `GET /dashboard/analytics/sales` |
-| Medicines | `GET /medicines` `GET /medicines/:id` `POST /medicines` `GET /medicines/barcode/:barcode` |
-| Medicine Intelligence | `POST /medicine-intelligence/search` `POST /medicine-intelligence/normalize` `POST /medicine-intelligence/extract` |
-| Inventory | `GET /inventory` `POST /inventory/batches` `GET /inventory/alerts/low-stock` `GET /inventory/alerts/expiry` |
-| Orders | `GET /orders` `POST /orders` `GET /orders/:id` `PATCH /orders/:id/status` |
-| Invoices | `GET /invoices` `POST /invoices/from-order/:orderId` `POST /invoices/:id/payment` |
-| Suppliers | `GET /suppliers` `POST /suppliers` `GET /suppliers/:id/ledger` |
-| Customers | `GET /customers` `POST /customers` `GET /customers/:id/purchase-history` |
-
-Full interactive docs at: http://localhost:3001/docs
+| Area | Sample endpoints |
+|------|------------------|
+| Auth | `POST /auth/login` · `POST /auth/register` · `POST /auth/refresh` · `GET /auth/me` |
+| Dashboard | `GET /dashboard` |
+| Medicines | `GET /medicines` · `POST /medicines` · `GET /medicine-intelligence/search` |
+| Categories | `GET/POST/PATCH/DELETE /categories` |
+| Inventory | `GET /inventory` · `POST /inventory/batches` · `POST /inventory/batches/:id/write-off` · `GET /inventory/insights` · `GET /inventory/alerts/*` |
+| Orders / Invoices | `POST /orders` · `POST /invoices/from-order/:id` · `POST /invoices/:id/credit-note` · `POST /invoices/:id/purchase-return` |
+| Purchases | `POST /purchases/bulk-import` · `POST /purchases/match-medicines` |
+| Stock | `POST /stock-takes` · `POST /stock-transfers` |
+| Stakeholders | `/customers` · `/suppliers` · `/sales-reps` · `/hr/employees` · `/hr/attendance` · `/hr/payroll` |
+| Finance | `/accounts/expenses` · `/accounts/profit-loss` · `/accounts/cash-flow` |
+| Reports | `/reports/gstr1` · `/reports/gstr3b` · `/reports/stock-valuation` · `/reports/schedule-h1-register` · `/reports/license-expiry` |
+| Platform | `/search` · `/events` (SSE) · `/audit-logs` · `/backup/export` · `/tenant/*` |
 
 ---
 
-## Medicine Intelligence Engine
+## Medicine Intelligence
 
-The core differentiator — a Pharmarack-like medicine normalization and matching system.
-
-### How it works
+A Pharmarack-style normalization + matching engine ([packages/medicine-intelligence](packages/medicine-intelligence)).
 
 ```
-Input: "Dolo650"
-       ↓
-Normalizer → { brand: "Dolo", strength: "650mg", form: "TABLET" }
-       ↓
-Multi-strategy matching:
-  1. Exact match       → "Dolo 650" (score: 1.0)
-  2. Alias match       → "Dolo650", "Para 650" (score: 0.95)
-  3. Barcode match     → EAN lookup (score: 1.0)
-  4. Fuzzy match       → Fuse.js typo-tolerant (score: 0.85)
-  5. Composition match → Paracetamol 650 (score: 0.75)
-  6. Token match       → token overlap (score: 0.65)
-       ↓
-Ranked results with confidence scores
+"Dolo650"
+   ↓ normalize → { brand: "Dolo", strength: "650mg", form: "TABLET" }
+   ↓ multi-strategy match: exact → alias → barcode → fuzzy → composition → token
+   ↓ ranked results with confidence scores
 ```
 
-### Meilisearch integration (production)
-
-When Meilisearch is running, full-text search with:
-- Typo tolerance
-- Pharmaceutical synonyms ("paracetamol" ↔ "acetaminophen" ↔ "pcm")
-- Composition-level indexing
-- Auto-highlighting
-
-Gracefully falls back to in-memory Fuse.js when Meilisearch is unavailable.
+Uses in-memory Fuse.js by default; plugs into Meilisearch for typo-tolerant full-text search when available.
 
 ---
 
-## Database Schema
+## India-specific compliance
 
-Key tables:
-- `Tenant` — Multi-tenant root (one per pharmacy/distributor)
-- `Store` — Physical branches per tenant
-- `Medicine` — Master medicine catalog (shared)
-- `MedicineComposition` — Ingredient breakdown
-- `MedicineSubstitute` — Substitute/generic mappings
-- `InventoryItem` — Per-store stock levels
-- `Batch` — Individual stock batches with expiry dates
-- `Order` — Sales and purchase orders
-- `Invoice` — GST-compliant invoices (CGST/SGST/IGST)
-- `Customer` + `Supplier` — Stakeholder management
-- `LedgerEntry` — Double-entry bookkeeping
-- `Prescription` — Digital prescription storage
-- `AuditLog` — Full audit trail
+- **GST** — CGST/SGST/IGST on every invoice, inter-state IGST routing, GSTR-1/3B
+- **HSN codes** per medicine
+- **Schedule H/H1/X** register (CDSCO) + prescription-required enforcement
+- **Drug license** tracking + expiry alerts (tenant + suppliers)
+- **UPI / multi-mode** payments
 
 ---
 
-## Features (MVP)
-
-### ✅ Implemented
-- Multi-tenant architecture
-- JWT auth with refresh tokens
-- Medicine master catalog
-- Fuzzy medicine search with normalization
-- Inventory tracking with batch management
-- Expiry date monitoring
-- Low stock alerts
-- Sales & purchase orders
-- GST invoice generation (CGST/SGST/IGST)
-- Payment recording
-- Customer & supplier management
-- Ledger / outstanding balance tracking
-- Dashboard with charts
-- Role-based access control
-
-### 🔜 Next (Phase 2)
-- Prescription upload + OCR
-- WhatsApp order notifications
-- Barcode scanning (mobile)
-- Meilisearch full-text indexing API
-- E-invoicing (IRN generation)
-- Purchase order with GRN
-- Credit/debit notes
-- Multi-store transfer
-- Sales rep tracking
-
-### 🚀 Future (Phase 3+)
-- React Native mobile app
-- AI reorder suggestions
-- Demand forecasting
-- B2B marketplace
-- Distributor portal
-- API ecosystem
-- US expansion (NDC, HIPAA)
-
----
-
-## India-Specific Compliance
-
-- **GST**: CGST/SGST/IGST breakdown on all invoices
-- **HSN codes**: Stored per medicine (30049099 etc.)
-- **Drug license**: Tracked per tenant and store
-- **Schedule H/H1/X**: Enforced — prescription required flag
-- **E-invoicing**: IRN field ready, integration point prepared
-- **UPI**: Payment method supported in schema
-
----
-
-## Development Workflow
+## Development
 
 ```bash
-# Start all services
-pnpm dev
-
-# Database operations
-pnpm db:studio          # Prisma Studio GUI
-pnpm db:migrate         # Run new migrations
-pnpm db:seed            # Reseed demo data
-
-# Type checking
-pnpm type-check
-
-# Linting
-pnpm lint
+pnpm dev                 # run api + web
+pnpm --filter @rxflow/web exec tsc --noEmit   # type-check web
+pnpm --filter @rxflow/api deploy:seed             # reseed demo data
 ```
 
----
-
-## Deployment
-
-### Recommended stack (low cost, scalable)
-
-| Service | Provider | Cost |
-|---------|----------|------|
-| Database | Neon.tech or Supabase | Free tier → $25/mo |
-| API hosting | Railway or Render | Free tier → $10/mo |
-| Frontend | Vercel | Free tier |
-| Search | Meilisearch Cloud | $30/mo OR self-hosted |
-| Storage | Cloudflare R2 | Free tier 10GB |
-| **Total MVP** | | **~$0 → $65/mo** |
-
-### Production checklist
-- [ ] Change JWT secrets
-- [ ] Enable SSL/HTTPS
-- [ ] Set `NODE_ENV=production`
-- [ ] Enable database connection pooling (PgBouncer)
-- [ ] Configure proper CORS origins
-- [ ] Set up log aggregation (Axiom / Betterstack)
-- [ ] Configure error monitoring (Sentry)
-- [ ] Enable database backups
-- [ ] Set rate limits appropriately
+The schema source of truth is `packages/db/prisma/schema.prisma`. After editing it, run `prisma generate` + `prisma db push`.
 
 ---
 
-## Contributing
+## Roadmap
 
-This is currently a solo-founder project. Structure is optimized for:
-1. Fast AI-assisted development (Claude, Cursor)
-2. Easy onboarding of first hires
-3. Clear module boundaries for eventual microservices split
+- Email OTP / password reset (Resend)
+- Loyalty points
+- Wholesale tier pricing
+- Mobile apps (Expo) + desktop (Tauri)
+- e-Invoicing (IRN) + e-Way bill via NIC APIs
+- Redis-backed pub/sub for multi-instance live sync
 
 ---
 
