@@ -36,3 +36,8 @@ Thumbs.db
 
 # Prisma
 packages/db/prisma/migrations/
+
+# Claude / agent + OS junk
+.claude/
+.DS_Store
+**/.DS_Store
