@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -147,16 +148,11 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
-            <p className="text-sm text-blue-700 font-medium">Demo credentials</p>
-            <p className="text-xs text-blue-600 mt-1">
-              Email: <code className="font-mono">admin@rxflow.in</code><br />
-              Password: <code className="font-mono">admin123</code>
-            </p>
-          </div>
-
           <p className="text-center text-sm text-slate-500 mt-6">
-            Self-serve signup coming soon — contact us for early access.
+            New to RxFlow?{' '}
+            <Link href="/register" className="text-brand-600 font-medium hover:underline">
+              Create your pharmacy account
+            </Link>
           </p>
         </div>
       </div>

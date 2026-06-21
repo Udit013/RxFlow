@@ -39,6 +39,17 @@ export const authService = {
     return user
   },
 
+  async register(payload: {
+    pharmacyName: string; tenantType?: string; name: string; email: string; password: string; phone: string
+  }): Promise<AuthUser> {
+    const res = await api.post('/auth/register', payload)
+    const { accessToken, refreshToken, user } = res.data.data
+    localStorage.setItem(TOKEN_KEY, accessToken)
+    localStorage.setItem(REFRESH_KEY, refreshToken)
+    localStorage.setItem(USER_KEY, JSON.stringify(user))
+    return user
+  },
+
   async logout(): Promise<void> {
     try { await api.post('/auth/logout') } catch {}
     localStorage.removeItem(TOKEN_KEY)

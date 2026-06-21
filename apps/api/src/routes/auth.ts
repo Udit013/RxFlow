@@ -10,20 +10,61 @@ const loginSchema = z.object({
 })
 
 const registerSchema = z.object({
-  tenantName: z.string().min(2),
-  tenantSlug: z.string().min(2).regex(/^[a-z0-9-]+$/),
-  tenantType: z.enum(['RETAIL_PHARMACY', 'WHOLESALE_DISTRIBUTOR', 'CHAIN_PHARMACY', 'HOSPITAL', 'CLINIC', 'SUPPLIER']),
+  pharmacyName: z.string().min(2),
+  tenantType: z.enum(['RETAIL_PHARMACY', 'WHOLESALE_DISTRIBUTOR', 'CHAIN_PHARMACY', 'HOSPITAL', 'CLINIC', 'SUPPLIER']).default('RETAIL_PHARMACY'),
   name: z.string().min(2),
   email: z.string().email(),
   password: z.string().min(8),
   phone: z.string().min(10),
 })
 
+function slugify(name: string): string {
+  const base = name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 32) || 'pharmacy'
+  return `${base}-${Math.random().toString(36).slice(2, 6)}`
+}
+
 const refreshSchema = z.object({
   refreshToken: z.string(),
 })
 
 export async function authRoutes(app: FastifyInstance) {
+  // Build the full auth response (tokens + user) for a given user id.
+  async function issueSession(userId: string) {
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      include: { tenant: true, stores: { include: { store: true } } },
+    })
+    const payload = {
+      userId: user.id,
+      tenantId: user.tenantId,
+      role: user.role,
+      storeIds: user.stores.map((us) => us.storeId),
+    }
+    const accessToken = app.jwt.sign(payload, { expiresIn: '15m' })
+    const refreshToken = app.jwt.sign({ userId: user.id }, { expiresIn: '7d' })
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { refreshToken: await bcrypt.hash(refreshToken, 10), lastLoginAt: new Date() },
+    })
+    return {
+      accessToken,
+      refreshToken,
+      expiresIn: 900,
+      user: {
+        id: user.id, name: user.name, email: user.email, role: user.role, tenantId: user.tenantId,
+        tenant: {
+          id: user.tenant.id, name: user.tenant.name, slug: user.tenant.slug, type: user.tenant.type, plan: user.tenant.plan,
+          gstin: user.tenant.gstin ?? null, drugLicenseNumber: user.tenant.drugLicenseNumber ?? null,
+          phone: user.tenant.phone ?? null, email: user.tenant.email ?? null,
+          addressLine1: user.tenant.addressLine1 ?? null, city: user.tenant.city ?? null,
+          state: user.tenant.state ?? null, pincode: user.tenant.pincode ?? null,
+          allowNegativeStock: user.tenant.allowNegativeStock ?? false,
+        },
+        stores: user.stores.map((us) => ({ id: us.store.id, name: us.store.name, code: us.store.code, isPrimary: us.isPrimary })),
+      },
+    }
+  }
+
   // POST /api/v1/auth/login
   app.post('/login', async (request, reply) => {
     const { email, password } = loginSchema.parse(request.body)
@@ -111,76 +152,57 @@ export async function authRoutes(app: FastifyInstance) {
   app.post('/register', async (request, reply) => {
     const body = registerSchema.parse(request.body)
 
-    const existingTenant = await prisma.tenant.findUnique({ where: { slug: body.tenantSlug } })
-    if (existingTenant) {
-      return reply.status(409).send({ success: false, error: 'Slug already taken' })
-    }
-
     const existingUser = await prisma.user.findFirst({ where: { email: body.email } })
     if (existingUser) {
-      return reply.status(409).send({ success: false, error: 'Email already registered' })
+      return reply.status(409).send({ success: false, error: 'An account with this email already exists. Try signing in.' })
     }
 
     const passwordHash = await bcrypt.hash(body.password, 12)
 
+    // Generate a unique slug (retry on the rare collision)
+    let slug = slugify(body.pharmacyName)
+    for (let i = 0; i < 5; i++) {
+      const taken = await prisma.tenant.findUnique({ where: { slug } })
+      if (!taken) break
+      slug = slugify(body.pharmacyName)
+    }
+
     const result = await prisma.$transaction(async (tx) => {
       const tenant = await tx.tenant.create({
         data: {
-          name: body.tenantName,
-          slug: body.tenantSlug,
+          name: body.pharmacyName,
+          slug,
           type: body.tenantType as any,
           phone: body.phone,
           email: body.email,
           settings: {
-            currency: 'INR',
-            timezone: 'Asia/Kolkata',
-            gstEnabled: true,
-            creditDays: 30,
-            lowStockThreshold: 10,
-            expiryAlertDays: 90,
+            currency: 'INR', timezone: 'Asia/Kolkata', gstEnabled: true,
+            creditDays: 30, lowStockThreshold: 10, expiryAlertDays: 90,
           },
         },
       })
 
       const store = await tx.store.create({
         data: {
-          tenantId: tenant.id,
-          name: body.tenantName,
-          code: 'MAIN',
-          city: '',
-          state: '',
-          pincode: '',
-          addressLine1: '',
-          isHeadOffice: true,
+          tenantId: tenant.id, name: body.pharmacyName, code: 'MAIN',
+          city: '', state: '', pincode: '', addressLine1: '', isHeadOffice: true,
         },
       })
 
       const user = await tx.user.create({
         data: {
-          tenantId: tenant.id,
-          name: body.name,
-          email: body.email,
-          phone: body.phone,
-          passwordHash,
-          role: 'TENANT_ADMIN',
+          tenantId: tenant.id, name: body.name, email: body.email, phone: body.phone,
+          passwordHash, role: 'TENANT_ADMIN',
         },
       })
 
-      await tx.userStore.create({
-        data: { userId: user.id, storeId: store.id, isPrimary: true },
-      })
-
-      return { tenant, store, user }
+      await tx.userStore.create({ data: { userId: user.id, storeId: store.id, isPrimary: true } })
+      return { user }
     })
 
-    return reply.status(201).send({
-      success: true,
-      message: 'Registration successful',
-      data: {
-        tenantId: result.tenant.id,
-        userId: result.user.id,
-      },
-    })
+    // Auto-login: return the same session payload the login endpoint does
+    const session = await issueSession(result.user.id)
+    return reply.status(201).send({ success: true, message: 'Welcome to RxFlow', data: session })
   })
 
   // POST /api/v1/auth/refresh
