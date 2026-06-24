@@ -227,6 +227,53 @@ export async function tenantRoutes(app: FastifyInstance) {
     return reply.send({ success: true })
   })
 
-  // Drug license expiry as part of tenant patch — already handled via /tenant PATCH below
-  // But add it explicitly to the tenant update schema
+  // DELETE /api/v1/tenant — permanently delete the whole workspace + all data.
+  // Admin-only. Requires the caller to confirm by sending the exact tenant name.
+  app.delete('/', { preHandler: [authenticate] }, async (request, reply) => {
+    const { tenantId, role } = request.user
+    if (role !== 'TENANT_ADMIN' && role !== 'SUPER_ADMIN') {
+      return reply.status(403).send({ success: false, error: 'Only the workspace admin can delete the account' })
+    }
+    const body = z.object({ confirmName: z.string() }).parse(request.body)
+
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } })
+    if (!tenant) return reply.status(404).send({ success: false, error: 'Workspace not found' })
+    if (body.confirmName.trim() !== tenant.name.trim()) {
+      return reply.status(400).send({ success: false, error: 'Confirmation text does not match the workspace name' })
+    }
+
+    // Delete every tenant-scoped row in dependency order (children first), then the tenant.
+    await prisma.$transaction([
+      prisma.payment.deleteMany({ where: { tenantId } }),
+      prisma.ledgerEntry.deleteMany({ where: { tenantId } }),
+      prisma.invoiceItem.deleteMany({ where: { invoice: { tenantId } } }),
+      prisma.invoice.deleteMany({ where: { tenantId } }),
+      prisma.orderItem.deleteMany({ where: { order: { tenantId } } }),
+      prisma.order.deleteMany({ where: { tenantId } }),
+      prisma.batch.deleteMany({ where: { inventoryItem: { tenantId } } }),
+      prisma.inventoryItem.deleteMany({ where: { tenantId } }),
+      prisma.payslip.deleteMany({ where: { payrollRun: { tenantId } } }),
+      prisma.payrollRun.deleteMany({ where: { tenantId } }),
+      prisma.attendance.deleteMany({ where: { tenantId } }),
+      prisma.employee.deleteMany({ where: { tenantId } }),
+      prisma.stockTakeLine.deleteMany({ where: { stockTake: { tenantId } } }),
+      prisma.stockTake.deleteMany({ where: { tenantId } }),
+      prisma.stockTransferItem.deleteMany({ where: { transfer: { tenantId } } }),
+      prisma.stockTransfer.deleteMany({ where: { tenantId } }),
+      prisma.expense.deleteMany({ where: { tenantId } }),
+      prisma.salesRep.deleteMany({ where: { tenantId } }),
+      prisma.prescription.deleteMany({ where: { tenantId } }),
+      prisma.alert.deleteMany({ where: { tenantId } }),
+      prisma.auditLog.deleteMany({ where: { tenantId } }),
+      prisma.medicineCategory.deleteMany({ where: { tenantId } }),
+      prisma.customer.deleteMany({ where: { tenantId } }),
+      prisma.supplier.deleteMany({ where: { tenantId } }),
+      prisma.userStore.deleteMany({ where: { user: { tenantId } } }),
+      prisma.user.deleteMany({ where: { tenantId } }),
+      prisma.store.deleteMany({ where: { tenantId } }),
+      prisma.tenant.delete({ where: { id: tenantId } }),
+    ])
+
+    return reply.send({ success: true })
+  })
 }

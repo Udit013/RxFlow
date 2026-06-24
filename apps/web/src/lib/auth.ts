@@ -57,6 +57,13 @@ export const authService = {
     localStorage.removeItem(USER_KEY)
   },
 
+  async deleteAccount(confirmName: string): Promise<void> {
+    await api.delete('/tenant', { data: { confirmName } })
+    localStorage.removeItem(TOKEN_KEY)
+    localStorage.removeItem(REFRESH_KEY)
+    localStorage.removeItem(USER_KEY)
+  },
+
   getStoredUser(): AuthUser | null {
     if (typeof window === 'undefined') return null
     const stored = localStorage.getItem(USER_KEY)
