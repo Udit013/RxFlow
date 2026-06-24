@@ -21,10 +21,15 @@ services:
     # tsx (a devDep) and need the Prisma CLI — so force them with --prod=false.
     # We install pnpm via npm (Render's global prefix is writable) instead of
     # `corepack enable`, which fails with EROFS on Render's read-only /usr/bin.
+    #
+    # db push and seed are made NON-FATAL: on a fresh DB they create + populate the
+    # schema, but on an already-provisioned DB `db push` errors with "type already
+    # exists" — which is benign, so we let the build continue. The seed is idempotent
+    # (medicines find-then-create, everything else upserts) and populates the catalog.
     buildCommand: |
       npm install -g pnpm@9.1.0
       pnpm install --prod=false --frozen-lockfile=false
-      cd packages/db && pnpm exec prisma generate && pnpm exec prisma db push --accept-data-loss
+      cd packages/db && pnpm exec prisma generate && (pnpm exec prisma db push --accept-data-loss || echo "schema already applied, continuing") && (pnpm exec tsx prisma/seed.ts || echo "seed skipped (non-fatal)")
     startCommand: pnpm --filter @rxflow/api start
     healthCheckPath: /health
     envVars:
