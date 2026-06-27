@@ -184,6 +184,25 @@ enum PayslipStatus {
   PAID
 }
 
+enum OtpPurpose {
+  PASSWORD_RESET
+  LOGIN
+}
+
+model OtpToken {
+  id         String     @id @default(cuid())
+  identifier String
+  codeHash   String
+  purpose    OtpPurpose
+  attempts   Int        @default(0)
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime   @default(now())
+
+  @@index([identifier, purpose])
+  @@index([expiresAt])
+}
+
 // ─── Tenant (Multi-tenant root) ───────────────────────────────────────────────
 
 model Tenant {

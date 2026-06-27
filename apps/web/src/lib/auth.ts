@@ -64,6 +64,28 @@ export const authService = {
     localStorage.removeItem(USER_KEY)
   },
 
+  async forgotPassword(email: string): Promise<void> {
+    await api.post('/auth/forgot-password', { email })
+  },
+
+  async resetPassword(email: string, otp: string, newPassword: string): Promise<void> {
+    await api.post('/auth/reset-password', { email, otp, newPassword })
+  },
+
+  async requestLoginOtp(identifier: string): Promise<{ sent: boolean; maskedEmail: string | null }> {
+    const res = await api.post('/auth/otp/request', { identifier })
+    return res.data.data
+  },
+
+  async loginWithOtp(identifier: string, otp: string): Promise<AuthUser> {
+    const res = await api.post('/auth/otp/verify', { identifier, otp })
+    const { accessToken, refreshToken, user } = res.data.data
+    localStorage.setItem(TOKEN_KEY, accessToken)
+    localStorage.setItem(REFRESH_KEY, refreshToken)
+    localStorage.setItem(USER_KEY, JSON.stringify(user))
+    return user
+  },
+
   getStoredUser(): AuthUser | null {
     if (typeof window === 'undefined') return null
     const stored = localStorage.getItem(USER_KEY)

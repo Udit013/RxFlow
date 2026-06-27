@@ -287,4 +287,114 @@ export async function authRoutes(app: FastifyInstance) {
       },
     })
   })
+
+  // ── OTP helpers ─────────────────────────────────────────────────────────────
+  async function issueOtp(identifier: string, purpose: 'PASSWORD_RESET' | 'LOGIN') {
+    const code = String(Math.floor(100000 + Math.random() * 900000)) // 6 digits
+    const codeHash = await bcrypt.hash(code, 10)
+    // Invalidate prior unconsumed OTPs for this identifier+purpose
+    await prisma.otpToken.deleteMany({ where: { identifier, purpose, consumedAt: null } })
+    await prisma.otpToken.create({
+      data: { identifier, codeHash, purpose, expiresAt: new Date(Date.now() + 10 * 60 * 1000) },
+    })
+    return code
+  }
+
+  async function verifyOtp(identifier: string, purpose: 'PASSWORD_RESET' | 'LOGIN', code: string): Promise<boolean> {
+    const token = await prisma.otpToken.findFirst({
+      where: { identifier, purpose, consumedAt: null, expiresAt: { gt: new Date() } },
+      orderBy: { createdAt: 'desc' },
+    })
+    if (!token) return false
+    if (token.attempts >= 5) return false
+    const ok = await bcrypt.compare(code, token.codeHash)
+    if (!ok) {
+      await prisma.otpToken.update({ where: { id: token.id }, data: { attempts: { increment: 1 } } })
+      return false
+    }
+    await prisma.otpToken.update({ where: { id: token.id }, data: { consumedAt: new Date() } })
+    return true
+  }
+
+  // POST /auth/forgot-password — always responds 200 (no account enumeration)
+  app.post('/forgot-password', async (request, reply) => {
+    const { email } = z.object({ email: z.string().email() }).parse(request.body)
+    const normalized = email.toLowerCase().trim()
+    const user = await prisma.user.findFirst({ where: { email: normalized, isActive: true } })
+    if (user) {
+      const code = await issueOtp(normalized, 'PASSWORD_RESET')
+      try {
+        const { sendEmail, otpEmailHtml } = await import('../utils/email.js')
+        await sendEmail({ to: normalized, subject: 'Reset your RxFlow password', html: otpEmailHtml(code, 'reset') })
+      } catch (e) {
+        request.log.error({ err: e }, 'password-reset email failed')
+      }
+    }
+    return reply.send({ success: true, message: 'If an account exists for that email, a reset code has been sent.' })
+  })
+
+  // POST /auth/reset-password — verify OTP + set new password
+  app.post('/reset-password', async (request, reply) => {
+    const body = z.object({
+      email: z.string().email(),
+      otp: z.string().length(6),
+      newPassword: z.string().min(8),
+    }).parse(request.body)
+    const normalized = body.email.toLowerCase().trim()
+
+    const ok = await verifyOtp(normalized, 'PASSWORD_RESET', body.otp)
+    if (!ok) return reply.status(400).send({ success: false, error: 'Invalid or expired code' })
+
+    const user = await prisma.user.findFirst({ where: { email: normalized, isActive: true } })
+    if (!user) return reply.status(404).send({ success: false, error: 'Account not found' })
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash: await bcrypt.hash(body.newPassword, 12), refreshToken: null },
+    })
+    return reply.send({ success: true, message: 'Password updated. You can now sign in.' })
+  })
+
+  // POST /auth/otp/request — passwordless login. Accepts email OR registered phone.
+  // The code is delivered to the account's email (free). True SMS needs a paid gateway.
+  app.post('/otp/request', async (request, reply) => {
+    const { identifier } = z.object({ identifier: z.string().min(3) }).parse(request.body)
+    const value = identifier.toLowerCase().trim()
+    // Look up by email or phone
+    const user = await prisma.user.findFirst({
+      where: { isActive: true, OR: [{ email: value }, { phone: identifier.trim() }] },
+    })
+    let delivered = false
+    if (user) {
+      const code = await issueOtp(user.email.toLowerCase(), 'LOGIN')
+      try {
+        const { sendEmail, otpEmailHtml } = await import('../utils/email.js')
+        await sendEmail({ to: user.email, subject: 'Your RxFlow login code', html: otpEmailHtml(code, 'login') })
+        delivered = true
+      } catch (e) {
+        request.log.error({ err: e }, 'login OTP email failed')
+      }
+    }
+    // Mask the email for the UI (e.g., r***@gmail.com) when we found a user
+    const maskedEmail = user ? user.email.replace(/^(.).*(@.*)$/, '$1***$2') : null
+    return reply.send({ success: true, data: { sent: delivered, maskedEmail } })
+  })
+
+  // POST /auth/otp/verify — verify login OTP, issue a session
+  app.post('/otp/verify', async (request, reply) => {
+    const body = z.object({ identifier: z.string().min(3), otp: z.string().length(6) }).parse(request.body)
+    const value = body.identifier.toLowerCase().trim()
+    const user = await prisma.user.findFirst({
+      where: { isActive: true, OR: [{ email: value }, { phone: body.identifier.trim() }] },
+      include: { tenant: true },
+    })
+    if (!user) return reply.status(401).send({ success: false, error: 'Invalid code' })
+    if (!user.tenant.isActive) return reply.status(403).send({ success: false, error: 'Account suspended' })
+
+    const ok = await verifyOtp(user.email.toLowerCase(), 'LOGIN', body.otp)
+    if (!ok) return reply.status(401).send({ success: false, error: 'Invalid or expired code' })
+
+    const session = await issueSession(user.id)
+    return reply.send({ success: true, data: session })
+  })
 }

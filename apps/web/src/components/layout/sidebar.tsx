@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Package, ShoppingCart, FileText,
   Users, Truck, Pill, BarChart3, Settings, LogOut,
   ChevronRight, Bell, Search, Store, Receipt, PackagePlus,
-  UserCheck, FileSpreadsheet, ClipboardList, History, Database, ArrowLeftRight, ShieldCheck, Wallet, Users2, Tags,
+  UserCheck, FileSpreadsheet, ClipboardList, History, Database, ArrowLeftRight, ShieldCheck, Wallet, Users2, Tags, RotateCcw,
 } from 'lucide-react'
 import { authService } from '@/lib/auth'
 import { useRouter } from 'next/navigation'
@@ -28,6 +28,7 @@ const navItems = [
       { href: '/dashboard/stock-transfers', icon: ArrowLeftRight, label: 'Stock Transfers' },
       { href: '/dashboard/orders', icon: ShoppingCart, label: 'Orders' },
       { href: '/dashboard/purchases/new', icon: PackagePlus, label: 'New Purchase' },
+      { href: '/dashboard/purchases/returns', icon: RotateCcw, label: 'Purchase Returns' },
       { href: '/dashboard/billing', icon: FileText, label: 'Billing / POS' },
       { href: '/dashboard/invoices', icon: Receipt, label: 'Invoices' },
     ],

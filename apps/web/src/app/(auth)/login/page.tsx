@@ -40,6 +40,46 @@ export default function LoginPage() {
     }
   }
 
+  // ── OTP (passwordless) login ──
+  const [mode, setMode] = useState<'password' | 'otp'>('password')
+  const [otpStep, setOtpStep] = useState<'request' | 'verify'>('request')
+  const [identifier, setIdentifier] = useState('')
+  const [otp, setOtp] = useState('')
+  const [maskedEmail, setMaskedEmail] = useState<string | null>(null)
+
+  const requestOtp = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    try {
+      const res = await authService.requestLoginOtp(identifier)
+      if (res.sent) {
+        setMaskedEmail(res.maskedEmail)
+        setOtpStep('verify')
+        toast.success(`Code sent to ${res.maskedEmail}`)
+      } else {
+        toast.error('No account found for that email or phone')
+      }
+    } catch {
+      toast.error('Something went wrong')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const verifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    try {
+      await authService.loginWithOtp(identifier, otp)
+      toast.success('Welcome back!')
+      router.push('/dashboard')
+    } catch (err: any) {
+      toast.error(err.response?.data?.error ?? 'Invalid code')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen flex">
       {/* Left panel — branding */}
@@ -95,64 +135,62 @@ export default function LoginPage() {
             <p className="text-slate-500 mt-1">Welcome back! Enter your credentials to continue.</p>
           </div>
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-            <div>
-              <label className="label" htmlFor="email">Email address</label>
-              <input
-                id="email"
-                type="email"
-                className="input"
-                placeholder="you@pharmacy.com"
-                autoComplete="email"
-                {...register('email')}
-              />
-              {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
-            </div>
-
-            <div>
-              <label className="label" htmlFor="password">Password</label>
-              <div className="relative">
-                <input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  className="input pr-10"
-                  placeholder="••••••••"
-                  autoComplete="current-password"
-                  {...register('password')}
-                />
-                <button
-                  type="button"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+          {mode === 'password' ? (
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+              <div>
+                <label className="label" htmlFor="email">Email address</label>
+                <input id="email" type="email" className="input" placeholder="you@pharmacy.com" autoComplete="email" {...register('email')} />
+                {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
               </div>
-              {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}
-            </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn-primary w-full py-2.5"
-            >
-              {loading ? (
-                <span className="flex items-center gap-2">
-                  <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                  Signing in...
-                </span>
-              ) : 'Sign in'}
-            </button>
-          </form>
+              <div>
+                <div className="flex items-center justify-between">
+                  <label className="label" htmlFor="password">Password</label>
+                  <Link href="/forgot-password" className="text-xs text-brand-600 hover:underline mb-1">Forgot password?</Link>
+                </div>
+                <div className="relative">
+                  <input id="password" type={showPassword ? 'text' : 'password'} className="input pr-10" placeholder="••••••••" autoComplete="current-password" {...register('password')} />
+                  <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600" onClick={() => setShowPassword(!showPassword)}>
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}
+              </div>
 
-          <p className="text-center text-sm text-slate-500 mt-6">
+              <button type="submit" disabled={loading} className="btn-primary w-full py-2.5">
+                {loading ? 'Signing in…' : 'Sign in'}
+              </button>
+            </form>
+          ) : otpStep === 'request' ? (
+            <form onSubmit={requestOtp} className="space-y-5">
+              <div>
+                <label className="label">Email or mobile number</label>
+                <input className="input" value={identifier} onChange={(e) => setIdentifier(e.target.value)} placeholder="you@pharmacy.com or 9876543210" autoFocus />
+                <p className="help-text">We&apos;ll email a 6-digit code to your registered address.</p>
+              </div>
+              <button type="submit" disabled={loading} className="btn-primary w-full py-2.5">{loading ? 'Sending…' : 'Send login code'}</button>
+            </form>
+          ) : (
+            <form onSubmit={verifyOtp} className="space-y-5">
+              <div>
+                <label className="label">Enter the code sent to {maskedEmail}</label>
+                <input className="input tracking-[0.4em] font-mono" inputMode="numeric" maxLength={6} value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))} placeholder="000000" autoFocus />
+              </div>
+              <button type="submit" disabled={loading} className="btn-primary w-full py-2.5">{loading ? 'Verifying…' : 'Sign in'}</button>
+              <button type="button" onClick={() => setOtpStep('request')} className="text-xs text-surface-500 hover:text-surface-700 w-full text-center">Use a different account</button>
+            </form>
+          )}
+
+          <button
+            onClick={() => { setMode(mode === 'password' ? 'otp' : 'password'); setOtpStep('request') }}
+            className="text-sm text-brand-600 hover:underline w-full text-center mt-4"
+          >
+            {mode === 'password' ? 'Sign in with a code instead' : 'Sign in with password instead'}
+          </button>
+
+          <p className="text-center text-sm text-slate-500 mt-5">
             New to RxFlow?{' '}
-            <Link href="/register" className="text-brand-600 font-medium hover:underline">
-              Create your pharmacy account
-            </Link>
+            <Link href="/register" className="text-brand-600 font-medium hover:underline">Create your pharmacy account</Link>
           </p>
         </div>
       </div>
