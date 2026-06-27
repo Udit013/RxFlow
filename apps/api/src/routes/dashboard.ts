@@ -198,6 +198,24 @@ export async function dashboardRoutes(app: FastifyInstance) {
       ORDER BY date ASC
     `
 
+    // ── Today's-Operations extras ───────────────────────────────────────────
+    const in30 = new Date(today.getTime() + 30 * 86400000)
+    const in60 = new Date(today.getTime() + 60 * 86400000)
+    const [pendingPOs, expiry30, expiry60, expiry90, recentMedicines] = await Promise.all([
+      prisma.order.count({
+        where: { tenantId, type: 'PURCHASE', status: { in: ['DRAFT', 'PENDING', 'CONFIRMED', 'PROCESSING'] as any } },
+      }),
+      prisma.batch.count({ where: { inventoryItem: { tenantId }, quantity: { gt: 0 }, expiryDate: { gte: today, lte: in30 } } }),
+      prisma.batch.count({ where: { inventoryItem: { tenantId }, quantity: { gt: 0 }, expiryDate: { gt: in30, lte: in60 } } }),
+      prisma.batch.count({ where: { inventoryItem: { tenantId }, quantity: { gt: 0 }, expiryDate: { gt: in60, lte: ninetyDaysOut } } }),
+      prisma.inventoryItem.findMany({
+        where: { tenantId },
+        orderBy: { createdAt: 'desc' },
+        take: 6,
+        include: { medicine: { select: { name: true, strength: true, dosageForm: true } } },
+      }),
+    ])
+
     return reply.send({
       success: true,
       data: {
@@ -213,6 +231,18 @@ export async function dashboardRoutes(app: FastifyInstance) {
           lowStockItems: Number(lowStockItems[0]?.count ?? 0),
           expiringItems: expiringBatches,
           expiredItems: expiredBatches,
+          expiry30, expiry60, expiry90,
+        },
+        operations: {
+          pendingPurchaseOrders: pendingPOs,
+          recentMedicines: recentMedicines.map((i) => ({
+            id: i.id,
+            name: i.medicine.name,
+            strength: i.medicine.strength,
+            dosageForm: i.medicine.dosageForm,
+            stock: i.availableQuantity,
+            addedAt: i.createdAt,
+          })),
         },
         finance: {
           outstanding: pendingInvoices._sum.grandTotal ?? 0,

@@ -25,8 +25,8 @@ export function PageHeader({
         {eyebrow && <p className="page-eyebrow">{eyebrow}</p>}
         <div className="flex items-center gap-3">
           {Icon && (
-            <span className="hidden sm:flex w-10 h-10 rounded-xl bg-gradient-brand text-white items-center justify-center shadow-sm shrink-0">
-              <Icon className="w-5 h-5" />
+            <span className="hidden sm:flex w-9 h-9 rounded-lg bg-brand-50 text-brand-600 border border-brand-200 items-center justify-center shrink-0">
+              <Icon className="w-4 h-4" />
             </span>
           )}
           <div className="min-w-0">

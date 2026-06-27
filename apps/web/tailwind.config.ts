@@ -10,107 +10,87 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // RxFlow brand palette — refined to feel a touch more clinical-yet-warm
+        // Primary = pharmacy green. Deep, confident, medical — not a SaaS blue.
         brand: {
-          50: '#edfaff',
-          100: '#d6f1ff',
-          200: '#b5e7ff',
-          300: '#82d8ff',
-          400: '#48c0fd',
-          500: '#1ea2f0',
-          600: '#0c83d0', // primary action
-          700: '#0a67a8',
-          800: '#0e588a',
-          900: '#114b73',
-          950: '#0a2e4a',
+          50: '#ecfdf3',
+          100: '#d1fae0',
+          200: '#a6f4c5',
+          300: '#6ee7a8',
+          400: '#34d186',
+          500: '#12b76a', // accents
+          600: '#0a8a52', // primary action
+          700: '#077043',
+          800: '#085a38',
+          900: '#074a30',
+          950: '#022c1b',
         },
-        // Accent (used sparingly for highlights, success-leaning actions)
+        // Accent kept for secondary highlights (teal-leaning)
         accent: {
-          50: '#ecfdf5',
-          100: '#d1fae5',
-          400: '#34d399',
-          500: '#10b981',
-          600: '#059669',
-          700: '#047857',
+          50: '#eefdfb',
+          100: '#d3f8f3',
+          400: '#2dd4bf',
+          500: '#14b8a6',
+          600: '#0d9488',
+          700: '#0f766e',
         },
-        // Surface gray scale — slightly warm to avoid clinical sterility
+        // Neutral surface scale — cool, flat, ERP-grade (relies on borders not shadows)
         surface: {
-          50: '#fafbfd',
-          100: '#f3f5f8',
-          200: '#e4e8ee',
-          300: '#cdd4dd',
-          400: '#9aa3b1',
-          500: '#6b7484',
-          600: '#4a525f',
-          700: '#363c47',
-          800: '#23282f',
-          900: '#11141a',
+          50: '#f8fafb',
+          100: '#f1f4f6',
+          200: '#e3e8ec',
+          300: '#cdd5db',
+          400: '#9aa5af',
+          500: '#6a7681',
+          600: '#4b555f',
+          700: '#353d45',
+          800: '#21272d',
+          900: '#12161a',
         },
         success: { 50: '#f0fdf4', 500: '#22c55e', 600: '#16a34a', 700: '#15803d' },
-        warning: { 50: '#fffbeb', 500: '#f59e0b', 600: '#d97706', 700: '#b45309' },
+        warning: { 50: '#fff8eb', 500: '#f59e0b', 600: '#d97706', 700: '#b45309' },
         danger:  { 50: '#fef2f2', 500: '#ef4444', 600: '#dc2626', 700: '#b91c1c' },
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        mono: ['JetBrains Mono', 'monospace'],
-        display: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['Geist', 'Inter', 'system-ui', 'sans-serif'],
+        mono: ['Geist Mono', 'JetBrains Mono', 'monospace'],
       },
       fontSize: {
-        // Tighter display sizing for headings
-        'display-sm': ['1.5rem', { lineHeight: '2rem', letterSpacing: '-0.015em', fontWeight: '700' }],
-        'display':    ['2rem',   { lineHeight: '2.5rem', letterSpacing: '-0.02em', fontWeight: '700' }],
-        'display-lg': ['2.5rem', { lineHeight: '3rem', letterSpacing: '-0.025em', fontWeight: '700' }],
+        // Compact, dense scale for an information-heavy ERP
+        '2xs': ['0.6875rem', { lineHeight: '1rem' }],
+      },
+      spacing: {
+        '4.5': '1.125rem',
       },
       borderRadius: {
-        sm: '0.375rem',
-        DEFAULT: '0.5rem',
-        lg: '0.75rem',
-        xl: '1rem',
-        '2xl': '1.25rem',
-        '3xl': '1.75rem',
+        // 8px design system. Nothing balloons into rounded SaaS cards.
+        none: '0',
+        sm: '0.25rem',     // 4px
+        DEFAULT: '0.375rem', // 6px — inputs, chips
+        md: '0.375rem',
+        lg: '0.5rem',      // 8px — cards, the system default
+        xl: '0.5rem',
+        '2xl': '0.625rem',
+        full: '9999px',
       },
       boxShadow: {
-        // Softer, more layered shadow scale
-        xs: '0 1px 2px 0 rgb(15 23 42 / 0.04)',
-        sm: '0 1px 3px 0 rgb(15 23 42 / 0.06), 0 1px 2px -1px rgb(15 23 42 / 0.05)',
-        card: '0 1px 3px 0 rgb(15 23 42 / 0.06), 0 1px 2px -1px rgb(15 23 42 / 0.04)',
-        'card-hover': '0 8px 24px -8px rgb(12 131 208 / 0.18), 0 4px 8px -4px rgb(15 23 42 / 0.08)',
-        elevated: '0 12px 32px -12px rgb(15 23 42 / 0.18), 0 4px 12px -4px rgb(15 23 42 / 0.08)',
-        ring: '0 0 0 4px rgb(12 131 208 / 0.12)',
-        // Inset for subtle inputs
-        'inset-sm': 'inset 0 1px 2px 0 rgb(15 23 42 / 0.06)',
+        // Minimal. Depth comes from borders, not big shadows.
+        xs: '0 1px 1px 0 rgb(18 22 26 / 0.04)',
+        sm: '0 1px 2px 0 rgb(18 22 26 / 0.05)',
+        card: '0 1px 2px 0 rgb(18 22 26 / 0.04)',
+        'card-hover': '0 2px 6px -1px rgb(18 22 26 / 0.08)',
+        elevated: '0 8px 24px -8px rgb(18 22 26 / 0.16)',
+        dropdown: '0 4px 16px -4px rgb(18 22 26 / 0.14)',
       },
       animation: {
-        'fade-in': 'fade-in 0.4s ease-out',
-        'rise': 'rise 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
-        'shimmer': 'shimmer 1.5s linear infinite',
-        'pulse-soft': 'pulse-soft 2s ease-in-out infinite',
+        'fade-in': 'fade-in 0.2s ease-out',
+        'rise': 'rise 0.22s ease-out',
       },
       keyframes: {
-        'fade-in': {
-          '0%': { opacity: '0' },
-          '100%': { opacity: '1' },
-        },
+        'fade-in': { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
         rise: {
-          '0%': { opacity: '0', transform: 'translateY(8px)' },
+          '0%': { opacity: '0', transform: 'translateY(4px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
         },
-        shimmer: {
-          '0%': { backgroundPosition: '-200% 0' },
-          '100%': { backgroundPosition: '200% 0' },
-        },
-        'pulse-soft': {
-          '0%, 100%': { opacity: '1' },
-          '50%': { opacity: '0.7' },
-        },
-      },
-      backgroundImage: {
-        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'gradient-brand': 'linear-gradient(135deg, #0c83d0 0%, #0a67a8 100%)',
-        'gradient-mesh':
-          'radial-gradient(at 20% 0%, rgba(72, 192, 253, 0.12) 0px, transparent 50%),' +
-          'radial-gradient(at 80% 0%, rgba(16, 185, 129, 0.06) 0px, transparent 50%),' +
-          'radial-gradient(at 0% 50%, rgba(12, 131, 208, 0.06) 0px, transparent 50%)',
       },
     },
   },
