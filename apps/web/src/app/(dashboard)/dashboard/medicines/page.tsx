@@ -3,11 +3,13 @@
 import { useRef, useState } from 'react'
 import Link from 'next/link'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Pill, Search, Upload, Sparkles, Download } from 'lucide-react'
+import { Pill, Upload, Sparkles, Download, Plus, Pencil } from 'lucide-react'
 import Papa from 'papaparse'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { formatCurrency } from '@/lib/utils'
+import { DataTable, type DataTableColumn } from '@/components/ui'
+import { MedicineMasterModal } from '@/components/medicines/medicine-master-modal'
 import { SAMPLE_MEDICINES, type SeedMedicine } from '@/data/sample-medicines'
 
 interface Medicine {
@@ -40,17 +42,17 @@ const CSV_TEMPLATE_HEADERS = [
 ]
 
 export default function MedicinesPage() {
-  const [search, setSearch] = useState('')
   const [scheduleFilter, setScheduleFilter] = useState<string>('')
   const [importResult, setImportResult] = useState<ImportResult | null>(null)
+  const [editing, setEditing] = useState<Medicine | 'new' | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const queryClient = useQueryClient()
 
   const { data, isLoading } = useQuery({
-    queryKey: ['medicines', search, scheduleFilter],
+    queryKey: ['medicines', scheduleFilter],
     queryFn: () =>
       api.get('/medicines', {
-        params: { search: search || undefined, schedule: scheduleFilter || undefined, limit: 50 },
+        params: { schedule: scheduleFilter || undefined, limit: 500 },
       }).then((r) => r.data),
   })
 
@@ -139,10 +141,13 @@ export default function MedicinesPage() {
           <button
             onClick={() => importMutation.mutate(SAMPLE_MEDICINES as Partial<SeedMedicine>[])}
             disabled={importMutation.isPending}
-            className="btn-primary"
+            className="btn-secondary"
           >
             <Sparkles className="w-4 h-4" />
-            {importMutation.isPending ? 'Loading...' : `Load ${SAMPLE_MEDICINES.length} sample medicines`}
+            {importMutation.isPending ? 'Loading...' : `Load samples`}
+          </button>
+          <button onClick={() => setEditing('new')} className="btn-primary">
+            <Plus className="w-4 h-4" /> Add Medicine
           </button>
         </div>
       </div>
@@ -165,89 +170,67 @@ export default function MedicinesPage() {
         </div>
       )}
 
-      <div className="flex gap-3">
-        <div className="card p-3 flex-1">
-          <div className="flex items-center gap-2">
-            <Search className="w-4 h-4 text-slate-400 ml-1" />
-            <input
-              className="flex-1 text-sm text-slate-700 placeholder:text-slate-400 outline-none"
-              placeholder="Search by name, generic, brand..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-        </div>
-        <select
-          className="input w-48"
-          value={scheduleFilter}
-          onChange={(e) => setScheduleFilter(e.target.value)}
-        >
-          <option value="">All schedules</option>
-          <option value="OTC">OTC</option>
-          <option value="SCHEDULE_H">Schedule H</option>
-          <option value="SCHEDULE_H1">Schedule H1</option>
-          <option value="SCHEDULE_X">Schedule X</option>
-          <option value="SCHEDULE_G">Schedule G</option>
-        </select>
-      </div>
+      <DataTable<Medicine>
+        data={medicines}
+        isLoading={isLoading}
+        rowKey={(m) => m.id}
+        searchPlaceholder="Search by name, generic, brand, manufacturer…"
+        exportFileName="rxflow-medicines"
+        emptyIcon={Pill}
+        emptyTitle="No medicines found"
+        emptyDescription="Add a medicine, load samples, or import a CSV to populate the catalog."
+        emptyAction={<button onClick={() => setEditing('new')} className="btn-primary"><Plus className="w-4 h-4" /> Add Medicine</button>}
+        onRowClick={(m) => setEditing(m)}
+        toolbar={
+          <select className="input w-44" value={scheduleFilter} onChange={(e) => setScheduleFilter(e.target.value)}>
+            <option value="">All schedules</option>
+            <option value="OTC">OTC</option>
+            <option value="SCHEDULE_H">Schedule H</option>
+            <option value="SCHEDULE_H1">Schedule H1</option>
+            <option value="SCHEDULE_X">Schedule X</option>
+            <option value="SCHEDULE_G">Schedule G</option>
+          </select>
+        }
+        columns={medicineColumns}
+      />
 
-      <div className="card overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Medicine</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Generic</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Manufacturer</th>
-              <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Pack</th>
-              <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase">MRP</th>
-              <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase">GST</th>
-              <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Schedule</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {isLoading ? (
-              Array.from({ length: 6 }).map((_, i) => (
-                <tr key={i} className="animate-pulse">
-                  {Array.from({ length: 7 }).map((_, j) => (
-                    <td key={j} className="px-4 py-3"><div className="h-4 bg-slate-100 rounded" /></td>
-                  ))}
-                </tr>
-              ))
-            ) : medicines.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="text-center py-12 text-slate-400">
-                  <Pill className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                  <p>No medicines found.</p>
-                  <p className="text-xs mt-2">Click <strong>"Load sample medicines"</strong> above to populate the catalog.</p>
-                </td>
-              </tr>
-            ) : (
-              medicines.map((m) => (
-                <tr key={m.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3">
-                    <Link href={`/dashboard/medicines/${m.id}`} className="font-medium text-slate-900 hover:text-brand-600">
-                      {m.name}
-                    </Link>
-                    <p className="text-xs text-slate-500">{m.strength} • {m.dosageForm}</p>
-                  </td>
-                  <td className="px-4 py-3 text-slate-700">{m.genericName}</td>
-                  <td className="px-4 py-3 text-slate-600 text-xs">{m.manufacturerName}</td>
-                  <td className="px-4 py-3 text-center text-slate-600">{m.packSize}</td>
-                  <td className="px-4 py-3 text-right font-medium text-slate-900">{formatCurrency(m.mrp)}</td>
-                  <td className="px-4 py-3 text-center text-slate-600">{m.gstRate}%</td>
-                  <td className="px-4 py-3 text-center">
-                    {m.schedule === 'OTC' ? (
-                      <span className="badge-success">OTC</span>
-                    ) : (
-                      <span className="badge-warning">{m.schedule.replace('SCHEDULE_', 'Sch ')}</span>
-                    )}
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      {editing && (
+        <MedicineMasterModal
+          medicine={editing === 'new' ? undefined : editing}
+          onClose={() => setEditing(null)}
+        />
+      )}
     </div>
   )
 }
+
+const medicineColumns: DataTableColumn<Medicine>[] = [
+  {
+    key: 'name', header: 'Medicine', pinned: true, accessor: (m) => m.name,
+    render: (m) => (
+      <div>
+        <p className="font-medium text-surface-900">{m.name}</p>
+        <p className="text-xs text-surface-500">{m.strength} • {m.dosageForm}</p>
+      </div>
+    ),
+  },
+  { key: 'genericName', header: 'Generic', accessor: (m) => m.genericName, render: (m) => <span className="text-surface-700">{m.genericName}</span> },
+  { key: 'manufacturerName', header: 'Manufacturer', accessor: (m) => m.manufacturerName, render: (m) => <span className="text-xs text-surface-600">{m.manufacturerName}</span> },
+  { key: 'packSize', header: 'Pack', align: 'center', accessor: (m) => m.packSize },
+  { key: 'mrp', header: 'MRP', align: 'right', accessor: (m) => m.mrp, render: (m) => <span className="font-medium">{formatCurrency(m.mrp)}</span> },
+  { key: 'gstRate', header: 'GST', align: 'center', accessor: (m) => m.gstRate, render: (m) => `${m.gstRate}%` },
+  {
+    key: 'schedule', header: 'Schedule', align: 'center', accessor: (m) => m.schedule,
+    render: (m) => m.schedule === 'OTC'
+      ? <span className="badge-success">OTC</span>
+      : <span className="badge-warning">{m.schedule.replace('SCHEDULE_', 'Sch ')}</span>,
+  },
+  {
+    key: 'actions', header: '', sortable: false, pinned: true, align: 'right',
+    render: (m) => (
+      <Link href={`/dashboard/medicines/${m.id}`} onClick={(e) => e.stopPropagation()} className="text-brand-600 hover:underline text-xs inline-flex items-center gap-1">
+        <Pencil className="w-3 h-3" /> Details
+      </Link>
+    ),
+  },
+]

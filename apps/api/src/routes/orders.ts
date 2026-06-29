@@ -24,9 +24,11 @@ const createOrderSchema = z.object({
   items: z.array(orderItemSchema).min(1),
   paymentMethod: z.enum(['CASH','UPI','NEFT','RTGS','CHEQUE','CREDIT','CARD']).optional(),
   notes: z.string().optional(),
-  // Salesman commission — only meaningful for SALE
+  // Salesman commission — optional, supported for both SALE and PURCHASE
   salesRepId: z.string().optional(),
   commissionPercent: z.number().min(0).max(100).optional(),
+  // Purchase-only: fixed transport/delivery charge added to the bill
+  transportCharge: z.number().min(0).optional(),
   deliveryAddress: z.object({
     line1: z.string(),
     city: z.string(),
@@ -159,18 +161,23 @@ export async function orderRoutes(app: FastifyInstance) {
     const body = createOrderSchema.parse(request.body)
 
     const totals = calculateOrderTotals(body.items)
+    const transportCharge = body.type === 'PURCHASE' ? (body.transportCharge ?? 0) : 0
+    totals.total += transportCharge
 
-    // Compute commission only if a sales rep is attached AND order is SALE
+    // Commission only when a salesman is attached (direct bills carry none).
+    // Supported for both SALE (our rep) and PURCHASE (supplier's salesman).
     let commissionPercent: number | undefined
     let commissionAmount: number | undefined
-    if (body.type === 'SALE' && body.salesRepId) {
+    if (body.salesRepId) {
       const rep = await prisma.salesRep.findFirst({
         where: { id: body.salesRepId, tenantId, isActive: true },
         select: { defaultCommissionPercent: true, flatBonusAmount: true },
       })
       if (rep) {
         commissionPercent = body.commissionPercent ?? rep.defaultCommissionPercent
-        commissionAmount = (totals.total * commissionPercent) / 100 + (rep.flatBonusAmount ?? 0)
+        // Commission is on the net value (subtotal − discount), excluding tax & transport.
+        const commissionBase = totals.subtotal - totals.discountAmount
+        commissionAmount = (commissionBase * commissionPercent) / 100 + (rep.flatBonusAmount ?? 0)
       }
     }
 
@@ -190,10 +197,11 @@ export async function orderRoutes(app: FastifyInstance) {
           notes: body.notes,
           deliveryAddress: body.deliveryAddress as any,
           createdBy: userId,
-          salesRepId: body.type === 'SALE' ? body.salesRepId : null,
+          salesRepId: body.salesRepId ?? null,
           commissionPercent,
           commissionAmount,
           commissionStatus: commissionAmount ? 'PENDING' : null,
+          transportCharge,
           items: {
             create: body.items.map((item) => {
               const lineTotal = item.quantity * item.unitPrice

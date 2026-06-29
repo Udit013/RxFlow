@@ -39,25 +39,35 @@ export function errorHandler(
   }
 
   // Prisma errors
-  const prismaError = error as FastifyError & { code?: string }
+  const prismaError = error as FastifyError & { code?: string; meta?: Record<string, unknown> }
   if (prismaError.code === 'P2002') {
+    const target = (prismaError.meta?.target as string[] | undefined)?.join(', ')
     return reply.status(409).send({
       success: false,
-      error: 'Conflict',
-      message: 'A record with this value already exists',
+      error: target ? `A record with this ${target} already exists` : 'A record with this value already exists',
     })
   }
   if (prismaError.code === 'P2025') {
-    return reply.status(404).send({
+    return reply.status(404).send({ success: false, error: 'Record not found' })
+  }
+  if (prismaError.code === 'P2003') {
+    return reply.status(400).send({ success: false, error: 'Related record not found or still in use' })
+  }
+  if (prismaError.code === 'P2011') {
+    return reply.status(400).send({ success: false, error: 'A required field is missing' })
+  }
+  // Schema drift — column/table missing. Surface a clear, actionable message.
+  if (prismaError.code === 'P2022' || prismaError.code === 'P2021') {
+    request.log.error({ meta: prismaError.meta }, 'Database schema is out of date')
+    return reply.status(500).send({
       success: false,
-      error: 'Not Found',
-      message: 'Record not found',
+      error: 'The database schema is out of date. Please run the latest migrations.',
     })
   }
 
   // Default
   const statusCode = error.statusCode ?? 500
-  reply.status(statusCode).send({
+  return reply.status(statusCode).send({
     success: false,
     error: statusCode >= 500 ? 'Internal Server Error' : error.message,
     ...(process.env.NODE_ENV === 'development' && { stack: error.stack }),

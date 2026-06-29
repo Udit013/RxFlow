@@ -98,6 +98,19 @@ enum DrugSchedule {
   SCHEDULE_G
 }
 
+enum MedicineStatus {
+  CONTINUE
+  DISCONTINUE
+  INACTIVE
+}
+
+enum MedicineType {
+  NORMAL
+  CONTROLLED
+  OTC
+  PRESCRIPTION
+}
+
 enum DosageForm {
   TABLET
   CAPSULE
@@ -360,6 +373,35 @@ model Medicine {
   isActive             Boolean      @default(true)
   isVerified           Boolean      @default(false)
   thumbnailUrl         String?
+  // ─── Medicine Master (MARG-style) ───
+  status               MedicineStatus @default(CONTINUE)
+  medicineType         MedicineType   @default(NORMAL)
+  shortName            String?
+  fastSearchName       String?
+  description          String?
+  composition          String?
+  // Units & packaging
+  packing              String?
+  primaryUnit          String       @default("PCS")
+  secondaryUnit        String?
+  conversionFactor     Float        @default(1)
+  boxQuantity          Int?
+  decimalAllowed       Boolean      @default(false)
+  // Pricing
+  rateA                Float?
+  rateB                Float?
+  rateC                Float?
+  defaultPurchasePrice Float?
+  defaultCostPrice     Float?
+  marginPercent        Float?
+  taxType              String       @default("TAXABLE")
+  cess                 Float        @default(0)
+  // Inventory defaults
+  defaultReorderLevel  Int          @default(10)
+  minStock             Int?
+  maxStock             Int?
+  negativeAllowed      Boolean      @default(false)
+  isHidden             Boolean      @default(false)
   // Metadata
   createdAt            DateTime     @default(now())
   updatedAt            DateTime     @updatedAt
@@ -458,6 +500,9 @@ model Batch {
   manufacturingDate   DateTime?
   quantity            Int
   purchasePrice       Float
+  // Purchase discount % applied to this batch at purchase time — used for the
+  // sell-below-cost (discount-loss) warning during billing.
+  discountPercent     Float     @default(0)
   mrp                 Float
   supplierId          String?
   purchaseOrderId     String?
@@ -578,11 +623,15 @@ model Order {
   // Parked-sale support
   parkedAt        DateTime?
   parkedLabel     String?
-  // Salesman commission
+  // Salesman commission — reused for both SALE and PURCHASE orders.
+  // For a PURCHASE, salesRepId is the supplier's salesman who brought the goods.
   salesRepId         String?
   commissionPercent  Float?
   commissionAmount   Float?
   commissionStatus   String?  @default("PENDING") // PENDING | APPROVED | PAID
+  // Purchase-only costs
+  transportCharge         Float?  @default(0) // fixed delivery/transport charge, added to purchase cost
+  purchaseDiscountPercent Float?  // supplier's bill discount %, for reporting context
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 

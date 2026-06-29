@@ -9,8 +9,12 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
+import { authService } from '@/lib/auth'
 import { cn, formatCurrency } from '@/lib/utils'
 import { AnimatedSection, PageHeader, MetricCard, SectionCard, EmptyState, SkeletonRow } from '@/components/ui'
+
+// Roles permitted to view individual salary figures in lists.
+const SALARY_VIEW_ROLES = ['TENANT_ADMIN', 'SUPER_ADMIN', 'ACCOUNTANT', 'STORE_MANAGER']
 
 function thisMonth() {
   const d = new Date()
@@ -83,12 +87,13 @@ function EmployeesTab() {
   })
   const employees: any[] = data?.data ?? []
   const totalMonthly = employees.filter(e => e.isActive && e.salaryType === 'MONTHLY').reduce((s, e) => s + e.monthlySalary, 0)
+  const canSeeSalary = SALARY_VIEW_ROLES.includes(authService.getStoredUser()?.role ?? '')
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         <MetricCard icon={Users2} tone="brand" label="Active Staff" value={String(employees.filter(e => e.isActive).length)} />
-        <MetricCard icon={IndianRupee} tone="warning" label="Monthly Salary Bill" value={formatCurrency(totalMonthly)} sub="Monthly-paid staff" />
+        {canSeeSalary && <MetricCard icon={IndianRupee} tone="warning" label="Monthly Salary Bill" value={formatCurrency(totalMonthly)} sub="Monthly-paid staff" />}
         <MetricCard icon={Briefcase} tone="neutral" label="Total Records" value={String(employees.length)} />
       </div>
 
@@ -107,14 +112,14 @@ function EmployeesTab() {
               <th className="text-left px-4 py-2.5">Name</th>
               <th className="text-left px-4 py-2.5">Designation</th>
               <th className="text-left px-4 py-2.5">Contact</th>
-              <th className="text-left px-4 py-2.5">Salary</th>
+              {canSeeSalary && <th className="text-left px-4 py-2.5">Salary</th>}
               <th className="text-center px-4 py-2.5">Status</th>
               <th className="px-4 py-2.5" />
             </tr>
           </thead>
           <tbody className="divide-y divide-surface-100">
-            {isLoading ? <SkeletonRow columns={6} rows={5} /> : employees.length === 0 ? (
-              <tr><td colSpan={6}><EmptyState icon={Users2} title="No employees" description="Add your staff to start tracking attendance and payroll." action={<button onClick={() => setEdit('new')} className="btn-primary"><Plus className="w-4 h-4" /> Add Employee</button>} /></td></tr>
+            {isLoading ? <SkeletonRow columns={canSeeSalary ? 6 : 5} rows={5} /> : employees.length === 0 ? (
+              <tr><td colSpan={canSeeSalary ? 6 : 5}><EmptyState icon={Users2} title="No employees" description="Add your staff to start tracking attendance and payroll." action={<button onClick={() => setEdit('new')} className="btn-primary"><Plus className="w-4 h-4" /> Add Employee</button>} /></td></tr>
             ) : employees.map((e) => (
               <tr key={e.id} className={cn('hover:bg-surface-50/60', !e.isActive && 'opacity-50')}>
                 <td className="px-4 py-2.5">
@@ -123,9 +128,11 @@ function EmployeesTab() {
                 </td>
                 <td className="px-4 py-2.5 text-surface-600">{e.designation ?? '—'}</td>
                 <td className="px-4 py-2.5"><span className="flex items-center gap-1.5 text-surface-700"><Phone className="w-3.5 h-3.5 text-surface-400" />{e.phone}</span></td>
-                <td className="px-4 py-2.5">
-                  {e.salaryType === 'MONTHLY' ? <span className="font-medium">{formatCurrency(e.monthlySalary)}<span className="text-xs text-surface-400">/mo</span></span> : <span className="font-medium">{formatCurrency(e.dailyRate)}<span className="text-xs text-surface-400">/day</span></span>}
-                </td>
+                {canSeeSalary && (
+                  <td className="px-4 py-2.5">
+                    {e.salaryType === 'MONTHLY' ? <span className="font-medium">{formatCurrency(e.monthlySalary)}<span className="text-xs text-surface-400">/mo</span></span> : <span className="font-medium">{formatCurrency(e.dailyRate)}<span className="text-xs text-surface-400">/day</span></span>}
+                  </td>
+                )}
                 <td className="px-4 py-2.5 text-center">{e.isActive ? <span className="badge-success">Active</span> : <span className="badge-neutral">Inactive</span>}</td>
                 <td className="px-4 py-2.5 text-right"><button onClick={() => setEdit(e)} className="text-xs text-brand-600 hover:underline">Edit</button></td>
               </tr>

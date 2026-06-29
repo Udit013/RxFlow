@@ -15,7 +15,7 @@ interface InventoryItem {
   availableQuantity: number
   sellingPrice: number
   medicine: { id: string; name: string; strength: string; dosageForm: string; gstRate: number; mrp: number; schedule: string }
-  batches: Array<{ id: string; batchNumber: string; expiryDate: string; quantity: number; mrp: number }>
+  batches: Array<{ id: string; batchNumber: string; expiryDate: string; quantity: number; mrp: number; purchasePrice?: number; discountPercent?: number }>
 }
 
 interface CartLine {
@@ -27,6 +27,9 @@ interface CartLine {
   unitPrice: number
   taxRate: number
   available: number
+  discountPercent: number
+  // Purchase discount % of the chosen batch — used for the discount-loss warning
+  batchPurchaseDiscount: number
 }
 
 interface Customer { id: string; name: string; phone: string }
@@ -53,6 +56,7 @@ function BillingPageInner() {
   const [customer, setCustomer] = useState<Customer | null>(null)
   const [customerSearch, setCustomerSearch] = useState('')
   const [salesRep, setSalesRep] = useState<SalesRep | null>(null)
+  const [commissionPercent, setCommissionPercent] = useState<number>(0)
   const [paymentMethod, setPaymentMethod] = useState<typeof PAYMENT_METHODS[number]>('CASH')
 
   useEffect(() => {
@@ -105,6 +109,8 @@ function BillingPageInner() {
               unitPrice: inv.sellingPrice,
               taxRate: inv.medicine.gstRate ?? 12,
               available: inv.availableQuantity,
+              discountPercent: 0,
+              batchPurchaseDiscount: inv.batches[0]?.discountPercent ?? 0,
             })
           }
           if (newCart.length > 0) setCart(newCart)
@@ -171,6 +177,8 @@ function BillingPageInner() {
         unitPrice: item.sellingPrice,
         taxRate: item.medicine.gstRate ?? 12,
         available: item.availableQuantity,
+        discountPercent: 0,
+        batchPurchaseDiscount: item.batches[0]?.discountPercent ?? 0,
       }]
     })
     setSearch('')
@@ -202,8 +210,13 @@ function BillingPageInner() {
     setCart((prev) => prev.map((l) => l.medicineId === medicineId ? { ...l, unitPrice: price } : l))
   }
 
-  const subtotal = cart.reduce((sum, l) => sum + l.quantity * l.unitPrice, 0)
-  const tax = cart.reduce((sum, l) => sum + (l.quantity * l.unitPrice * l.taxRate) / 100, 0)
+  function updateDiscount(medicineId: string, discountPercent: number) {
+    setCart((prev) => prev.map((l) => l.medicineId === medicineId ? { ...l, discountPercent: Math.max(0, Math.min(100, discountPercent)) } : l))
+  }
+
+  const lineNet = (l: CartLine) => l.quantity * l.unitPrice * (1 - l.discountPercent / 100)
+  const subtotal = cart.reduce((sum, l) => sum + lineNet(l), 0)
+  const tax = cart.reduce((sum, l) => sum + (lineNet(l) * l.taxRate) / 100, 0)
   const total = subtotal + tax
 
   const [showParkedList, setShowParkedList] = useState(false)
@@ -225,7 +238,7 @@ function BillingPageInner() {
         paymentMethod,
         items: cart.map((l) => ({
           medicineId: l.medicineId, batchId: l.batchId, quantity: l.quantity,
-          unitPrice: l.unitPrice, discountPercent: 0, taxRate: l.taxRate,
+          unitPrice: l.unitPrice, discountPercent: l.discountPercent, taxRate: l.taxRate,
         })),
       })
     },
@@ -260,6 +273,8 @@ function BillingPageInner() {
       unitPrice: it.unitPrice,
       taxRate: it.taxRate,
       available: it.quantity * 10, // permissive — we don't refetch inventory here, server will re-validate on checkout
+      discountPercent: it.discountPercent ?? 0,
+      batchPurchaseDiscount: 0,
     }))
     setCart(recalledLines)
     if (o.customer) setCustomer({ id: o.customer.id, name: o.customer.name, phone: o.customer.phone })
@@ -272,18 +287,34 @@ function BillingPageInner() {
   const checkoutMutation = useMutation({
     mutationFn: async () => {
       if (!storeId) throw new Error('No store assigned to user')
+
+      // Discount-loss guard: warn if any line is billed at a higher discount than
+      // the purchase discount of its batch (profit may shrink or go negative).
+      const risky = cart.filter((l) => l.discountPercent > l.batchPurchaseDiscount)
+      if (risky.length > 0) {
+        const detail = risky
+          .map((l) => `• ${l.name} — selling ${l.discountPercent}% vs purchase ${l.batchPurchaseDiscount}%`)
+          .join('\n')
+        const ok = window.confirm(
+          `This sale is being billed at a higher discount than the purchase discount for ${risky.length === 1 ? 'this batch' : 'these batches'}. ` +
+          `This may reduce or eliminate your profit.\n\n${detail}\n\nDo you want to continue?`
+        )
+        if (!ok) throw new Error('__cancelled__')
+      }
+
       const orderRes = await api.post('/orders', {
         type: 'SALE',
         storeId,
         customerId: customer?.id,
         salesRepId: salesRep?.id,
+        commissionPercent: salesRep ? commissionPercent : undefined,
         paymentMethod,
         items: cart.map((l) => ({
           medicineId: l.medicineId,
           batchId: l.batchId,
           quantity: l.quantity,
           unitPrice: l.unitPrice,
-          discountPercent: 0,
+          discountPercent: l.discountPercent,
           taxRate: l.taxRate,
         })),
       })
@@ -300,9 +331,13 @@ function BillingPageInner() {
       setCart([])
       setCustomer(null)
       setSalesRep(null)
+      setCommissionPercent(0)
       router.push(`/dashboard/orders/${orderId}`)
     },
-    onError: (e: any) => toast.error(e.response?.data?.error ?? e.message ?? 'Checkout failed'),
+    onError: (e: any) => {
+      if (e?.message === '__cancelled__') return // user dismissed the discount-loss warning
+      toast.error(e.response?.data?.error ?? e.message ?? 'Checkout failed')
+    },
   })
 
   return (
@@ -431,8 +466,26 @@ function BillingPageInner() {
                         value={l.unitPrice}
                         onChange={(e) => updatePrice(l.medicineId, parseFloat(e.target.value) || 0)}
                       />
+                      <div className="mt-1 flex items-center justify-end gap-1">
+                        <input
+                          type="number" min="0" max="100" step="0.5"
+                          className={cn(
+                            'w-16 text-right border rounded px-2 py-0.5 text-xs focus:outline-none focus:ring-1',
+                            l.discountPercent > l.batchPurchaseDiscount
+                              ? 'border-accent-400 text-accent-700 focus:ring-accent-500 bg-accent-50'
+                              : 'border-slate-200 focus:ring-brand-500'
+                          )}
+                          value={l.discountPercent}
+                          onChange={(e) => updateDiscount(l.medicineId, parseFloat(e.target.value) || 0)}
+                          aria-label="Discount percent"
+                        />
+                        <span className="text-xs text-surface-400">% off</span>
+                      </div>
+                      {l.discountPercent > l.batchPurchaseDiscount && (
+                        <p className="text-[10px] text-accent-600 mt-0.5">above {l.batchPurchaseDiscount}% cost disc.</p>
+                      )}
                     </td>
-                    <td className="px-4 py-3 text-right font-medium">{formatCurrency(l.quantity * l.unitPrice)}</td>
+                    <td className="px-4 py-3 text-right font-medium">{formatCurrency(lineNet(l))}</td>
                     <td className="px-2 py-3 text-right">
                       <button onClick={() => removeFromCart(l.medicineId)} className="text-slate-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
                     </td>
@@ -482,19 +535,37 @@ function BillingPageInner() {
 
         <div>
           <label className="label flex items-center gap-1.5"><UserCheck className="w-3.5 h-3.5" /> Sales Rep (commission)</label>
-          <select
-            className="input"
-            value={salesRep?.id ?? ''}
-            onChange={(e) => {
-              const r = salesReps.find((s) => s.id === e.target.value) ?? null
-              setSalesRep(r)
-            }}
-          >
-            <option value="">— None (no commission) —</option>
-            {salesReps.map((r) => (
-              <option key={r.id} value={r.id}>{r.name} ({r.defaultCommissionPercent}%)</option>
-            ))}
-          </select>
+          <div className="flex gap-2">
+            <select
+              className="input flex-1"
+              value={salesRep?.id ?? ''}
+              onChange={(e) => {
+                const r = salesReps.find((s) => s.id === e.target.value) ?? null
+                setSalesRep(r)
+                setCommissionPercent(r?.defaultCommissionPercent ?? 0)
+              }}
+            >
+              <option value="">— None (no commission) —</option>
+              {salesReps.map((r) => (
+                <option key={r.id} value={r.id}>{r.name} ({r.defaultCommissionPercent}%)</option>
+              ))}
+            </select>
+            {salesRep && (
+              <div className="relative w-24">
+                <input
+                  type="number" min="0" max="100" step="0.5"
+                  className="input pr-6 text-right"
+                  value={commissionPercent}
+                  onChange={(e) => setCommissionPercent(Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)))}
+                  aria-label="Commission percent"
+                />
+                <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-surface-400 text-sm">%</span>
+              </div>
+            )}
+          </div>
+          {salesRep && (
+            <p className="help-text mt-1">Commission ≈ {formatCurrency(subtotal * commissionPercent / 100)} on this bill</p>
+          )}
         </div>
 
         <div>

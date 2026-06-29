@@ -3,11 +3,13 @@
 import { useEffect, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
-import { Settings, Building, Save, X, Plus, Users as UsersIcon, AlertTriangle, Wifi } from 'lucide-react'
+import { Settings, Building, Save, X, Plus, Users as UsersIcon, AlertTriangle, Wifi, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { authService } from '@/lib/auth'
 import { cn, formatDate } from '@/lib/utils'
+import { DeleteAccountModal } from '@/components/delete-account-modal'
 
 const ROLES = ['TENANT_ADMIN', 'STORE_MANAGER', 'PHARMACIST', 'SALES_REP', 'ACCOUNTANT', 'DELIVERY_STAFF', 'VIEWER'] as const
 
@@ -132,8 +134,12 @@ function TenantTab({ user }: { user: NonNullable<ReturnType<typeof authService.g
   })
 
   const allowNeg = watch('allowNegativeStock')
+  const router = useRouter()
+  const [showDelete, setShowDelete] = useState(false)
+  const isAdmin = user.role === 'TENANT_ADMIN' || user.role === 'SUPER_ADMIN'
 
   return (
+   <div className="space-y-5">
     <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="space-y-5">
       <div className="card p-5">
         <h3 className="font-semibold mb-3 flex items-center gap-2"><Building className="w-4 h-4" /> Business Information</h3>
@@ -207,6 +213,34 @@ function TenantTab({ user }: { user: NonNullable<ReturnType<typeof authService.g
         </button>
       </div>
     </form>
+
+    {isAdmin && (
+      <div className="card p-5 border-red-200">
+        <h3 className="font-semibold mb-1 flex items-center gap-2 text-red-600">
+          <AlertTriangle className="w-4 h-4" /> Danger Zone
+        </h3>
+        <div className="flex items-center justify-between gap-4 mt-3">
+          <div>
+            <p className="font-medium text-sm text-surface-900">Delete this account</p>
+            <p className="text-xs text-surface-500 mt-0.5">
+              Permanently delete <strong>{user.tenant?.name}</strong> and all of its data. This cannot be undone.
+            </p>
+          </div>
+          <button onClick={() => setShowDelete(true)} className="btn-danger shrink-0">
+            <Trash2 className="w-4 h-4" /> Delete account
+          </button>
+        </div>
+      </div>
+    )}
+
+    {showDelete && (
+      <DeleteAccountModal
+        tenantName={user.tenant?.name ?? ''}
+        onClose={() => setShowDelete(false)}
+        onDeleted={() => router.push('/login')}
+      />
+    )}
+   </div>
   )
 }
 

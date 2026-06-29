@@ -5,12 +5,10 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboard, Package, ShoppingCart, FileText,
-  Users, Truck, Pill, BarChart3, Settings, LogOut,
+  Users, Truck, Pill, BarChart3, Settings,
   ChevronRight, Bell, Search, Store, Receipt, PackagePlus,
   UserCheck, FileSpreadsheet, ClipboardList, History, Database, ArrowLeftRight, ShieldCheck, Wallet, Users2, Tags, RotateCcw,
 } from 'lucide-react'
-import { authService } from '@/lib/auth'
-import { useRouter } from 'next/navigation'
 
 const navItems = [
   {
@@ -67,48 +65,45 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname()
-  const router = useRouter()
-
-  const handleLogout = async () => {
-    await authService.logout()
-    router.push('/login')
-  }
 
   return (
-    <aside className="w-64 bg-white border-r border-slate-200 flex flex-col h-full overflow-hidden shrink-0">
+    <aside className="w-64 bg-white border-r border-surface-200 flex flex-col h-full overflow-hidden shrink-0">
       {/* Logo */}
-      <div className="flex items-center gap-2.5 px-5 py-5 border-b border-slate-100">
+      <div className="flex items-center gap-2.5 px-5 py-4 border-b border-surface-100">
         <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center">
           <Pill className="w-4.5 h-4.5 text-white" />
         </div>
         <div>
-          <span className="font-bold text-slate-900 text-lg">RxFlow</span>
-          <p className="text-xs text-slate-500 -mt-0.5">Pharma Network</p>
+          <span className="font-bold text-surface-900 text-base">RxFlow</span>
+          <p className="text-2xs text-surface-500 -mt-0.5">Pharma Network</p>
         </div>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto py-4 px-3">
+      <nav className="flex-1 overflow-y-auto py-3 px-2.5">
         {navItems.map((section) => (
-          <div key={section.label} className="mb-6">
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-2 mb-2">
+          <div key={section.label} className="mb-5">
+            <p className="text-2xs font-semibold text-surface-400 uppercase tracking-wider px-2 mb-1.5">
               {section.label}
             </p>
             <ul className="space-y-0.5">
               {section.items.map((item) => {
-                const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
+                // Exact match for the dashboard root; prefix match for nested routes.
+                const isActive = item.href === '/dashboard'
+                  ? pathname === '/dashboard'
+                  : pathname === item.href || pathname.startsWith(`${item.href}/`)
                 return (
                   <li key={item.href}>
                     <Link
                       href={item.href}
                       className={cn(
-                        'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                        'flex items-center gap-2.5 px-3 py-1.5 rounded-md text-[13px] font-medium transition-colors',
                         isActive
                           ? 'bg-brand-50 text-brand-700'
-                          : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                          : 'text-surface-600 hover:bg-surface-50 hover:text-surface-900'
                       )}
                     >
-                      <item.icon className={cn('w-4.5 h-4.5', isActive ? 'text-brand-600' : 'text-slate-400')} />
+                      <item.icon className={cn('w-4.5 h-4.5', isActive ? 'text-brand-600' : 'text-surface-400')} />
                       {item.label}
                       {isActive && <ChevronRight className="w-3.5 h-3.5 ml-auto text-brand-400" />}
                     </Link>
@@ -119,17 +114,6 @@ export function Sidebar() {
           </div>
         ))}
       </nav>
-
-      {/* User profile */}
-      <div className="border-t border-slate-100 p-3">
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-500 hover:bg-slate-50 hover:text-red-600 w-full transition-colors"
-        >
-          <LogOut className="w-4 h-4" />
-          Sign out
-        </button>
-      </div>
     </aside>
   )
 }

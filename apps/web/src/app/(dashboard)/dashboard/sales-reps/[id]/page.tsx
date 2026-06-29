@@ -27,6 +27,7 @@ export default function SalesRepDetailPage() {
   const queryClient = useQueryClient()
   const [period, setPeriod] = useState(thisMonth())
   const [selected, setSelected] = useState<string[]>([])
+  const [reportType, setReportType] = useState<'SALE' | 'PURCHASE' | 'all'>('SALE')
 
   const { from, to } = useMemo(() => monthRange(period), [period])
 
@@ -37,8 +38,8 @@ export default function SalesRepDetailPage() {
   })
 
   const { data: reportData, isLoading } = useQuery({
-    queryKey: ['commission-report', id, period],
-    queryFn: () => api.get(`/sales-reps/${id}/commission-report`, { params: { from, to } }).then((r) => r.data),
+    queryKey: ['commission-report', id, period, reportType],
+    queryFn: () => api.get(`/sales-reps/${id}/commission-report`, { params: { from, to, type: reportType } }).then((r) => r.data),
     enabled: !!id,
   })
 
@@ -57,7 +58,8 @@ export default function SalesRepDetailPage() {
   const rep = repData.data
   const report = reportData?.data
   const orders = report?.orders ?? []
-  const totals = report?.totals ?? { totalSales: 0, totalCommission: 0, paidCommission: 0, pendingCommission: 0, orderCount: 0 }
+  const totals = report?.totals ?? { totalSales: 0, totalCommission: 0, paidCommission: 0, pendingCommission: 0, outstandingCommission: 0, orderCount: 0 }
+  const isPurchase = reportType === 'PURCHASE'
 
   const pendingOrders = orders.filter((o: any) => o.commissionStatus !== 'PAID')
   const allPendingSelected = pendingOrders.length > 0 && pendingOrders.every((o: any) => selected.includes(o.id))
@@ -112,23 +114,39 @@ export default function SalesRepDetailPage() {
       </div>
 
       <div className="card p-5">
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <h3 className="font-semibold text-slate-900 flex items-center gap-2"><Wallet className="w-4 h-4" /> Commission Report</h3>
-          <input
-            type="month"
-            value={period}
-            onChange={(e) => setPeriod(e.target.value)}
-            className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm"
-          />
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-0.5 bg-surface-100 rounded-lg p-0.5">
+              {(['SALE', 'PURCHASE', 'all'] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => { setReportType(t); setSelected([]) }}
+                  className={cn(
+                    'px-3 py-1 rounded-md text-xs font-medium capitalize transition-colors',
+                    reportType === t ? 'bg-white text-brand-700 shadow-sm' : 'text-surface-500 hover:text-surface-800'
+                  )}
+                >
+                  {t === 'all' ? 'All' : t === 'SALE' ? 'Sales' : 'Purchases'}
+                </button>
+              ))}
+            </div>
+            <input
+              type="month"
+              value={period}
+              onChange={(e) => setPeriod(e.target.value)}
+              className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm"
+            />
+          </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-3 mb-4 pb-4 border-b">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-4 pb-4 border-b">
           <div>
             <p className="text-xs text-slate-500">Orders</p>
             <p className="font-semibold">{totals.orderCount}</p>
           </div>
           <div>
-            <p className="text-xs text-slate-500">Sales Value</p>
+            <p className="text-xs text-slate-500">{isPurchase ? 'Purchase Value' : 'Sales Value'}</p>
             <p className="font-semibold">{formatCurrency(totals.totalSales)}</p>
           </div>
           <div>
@@ -137,7 +155,11 @@ export default function SalesRepDetailPage() {
           </div>
           <div>
             <p className="text-xs text-slate-500">Paid</p>
-            <p className="font-semibold text-green-600">{formatCurrency(totals.paidCommission)}</p>
+            <p className="font-semibold text-secondary-600">{formatCurrency(totals.paidCommission)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-slate-500">Outstanding</p>
+            <p className="font-semibold text-accent-600">{formatCurrency(totals.outstandingCommission ?? totals.pendingCommission)}</p>
           </div>
         </div>
 
@@ -163,8 +185,8 @@ export default function SalesRepDetailPage() {
                 </th>
                 <th className="text-left px-2 py-2">Order #</th>
                 <th className="text-left px-2 py-2">Date</th>
-                <th className="text-left px-2 py-2">Customer</th>
-                <th className="text-right px-2 py-2">Sale</th>
+                <th className="text-left px-2 py-2">{isPurchase ? 'Supplier' : 'Customer'}</th>
+                <th className="text-right px-2 py-2">{isPurchase ? 'Purchase' : 'Sale'}</th>
                 <th className="text-center px-2 py-2">Rate</th>
                 <th className="text-right px-2 py-2">Commission</th>
                 <th className="text-center px-2 py-2">Status</th>
@@ -191,7 +213,7 @@ export default function SalesRepDetailPage() {
                       </Link>
                     </td>
                     <td className="px-2 py-2 text-slate-600">{formatDate(o.createdAt)}</td>
-                    <td className="px-2 py-2">{o.customer?.name ?? 'Walk-in'}</td>
+                    <td className="px-2 py-2">{isPurchase ? (o.supplier?.name ?? '—') : (o.customer?.name ?? 'Walk-in')}</td>
                     <td className="px-2 py-2 text-right">{formatCurrency(o.total)}</td>
                     <td className="px-2 py-2 text-center text-slate-600">{o.commissionPercent ?? '—'}%</td>
                     <td className="px-2 py-2 text-right font-medium">{formatCurrency(o.commissionAmount ?? 0)}</td>

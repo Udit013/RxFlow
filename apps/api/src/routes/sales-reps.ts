@@ -103,9 +103,13 @@ export async function salesRepRoutes(app: FastifyInstance) {
   app.get('/:id/commission-report', { preHandler: [authenticate] }, async (request, reply) => {
     const { id } = request.params as { id: string }
     const { tenantId } = request.user
-    const query = request.query as { from?: string; to?: string }
+    const query = request.query as { from?: string; to?: string; type?: string }
 
-    const where: any = { tenantId, salesRepId: id, type: 'SALE' }
+    // type = SALE (default) | PURCHASE | all
+    const where: any = { tenantId, salesRepId: id, commissionAmount: { not: null } }
+    if (query.type === 'PURCHASE') where.type = 'PURCHASE'
+    else if (query.type === 'all') { /* both */ }
+    else where.type = 'SALE'
     if (query.from || query.to) {
       where.createdAt = {}
       if (query.from) where.createdAt.gte = new Date(query.from)
@@ -117,6 +121,7 @@ export async function salesRepRoutes(app: FastifyInstance) {
       orderBy: { createdAt: 'desc' },
       include: {
         customer: { select: { id: true, name: true } },
+        supplier: { select: { id: true, name: true } },
       },
     })
 
@@ -130,12 +135,14 @@ export async function salesRepRoutes(app: FastifyInstance) {
       },
       { totalSales: 0, totalCommission: 0, paidCommission: 0, pendingCommission: 0 }
     )
+    // "Outstanding" = commission owed but not yet paid (alias of pending for clarity in reports)
+    const outstandingCommission = totals.pendingCommission
 
     return reply.send({
       success: true,
       data: {
         orders,
-        totals: { ...totals, orderCount: orders.length },
+        totals: { ...totals, outstandingCommission, orderCount: orders.length },
       },
     })
   })

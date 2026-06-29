@@ -10,28 +10,41 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Primary = pharmacy green. Deep, confident, medical — not a SaaS blue.
+        // Primary = healthcare blue. Trust, calm, clinical — the spine of the UI.
         brand: {
+          50: '#eff6ff',
+          100: '#dbeafe',
+          200: '#bfdbfe',
+          300: '#93c5fd',
+          400: '#60a5fa',
+          500: '#3b82f6', // accents
+          600: '#2563eb', // primary action
+          700: '#1d4ed8',
+          800: '#1e40af',
+          900: '#1e3a8a',
+          950: '#172554',
+        },
+        // Secondary = health/inventory green. For positive, stock, and growth states.
+        secondary: {
           50: '#ecfdf3',
           100: '#d1fae0',
           200: '#a6f4c5',
           300: '#6ee7a8',
           400: '#34d186',
-          500: '#12b76a', // accents
-          600: '#0a8a52', // primary action
+          500: '#12b76a',
+          600: '#0a8a52',
           700: '#077043',
           800: '#085a38',
           900: '#074a30',
-          950: '#022c1b',
         },
-        // Accent kept for secondary highlights (teal-leaning)
+        // Accent = orange. Used sparingly for alerts, urgency, and standout CTAs.
         accent: {
-          50: '#eefdfb',
-          100: '#d3f8f3',
-          400: '#2dd4bf',
-          500: '#14b8a6',
-          600: '#0d9488',
-          700: '#0f766e',
+          50: '#fff7ed',
+          100: '#ffedd5',
+          400: '#fb923c',
+          500: '#f97316',
+          600: '#ea580c',
+          700: '#c2410c',
         },
         // Neutral surface scale — cool, flat, ERP-grade (relies on borders not shadows)
         surface: {

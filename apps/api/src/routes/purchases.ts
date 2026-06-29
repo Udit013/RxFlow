@@ -21,6 +21,11 @@ const importSchema = z.object({
   storeId: z.string(),
   notes: z.string().optional(),
   rows: z.array(importRowSchema).min(1),
+  // Optional purchase costs
+  transportCharge: z.number().min(0).optional(),
+  // Purchase salesman commission — only applied when a salesman is selected
+  salesRepId: z.string().optional(),
+  commissionPercent: z.number().min(0).max(100).optional(),
 })
 
 export async function purchaseRoutes(app: FastifyInstance) {
@@ -62,6 +67,23 @@ export async function purchaseRoutes(app: FastifyInstance) {
       { subtotal: 0, discountAmount: 0, taxAmount: 0, total: 0 }
     )
 
+    const transportCharge = body.transportCharge ?? 0
+    totals.total += transportCharge
+
+    // Purchase salesman commission — only when a salesman is selected
+    let commissionPercent: number | undefined
+    let commissionAmount: number | undefined
+    if (body.salesRepId) {
+      const rep = await prisma.salesRep.findFirst({
+        where: { id: body.salesRepId, tenantId, isActive: true },
+        select: { defaultCommissionPercent: true },
+      })
+      if (!rep) return reply.status(400).send({ success: false, error: 'Purchase salesman not found' })
+      commissionPercent = body.commissionPercent ?? rep.defaultCommissionPercent
+      // Commission is charged on the purchase value (taxable subtotal less discount)
+      commissionAmount = (totals.subtotal - totals.discountAmount) * commissionPercent / 100
+    }
+
     // Generate FY-aware PO number
     const fy = getFinancialYear()
     const { from, to } = getFinancialYearBounds()
@@ -81,6 +103,11 @@ export async function purchaseRoutes(app: FastifyInstance) {
           status: 'CONFIRMED',
           supplierId: body.supplierId,
           ...totals,
+          transportCharge,
+          salesRepId: body.salesRepId ?? null,
+          commissionPercent,
+          commissionAmount,
+          commissionStatus: commissionAmount ? 'PENDING' : null,
           paymentMethod: 'CREDIT',
           notes: body.notes,
           createdBy: userId,
@@ -132,6 +159,7 @@ export async function purchaseRoutes(app: FastifyInstance) {
             expiryDate: r.expiryDate,
             quantity: r.quantity,
             purchasePrice: r.purchasePrice,
+            discountPercent: r.discountPercent,
             mrp: r.mrp,
             supplierId: body.supplierId,
             purchaseOrderId: order.id,

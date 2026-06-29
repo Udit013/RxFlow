@@ -3,8 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Search, ChevronDown, Settings, LogOut, Trash2, X, AlertTriangle } from 'lucide-react'
-import { toast } from 'sonner'
+import { Search, ChevronDown, Settings, LogOut } from 'lucide-react'
 import { authService } from '@/lib/auth'
 import { NotificationBell } from '@/components/notification-bell'
 
@@ -12,7 +11,6 @@ export function TopBar() {
   const router = useRouter()
   const [user, setUser] = useState<ReturnType<typeof authService.getStoredUser>>(null)
   const [menuOpen, setMenuOpen] = useState(false)
-  const [showDelete, setShowDelete] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => { setUser(authService.getStoredUser()) }, [])
@@ -32,8 +30,6 @@ export function TopBar() {
     await authService.logout()
     router.push('/login')
   }
-
-  const isAdmin = user?.role === 'TENANT_ADMIN' || user?.role === 'SUPER_ADMIN'
 
   return (
     <header className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between shrink-0">
@@ -92,89 +88,10 @@ export function TopBar() {
                   <LogOut className="w-4 h-4 text-slate-400" /> Sign out
                 </button>
               </div>
-              {isAdmin && (
-                <div className="py-1 border-t border-slate-100">
-                  <button
-                    onClick={() => { setMenuOpen(false); setShowDelete(true) }}
-                    className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-                  >
-                    <Trash2 className="w-4 h-4" /> Delete account
-                  </button>
-                </div>
-              )}
             </div>
           )}
         </div>
       </div>
-
-      {showDelete && (
-        <DeleteAccountModal
-          tenantName={user?.tenant?.name ?? ''}
-          onClose={() => setShowDelete(false)}
-          onDeleted={() => router.push('/login')}
-        />
-      )}
     </header>
-  )
-}
-
-function DeleteAccountModal({ tenantName, onClose, onDeleted }: { tenantName: string; onClose: () => void; onDeleted: () => void }) {
-  const [confirm, setConfirm] = useState('')
-  const [loading, setLoading] = useState(false)
-  const matches = confirm.trim() === tenantName.trim()
-
-  const handleDelete = async () => {
-    if (!matches) return
-    setLoading(true)
-    try {
-      await authService.deleteAccount(confirm)
-      toast.success('Account deleted')
-      onDeleted()
-    } catch (e: any) {
-      toast.error(e.response?.data?.error ?? 'Failed to delete account')
-      setLoading(false)
-    }
-  }
-
-  return (
-    <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-          <h2 className="font-semibold text-red-600 flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4" /> Delete account
-          </h2>
-          <button onClick={onClose}><X className="w-4 h-4 text-slate-400" /></button>
-        </div>
-        <div className="p-5 space-y-4">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-900">
-            This permanently deletes <strong>{tenantName}</strong> and <strong>all</strong> of its data — inventory,
-            invoices, customers, suppliers, staff, accounts, and every other record. This <strong>cannot be undone</strong>.
-          </div>
-          <p className="text-xs text-slate-500">
-            💡 Want a copy first? Cancel and use <strong>Backup &amp; Import → Export</strong> to download everything.
-          </p>
-          <div>
-            <label className="label">Type <span className="font-mono font-semibold">{tenantName}</span> to confirm</label>
-            <input
-              className="input"
-              value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
-              placeholder={tenantName}
-              autoFocus
-            />
-          </div>
-          <div className="flex justify-end gap-2 pt-1">
-            <button onClick={onClose} className="btn-secondary">Cancel</button>
-            <button
-              onClick={handleDelete}
-              disabled={!matches || loading}
-              className="btn-danger"
-            >
-              <Trash2 className="w-4 h-4" /> {loading ? 'Deleting...' : 'Delete forever'}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
   )
 }

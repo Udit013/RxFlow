@@ -20,9 +20,11 @@ interface POLine {
   purchasePrice: number
   mrp: number
   gstRate: number
+  discountPercent: number
 }
 
 interface Supplier { id: string; name: string; companyName: string }
+interface SalesRep { id: string; name: string; defaultCommissionPercent: number }
 interface Medicine { id: string; name: string; strength: string; dosageForm: string; mrp: number; gstRate: number; manufacturerName: string }
 
 export default function NewPurchasePage() {
@@ -33,6 +35,15 @@ export default function NewPurchasePage() {
   const [medQuery, setMedQuery] = useState('')
   const [lines, setLines] = useState<POLine[]>([])
   const [mode, setMode] = useState<'manual' | 'csv'>('manual')
+  const [transportCharge, setTransportCharge] = useState<number>(0)
+  const [salesman, setSalesman] = useState<SalesRep | null>(null)
+  const [commissionPercent, setCommissionPercent] = useState<number>(0)
+
+  const salesRepResults = useQuery({
+    queryKey: ['po-salesreps'],
+    queryFn: () => api.get('/sales-reps', { params: { active: 'true', limit: 50 } }).then((r) => r.data),
+  })
+  const salesReps: SalesRep[] = salesRepResults.data?.data ?? []
 
   useEffect(() => {
     const user = authService.getStoredUser()
@@ -65,6 +76,7 @@ export default function NewPurchasePage() {
         purchasePrice: Number((m.mrp * 0.8).toFixed(2)),
         mrp: m.mrp,
         gstRate: m.gstRate ?? 12,
+        discountPercent: 0,
       },
     ])
     setMedQuery('')
@@ -78,9 +90,11 @@ export default function NewPurchasePage() {
     setLines((prev) => prev.filter((_, i) => i !== idx))
   }
 
-  const subtotal = lines.reduce((s, l) => s + l.quantity * l.purchasePrice, 0)
-  const tax = lines.reduce((s, l) => s + (l.quantity * l.purchasePrice * l.gstRate) / 100, 0)
-  const total = subtotal + tax
+  const lineNet = (l: POLine) => l.quantity * l.purchasePrice * (1 - l.discountPercent / 100)
+  const subtotal = lines.reduce((s, l) => s + lineNet(l), 0)
+  const tax = lines.reduce((s, l) => s + (lineNet(l) * l.gstRate) / 100, 0)
+  const commissionAmount = salesman ? subtotal * commissionPercent / 100 : 0
+  const total = subtotal + tax + (transportCharge || 0)
 
   const submit = useMutation({
     mutationFn: async () => {
@@ -97,11 +111,14 @@ export default function NewPurchasePage() {
         storeId,
         supplierId: supplier.id,
         paymentMethod: 'CREDIT',
+        transportCharge: transportCharge || undefined,
+        salesRepId: salesman?.id,
+        commissionPercent: salesman ? commissionPercent : undefined,
         items: lines.map((l) => ({
           medicineId: l.medicineId,
           quantity: l.quantity,
           unitPrice: l.purchasePrice,
-          discountPercent: 0,
+          discountPercent: l.discountPercent,
           taxRate: l.gstRate,
         })),
       })
@@ -117,6 +134,7 @@ export default function NewPurchasePage() {
             expiryDate: new Date(l.expiryDate).toISOString(),
             quantity: l.quantity,
             purchasePrice: l.purchasePrice,
+            discountPercent: l.discountPercent,
             mrp: l.mrp,
             sellingPrice: l.mrp,
             supplierId: supplier.id,
@@ -174,14 +192,14 @@ export default function NewPurchasePage() {
       {mode === 'csv' ? (
         <CsvImportFlow />
       ) : (
-        <ManualFlow {...{ supplier, setSupplier, supplierSearch, setSupplierSearch, medQuery, setMedQuery, lines, setLines, supplierResults, medicineResults, addLine, updateLine, removeLine, subtotal, tax, total, submit, router }} />
+        <ManualFlow {...{ supplier, setSupplier, supplierSearch, setSupplierSearch, medQuery, setMedQuery, lines, setLines, supplierResults, medicineResults, addLine, updateLine, removeLine, subtotal, tax, total, submit, router, transportCharge, setTransportCharge, salesman, setSalesman, commissionPercent, setCommissionPercent, commissionAmount, salesReps }} />
       )}
     </div>
   )
 }
 
 function ManualFlow(props: any) {
-  const { supplier, setSupplier, supplierSearch, setSupplierSearch, medQuery, setMedQuery, lines, supplierResults, medicineResults, addLine, updateLine, removeLine, subtotal, tax, total, submit, router } = props
+  const { supplier, setSupplier, supplierSearch, setSupplierSearch, medQuery, setMedQuery, lines, supplierResults, medicineResults, addLine, updateLine, removeLine, subtotal, tax, total, submit, router, transportCharge, setTransportCharge, salesman, setSalesman, commissionPercent, setCommissionPercent, commissionAmount, salesReps } = props
   return (
     <>
       {/* Supplier */}
@@ -242,6 +260,7 @@ function ManualFlow(props: any) {
                 <th className="text-left px-2 py-2">Expiry *</th>
                 <th className="text-center px-2 py-2">Qty</th>
                 <th className="text-right px-2 py-2">Buy ₹</th>
+                <th className="text-center px-2 py-2">Disc %</th>
                 <th className="text-right px-2 py-2">MRP</th>
                 <th className="text-center px-2 py-2">GST</th>
                 <th className="text-right px-2 py-2">Line</th>
@@ -267,6 +286,9 @@ function ManualFlow(props: any) {
                   <td className="px-2 py-2">
                     <input type="number" step="0.01" className="w-20 text-right border border-slate-200 rounded px-2 py-1 text-xs" value={l.purchasePrice} onChange={(e) => updateLine(i, { purchasePrice: parseFloat(e.target.value) || 0 })} />
                   </td>
+                  <td className="px-2 py-2 text-center">
+                    <input type="number" step="0.5" min="0" max="100" className="w-14 text-center border border-slate-200 rounded px-2 py-1 text-xs" value={l.discountPercent} onChange={(e) => updateLine(i, { discountPercent: parseFloat(e.target.value) || 0 })} />
+                  </td>
                   <td className="px-2 py-2">
                     <input type="number" step="0.01" className="w-20 text-right border border-slate-200 rounded px-2 py-1 text-xs" value={l.mrp} onChange={(e) => updateLine(i, { mrp: parseFloat(e.target.value) || 0 })} />
                   </td>
@@ -274,7 +296,7 @@ function ManualFlow(props: any) {
                     <input type="number" step="0.5" className="w-14 text-center border border-slate-200 rounded px-2 py-1 text-xs" value={l.gstRate} onChange={(e) => updateLine(i, { gstRate: parseFloat(e.target.value) || 0 })} />
                   </td>
                   <td className="px-2 py-2 text-right text-xs font-medium">
-                    {formatCurrency(l.quantity * l.purchasePrice * (1 + l.gstRate / 100))}
+                    {formatCurrency(l.quantity * l.purchasePrice * (1 - l.discountPercent / 100) * (1 + l.gstRate / 100))}
                   </td>
                   <td className="px-2 py-2">
                     <button onClick={() => removeLine(i)} className="text-slate-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
@@ -283,9 +305,11 @@ function ManualFlow(props: any) {
               ))}
             </tbody>
             <tfoot className="bg-slate-50 text-sm">
-              <tr><td colSpan={7} className="px-3 py-2 text-right text-slate-600">Subtotal</td><td className="px-2 py-2 text-right">{formatCurrency(subtotal)}</td><td/></tr>
-              <tr><td colSpan={7} className="px-3 py-2 text-right text-slate-600">GST</td><td className="px-2 py-2 text-right">{formatCurrency(tax)}</td><td/></tr>
-              <tr className="border-t"><td colSpan={7} className="px-3 py-2 text-right font-bold">Total</td><td className="px-2 py-2 text-right font-bold">{formatCurrency(total)}</td><td/></tr>
+              <tr><td colSpan={8} className="px-3 py-2 text-right text-slate-600">Subtotal (after discount)</td><td className="px-2 py-2 text-right">{formatCurrency(subtotal)}</td><td/></tr>
+              <tr><td colSpan={8} className="px-3 py-2 text-right text-slate-600">GST</td><td className="px-2 py-2 text-right">{formatCurrency(tax)}</td><td/></tr>
+              {transportCharge > 0 && <tr><td colSpan={8} className="px-3 py-2 text-right text-slate-600">Transport</td><td className="px-2 py-2 text-right">{formatCurrency(transportCharge)}</td><td/></tr>}
+              <tr className="border-t"><td colSpan={8} className="px-3 py-2 text-right font-bold">Total</td><td className="px-2 py-2 text-right font-bold">{formatCurrency(total)}</td><td/></tr>
+              {salesman && commissionAmount > 0 && <tr><td colSpan={8} className="px-3 py-1 text-right text-xs text-accent-700">Salesman commission ({commissionPercent}%)</td><td className="px-2 py-1 text-right text-xs text-accent-700">{formatCurrency(commissionAmount)}</td><td/></tr>}
             </tfoot>
           </table>
         )}
@@ -293,6 +317,38 @@ function ManualFlow(props: any) {
         {lines.length === 0 && (
           <p className="text-center text-slate-400 text-sm py-6">Search and add medicines above</p>
         )}
+      </div>
+
+      {/* Costs & Commission */}
+      <div className="card p-5">
+        <h3 className="font-semibold text-slate-900 mb-1">3. Costs &amp; Commission <span className="text-xs font-normal text-surface-400">(optional)</span></h3>
+        <p className="text-xs text-surface-500 mb-3">Transport is added to the bill. Commission is only recorded if a salesman is selected.</p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div>
+            <label className="label">Transportation / Delivery charge (₹)</label>
+            <input type="number" min="0" step="1" className="input" value={transportCharge} onChange={(e) => setTransportCharge(parseFloat(e.target.value) || 0)} placeholder="0" />
+          </div>
+          <div>
+            <label className="label">Purchase salesman</label>
+            <select
+              className="input"
+              value={salesman?.id ?? ''}
+              onChange={(e) => {
+                const r = salesReps.find((s: SalesRep) => s.id === e.target.value) ?? null
+                setSalesman(r)
+                setCommissionPercent(r?.defaultCommissionPercent ?? 0)
+              }}
+            >
+              <option value="">— None (direct, no commission) —</option>
+              {salesReps.map((r: SalesRep) => <option key={r.id} value={r.id}>{r.name} ({r.defaultCommissionPercent}%)</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="label">Commission %</label>
+            <input type="number" min="0" max="100" step="0.5" disabled={!salesman} className="input disabled:bg-surface-50 disabled:text-surface-400" value={commissionPercent} onChange={(e) => setCommissionPercent(Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)))} />
+            {salesman && <p className="help-text mt-1">≈ {formatCurrency(commissionAmount)} on this purchase</p>}
+          </div>
+        </div>
       </div>
 
       <div className="flex items-center justify-between">

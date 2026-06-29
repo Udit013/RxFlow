@@ -2,13 +2,14 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
-import { Users, Search, Plus, Phone, Mail, X } from 'lucide-react'
+import { Users, Plus, Phone, Mail, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { formatCurrency } from '@/lib/utils'
-import { AnimatedSection, PageHeader, SectionCard, EmptyState, SkeletonRow } from '@/components/ui'
+import { AnimatedSection, PageHeader, DataTable, type DataTableColumn } from '@/components/ui'
 
 interface Customer {
   id: string
@@ -35,15 +36,40 @@ interface CustomerForm {
   creditLimit: number
 }
 
+const customerColumns: DataTableColumn<Customer>[] = [
+  {
+    key: 'name', header: 'Name', pinned: true, accessor: (c) => c.name,
+    render: (c) => (
+      <Link href={`/dashboard/customers/${c.id}`} onClick={(e) => e.stopPropagation()} className="font-medium text-surface-900 hover:text-brand-600">
+        {c.name}{c.gstin && <span className="ml-2 badge-info text-[10px] font-mono">B2B</span>}
+      </Link>
+    ),
+  },
+  {
+    key: 'phone', header: 'Contact', accessor: (c) => `${c.phone} ${c.email ?? ''}`,
+    render: (c) => (
+      <div>
+        <div className="flex items-center gap-1.5 text-surface-700"><Phone className="w-3.5 h-3.5 text-surface-400" />{c.phone}</div>
+        {c.email && <div className="flex items-center gap-1.5 text-xs text-surface-500 mt-0.5"><Mail className="w-3 h-3" />{c.email}</div>}
+      </div>
+    ),
+  },
+  { key: 'location', header: 'Location', accessor: (c) => [c.city, c.state].filter(Boolean).join(', '), render: (c) => <span className="text-surface-600">{[c.city, c.state].filter(Boolean).join(', ') || '—'}</span> },
+  {
+    key: 'outstandingBalance', header: 'Outstanding', align: 'right', accessor: (c) => c.outstandingBalance ?? 0,
+    render: (c) => <span className={(c.outstandingBalance ?? 0) > 0 ? 'text-accent-600 font-medium' : 'text-surface-500'}>{formatCurrency(c.outstandingBalance ?? 0)}</span>,
+  },
+  { key: 'totalPurchases', header: 'Total Purchases', align: 'right', accessor: (c) => c.totalPurchases ?? 0, render: (c) => <span className="text-surface-900">{formatCurrency(c.totalPurchases ?? 0)}</span> },
+]
+
 export default function CustomersPage() {
-  const [search, setSearch] = useState('')
   const [showCreate, setShowCreate] = useState(false)
   const queryClient = useQueryClient()
+  const router = useRouter()
 
   const { data, isLoading } = useQuery({
-    queryKey: ['customers', search],
-    queryFn: () =>
-      api.get('/customers', { params: { search: search || undefined, limit: 50 } }).then((r) => r.data),
+    queryKey: ['customers'],
+    queryFn: () => api.get('/customers', { params: { limit: 500 } }).then((r) => r.data),
   })
 
   const customers: Customer[] = data?.data ?? []
@@ -55,7 +81,7 @@ export default function CustomersPage() {
           icon={Users}
           eyebrow="Stakeholders"
           title="Customers"
-          description={`${data?.meta?.total ?? 0} customer${(data?.meta?.total ?? 0) === 1 ? '' : 's'} on file`}
+          description={`${data?.meta?.total ?? customers.length} customer${(data?.meta?.total ?? customers.length) === 1 ? '' : 's'} on file`}
           actions={
             <button className="btn-primary" onClick={() => setShowCreate(true)}>
               <Plus className="w-4 h-4" /> Add Customer
@@ -64,80 +90,19 @@ export default function CustomersPage() {
         />
       </AnimatedSection>
 
-      <AnimatedSection>
-        <div className="card !p-2 flex items-center gap-2">
-          <Search className="w-4 h-4 text-surface-400 ml-1" />
-          <input
-            className="flex-1 text-sm bg-transparent placeholder:text-surface-400 outline-none py-1.5"
-            placeholder="Search by name, phone, email..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          {search && <button onClick={() => setSearch('')} className="text-surface-400 hover:text-surface-700 px-1"><X className="w-3.5 h-3.5" /></button>}
-        </div>
-      </AnimatedSection>
-
-      <AnimatedSection>
-        <SectionCard flush>
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-surface-50/60 border-b border-surface-200/70">
-              <th className="text-left px-4 py-3 text-[10px] font-semibold text-surface-500 uppercase tracking-[0.1em]">Name</th>
-              <th className="text-left px-4 py-3 text-[10px] font-semibold text-surface-500 uppercase tracking-[0.1em]">Contact</th>
-              <th className="text-left px-4 py-3 text-[10px] font-semibold text-surface-500 uppercase tracking-[0.1em]">Location</th>
-              <th className="text-right px-4 py-3 text-[10px] font-semibold text-surface-500 uppercase tracking-[0.1em]">Outstanding</th>
-              <th className="text-right px-4 py-3 text-[10px] font-semibold text-surface-500 uppercase tracking-[0.1em]">Total Purchases</th>
-              <th className="px-4 py-3" />
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-surface-100">
-            {isLoading ? (
-              <SkeletonRow columns={6} rows={6} widths={['40%', '50%', '40%', '30%', '30%', '15%']} />
-            ) : customers.length === 0 ? (
-              <tr>
-                <td colSpan={6}>
-                  <EmptyState
-                    icon={Users}
-                    title={search ? 'No matches' : 'No customers yet'}
-                    description={search ? `Nothing matches "${search}".` : 'Add your first customer to start tracking sales.'}
-                    action={!search && (
-                      <button onClick={() => setShowCreate(true)} className="btn-primary">
-                        <Plus className="w-4 h-4" /> Add Customer
-                      </button>
-                    )}
-                  />
-                </td>
-              </tr>
-            ) : (
-              customers.map((c) => (
-                <tr key={c.id} className="hover:bg-surface-50/60 transition-colors">
-                  <td className="px-4 py-3">
-                    <Link href={`/dashboard/customers/${c.id}`} className="font-medium text-slate-900 hover:text-brand-600">
-                      {c.name}
-                    </Link>
-                    {c.gstin && <span className="ml-2 badge-info text-[10px] font-mono">B2B</span>}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1.5 text-slate-700"><Phone className="w-3.5 h-3.5 text-slate-400" />{c.phone}</div>
-                    {c.email && <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-0.5"><Mail className="w-3 h-3" />{c.email}</div>}
-                  </td>
-                  <td className="px-4 py-3 text-slate-600">{[c.city, c.state].filter(Boolean).join(', ') || '—'}</td>
-                  <td className="px-4 py-3 text-right">
-                    <span className={c.outstandingBalance > 0 ? 'text-amber-600 font-medium' : 'text-slate-500'}>
-                      {formatCurrency(c.outstandingBalance ?? 0)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right text-slate-900">{formatCurrency(c.totalPurchases ?? 0)}</td>
-                  <td className="px-4 py-3 text-right">
-                    <Link href={`/dashboard/customers/${c.id}`} className="text-xs text-brand-600 hover:underline">View</Link>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-        </SectionCard>
-      </AnimatedSection>
+      <DataTable<Customer>
+        data={customers}
+        isLoading={isLoading}
+        rowKey={(c) => c.id}
+        columns={customerColumns}
+        searchPlaceholder="Search by name, phone, email…"
+        exportFileName="rxflow-customers"
+        emptyIcon={Users}
+        emptyTitle="No customers yet"
+        emptyDescription="Add your first customer to start tracking sales."
+        emptyAction={<button onClick={() => setShowCreate(true)} className="btn-primary"><Plus className="w-4 h-4" /> Add Customer</button>}
+        onRowClick={(c) => router.push(`/dashboard/customers/${c.id}`)}
+      />
 
       {showCreate && (
         <CreateCustomerModal

@@ -2,12 +2,14 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
-import { Truck, Search, Plus, Phone, X } from 'lucide-react'
+import { Truck, Plus, Phone, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { formatCurrency } from '@/lib/utils'
+import { DataTable, type DataTableColumn } from '@/components/ui'
 
 interface Supplier {
   id: string
@@ -33,15 +35,41 @@ interface SupplierForm {
   creditDays: number
 }
 
+const supplierColumns: DataTableColumn<Supplier>[] = [
+  {
+    key: 'name', header: 'Supplier', pinned: true, accessor: (s) => `${s.name} ${s.companyName}`,
+    render: (s) => (
+      <Link href={`/dashboard/suppliers/${s.id}`} onClick={(e) => e.stopPropagation()}>
+        <p className="font-medium text-surface-900 hover:text-brand-600">{s.name}</p>
+        <p className="text-xs text-surface-500">{s.companyName}</p>
+      </Link>
+    ),
+  },
+  {
+    key: 'phone', header: 'Contact', accessor: (s) => s.phone,
+    render: (s) => (
+      <div>
+        <div className="flex items-center gap-1.5 text-surface-700"><Phone className="w-3.5 h-3.5 text-surface-400" />{s.phone}</div>
+        {s.email && <p className="text-xs text-surface-500 mt-0.5">{s.email}</p>}
+      </div>
+    ),
+  },
+  { key: 'gstin', header: 'GSTIN', accessor: (s) => s.gstin ?? '', render: (s) => <span className="font-mono text-xs text-surface-600">{s.gstin ?? '—'}</span> },
+  { key: 'creditDays', header: 'Credit Days', align: 'center', accessor: (s) => s.creditDays, render: (s) => `${s.creditDays}d` },
+  {
+    key: 'outstandingBalance', header: 'Outstanding', align: 'right', accessor: (s) => s.outstandingBalance ?? 0,
+    render: (s) => <span className={(s.outstandingBalance ?? 0) > 0 ? 'text-accent-600 font-medium' : 'text-surface-500'}>{formatCurrency(s.outstandingBalance ?? 0)}</span>,
+  },
+]
+
 export default function SuppliersPage() {
-  const [search, setSearch] = useState('')
   const [showCreate, setShowCreate] = useState(false)
   const queryClient = useQueryClient()
+  const router = useRouter()
 
   const { data, isLoading } = useQuery({
-    queryKey: ['suppliers', search],
-    queryFn: () =>
-      api.get('/suppliers', { params: { search: search || undefined, limit: 50 } }).then((r) => r.data),
+    queryKey: ['suppliers'],
+    queryFn: () => api.get('/suppliers', { params: { limit: 500 } }).then((r) => r.data),
   })
 
   const suppliers: Supplier[] = data?.data ?? []
@@ -51,7 +79,7 @@ export default function SuppliersPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Suppliers</h1>
-          <p className="text-sm text-slate-500">{data?.meta?.total ?? 0} suppliers</p>
+          <p className="text-sm text-surface-500">{data?.meta?.total ?? suppliers.length} suppliers</p>
         </div>
         <button className="btn-primary" onClick={() => setShowCreate(true)}>
           <Plus className="w-4 h-4" />
@@ -59,75 +87,19 @@ export default function SuppliersPage() {
         </button>
       </div>
 
-      <div className="card p-3">
-        <div className="flex items-center gap-2">
-          <Search className="w-4 h-4 text-slate-400 ml-1" />
-          <input
-            className="flex-1 text-sm text-slate-700 placeholder:text-slate-400 outline-none"
-            placeholder="Search by name, company, GSTIN, phone..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-      </div>
-
-      <div className="card overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Supplier</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Contact</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">GSTIN</th>
-              <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Credit Days</th>
-              <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Outstanding</th>
-              <th className="px-4 py-3" />
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {isLoading ? (
-              Array.from({ length: 6 }).map((_, i) => (
-                <tr key={i} className="animate-pulse">
-                  {Array.from({ length: 6 }).map((_, j) => (
-                    <td key={j} className="px-4 py-3"><div className="h-4 bg-slate-100 rounded" /></td>
-                  ))}
-                </tr>
-              ))
-            ) : suppliers.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="text-center py-12 text-slate-400">
-                  <Truck className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                  No suppliers yet
-                </td>
-              </tr>
-            ) : (
-              suppliers.map((s) => (
-                <tr key={s.id} className="hover:bg-slate-50">
-                  <td className="px-4 py-3">
-                    <Link href={`/dashboard/suppliers/${s.id}`} className="font-medium text-slate-900 hover:text-brand-600">
-                      {s.name}
-                    </Link>
-                    <p className="text-xs text-slate-500">{s.companyName}</p>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1.5 text-slate-700"><Phone className="w-3.5 h-3.5 text-slate-400" />{s.phone}</div>
-                    {s.email && <p className="text-xs text-slate-500 mt-0.5">{s.email}</p>}
-                  </td>
-                  <td className="px-4 py-3 text-slate-600 font-mono text-xs">{s.gstin ?? '—'}</td>
-                  <td className="px-4 py-3 text-center text-slate-700">{s.creditDays}d</td>
-                  <td className="px-4 py-3 text-right">
-                    <span className={(s.outstandingBalance ?? 0) > 0 ? 'text-amber-600 font-medium' : 'text-slate-500'}>
-                      {formatCurrency(s.outstandingBalance ?? 0)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Link href={`/dashboard/suppliers/${s.id}`} className="text-xs text-brand-600 hover:underline">View</Link>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+      <DataTable<Supplier>
+        data={suppliers}
+        isLoading={isLoading}
+        rowKey={(s) => s.id}
+        columns={supplierColumns}
+        searchPlaceholder="Search by name, company, GSTIN, phone…"
+        exportFileName="rxflow-suppliers"
+        emptyIcon={Truck}
+        emptyTitle="No suppliers yet"
+        emptyDescription="Add your first supplier to track purchases, ledgers, and dues."
+        emptyAction={<button onClick={() => setShowCreate(true)} className="btn-primary"><Plus className="w-4 h-4" /> Add Supplier</button>}
+        onRowClick={(s) => router.push(`/dashboard/suppliers/${s.id}`)}
+      />
 
       {showCreate && (
         <CreateSupplierModal
