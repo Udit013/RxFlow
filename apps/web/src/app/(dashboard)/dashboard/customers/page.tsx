@@ -8,7 +8,7 @@ import { useForm } from 'react-hook-form'
 import { Users, Plus, Phone, Mail, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, optionalNumber } from '@/lib/utils'
 import { AnimatedSection, PageHeader, DataTable, type DataTableColumn } from '@/components/ui'
 
 interface Customer {
@@ -169,7 +169,7 @@ function CreateCustomerModal({ onClose, onCreated }: { onClose: () => void; onCr
           </div>
           <div>
             <label className="label">Credit Limit (₹)</label>
-            <input className="input" type="number" {...register('creditLimit', { valueAsNumber: true })} />
+            <input className="input" type="number" {...register('creditLimit', optionalNumber)} />
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>

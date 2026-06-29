@@ -68,7 +68,7 @@ export default function ForgotPasswordPage() {
           {step === 'request' ? (
             <form onSubmit={requestCode} className="space-y-4">
               <div>
-                <label className="label">Email address</label>
+                <label className="label">Email address *</label>
                 <div className="relative">
                   <Mail className="w-4 h-4 text-surface-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                   <input className="input pl-8" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@pharmacy.com" autoFocus />
@@ -81,14 +81,14 @@ export default function ForgotPasswordPage() {
           ) : (
             <form onSubmit={reset} className="space-y-4">
               <div>
-                <label className="label">6-digit code</label>
+                <label className="label">6-digit code *</label>
                 <div className="relative">
                   <KeyRound className="w-4 h-4 text-surface-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                   <input className="input pl-8 tracking-[0.4em] font-mono" inputMode="numeric" maxLength={6} required value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))} placeholder="000000" autoFocus />
                 </div>
               </div>
               <div>
-                <label className="label">New password</label>
+                <label className="label">New password *</label>
                 <div className="relative">
                   <Lock className="w-4 h-4 text-surface-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                   <input className="input pl-8 pr-9" type={showPw ? 'text' : 'password'} required value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="At least 8 characters" />

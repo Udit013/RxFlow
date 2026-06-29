@@ -138,14 +138,14 @@ export default function LoginPage() {
           {mode === 'password' ? (
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
               <div>
-                <label className="label" htmlFor="email">Email address</label>
+                <label className="label" htmlFor="email">Email address *</label>
                 <input id="email" type="email" className="input" placeholder="you@pharmacy.com" autoComplete="email" {...register('email')} />
                 {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
               </div>
 
               <div>
                 <div className="flex items-center justify-between">
-                  <label className="label" htmlFor="password">Password</label>
+                  <label className="label" htmlFor="password">Password *</label>
                   <Link href="/forgot-password" className="text-xs text-brand-600 hover:underline mb-1">Forgot password?</Link>
                 </div>
                 <div className="relative">

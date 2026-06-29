@@ -207,7 +207,7 @@ function WriteOffModal({ batch, onClose, onDone }: { batch: any; onClose: () => 
           </div>
           <div>
             <label className="label">Reason</label>
-            <select className="input" {...register('reason', { required: true })}>
+            <select className="input" {...register('reason')}>
               <option value="Expired">Expired</option>
               <option value="Damaged">Damaged</option>
               <option value="Lost">Lost</option>

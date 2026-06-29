@@ -8,7 +8,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft, Phone, Mail, MapPin, FileText, Pencil, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { formatCurrency, formatDate, optionalNumber } from '@/lib/utils'
 
 interface SupplierForm {
   name: string
@@ -267,11 +267,11 @@ function EditSupplierModal({ supplier, onClose, onSaved }: { supplier: any; onCl
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="label">Credit Days</label>
-              <input className="input" type="number" {...register('creditDays', { valueAsNumber: true })} />
+              <input className="input" type="number" {...register('creditDays', optionalNumber)} />
             </div>
             <div>
               <label className="label">Credit Limit (₹)</label>
-              <input className="input" type="number" {...register('creditLimit', { valueAsNumber: true })} />
+              <input className="input" type="number" {...register('creditLimit', optionalNumber)} />
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-2">

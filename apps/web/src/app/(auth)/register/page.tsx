@@ -108,7 +108,7 @@ export default function RegisterPage() {
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div>
-              <label className="label">Pharmacy / business name</label>
+              <label className="label">Pharmacy / business name *</label>
               <div className="relative">
                 <Building2 className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input className="input pl-9" placeholder="Sunrise Medical Store" {...register('pharmacyName')} />
@@ -124,7 +124,7 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className="label">Your name</label>
+              <label className="label">Your name *</label>
               <div className="relative">
                 <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input className="input pl-9" placeholder="Dr. Ramesh Kumar" autoComplete="name" {...register('name')} />
@@ -134,7 +134,7 @@ export default function RegisterPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="label">Email</label>
+                <label className="label">Email *</label>
                 <div className="relative">
                   <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input className="input pl-9" type="email" placeholder="you@store.com" autoComplete="email" {...register('email')} />
@@ -142,7 +142,7 @@ export default function RegisterPage() {
                 {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
               </div>
               <div>
-                <label className="label">Phone</label>
+                <label className="label">Phone *</label>
                 <div className="relative">
                   <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input className="input pl-9" placeholder="9876543210" autoComplete="tel" {...register('phone')} />
@@ -152,7 +152,7 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className="label">Password</label>
+              <label className="label">Password *</label>
               <div className="relative">
                 <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input

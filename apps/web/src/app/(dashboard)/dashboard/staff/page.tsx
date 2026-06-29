@@ -10,7 +10,7 @@ import {
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { authService } from '@/lib/auth'
-import { cn, formatCurrency } from '@/lib/utils'
+import { cn, formatCurrency, optionalNumber } from '@/lib/utils'
 import { AnimatedSection, PageHeader, MetricCard, SectionCard, EmptyState, SkeletonRow } from '@/components/ui'
 
 // Roles permitted to view individual salary figures in lists.
@@ -204,9 +204,9 @@ function EmployeeModal({ existing, onClose, onSaved }: { existing?: any; onClose
           </div>
           <div className="grid grid-cols-2 gap-3">
             {salaryType === 'MONTHLY' ? (
-              <div><label className="label">Monthly Salary (₹)</label><input className="input" type="number" {...register('monthlySalary', { valueAsNumber: true })} /></div>
+              <div><label className="label">Monthly Salary (₹)</label><input className="input" type="number" {...register('monthlySalary', optionalNumber)} /></div>
             ) : (
-              <div><label className="label">Daily Rate (₹)</label><input className="input" type="number" {...register('dailyRate', { valueAsNumber: true })} /></div>
+              <div><label className="label">Daily Rate (₹)</label><input className="input" type="number" {...register('dailyRate', optionalNumber)} /></div>
             )}
           </div>
           <div className="pt-2 border-t border-surface-100">

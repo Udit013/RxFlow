@@ -9,7 +9,7 @@ import { ArrowLeft, Phone, Mail, MapPin, CreditCard, Pencil, Trash2, X, Repeat, 
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { authService } from '@/lib/auth'
-import { formatCurrency, formatDate } from '@/lib/utils'
+import { formatCurrency, formatDate, optionalNumber } from '@/lib/utils'
 
 interface CustomerForm {
   name: string
@@ -334,7 +334,7 @@ function EditCustomerModal({ customer, onClose, onSaved }: { customer: any; onCl
           </div>
           <div>
             <label className="label">Credit Limit (₹)</label>
-            <input className="input" type="number" {...register('creditLimit', { valueAsNumber: true })} />
+            <input className="input" type="number" {...register('creditLimit', optionalNumber)} />
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>

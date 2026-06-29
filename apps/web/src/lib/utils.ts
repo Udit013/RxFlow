@@ -11,6 +11,20 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/**
+ * react-hook-form register options for an OPTIONAL number field.
+ * Unlike `valueAsNumber` (which yields NaN → serializes to null and breaks
+ * server-side `.optional()` validation), this maps an empty input to `undefined`
+ * so the field is genuinely optional and the form submits when left blank.
+ */
+export const optionalNumber = {
+  setValueAs: (v: unknown): number | undefined => {
+    if (v === '' || v === null || v === undefined) return undefined
+    const n = Number(v)
+    return Number.isNaN(n) ? undefined : n
+  },
+}
+
 export function formatCurrency(amount: number, currency = 'INR'): string {
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',

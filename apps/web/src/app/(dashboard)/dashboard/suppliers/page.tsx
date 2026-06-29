@@ -8,7 +8,7 @@ import { useForm } from 'react-hook-form'
 import { Truck, Plus, Phone, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, optionalNumber } from '@/lib/utils'
 import { DataTable, type DataTableColumn } from '@/components/ui'
 
 interface Supplier {
@@ -165,7 +165,7 @@ function CreateSupplierModal({ onClose, onCreated }: { onClose: () => void; onCr
             </div>
             <div>
               <label className="label">Credit Days</label>
-              <input className="input" type="number" {...register('creditDays', { valueAsNumber: true })} />
+              <input className="input" type="number" {...register('creditDays', optionalNumber)} />
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-2">
