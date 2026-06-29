@@ -4,21 +4,25 @@ import { prisma } from '@rxflow/db'
 import { authenticate } from '../middleware/auth.js'
 import { getPaginationParams, buildPaginationMeta } from '../utils/pagination.js'
 
+const optStr = (v: unknown) => (v === '' ? undefined : v)
 const createMedicineSchema = z.object({
+  // Required essentials
   name: z.string().min(1),
-  genericName: z.string().min(1),
-  brandName: z.string().min(1),
   manufacturerName: z.string().min(1),
-  dosageForm: z.enum(['TABLET','CAPSULE','SYRUP','INJECTION','CREAM','OINTMENT','DROPS','INHALER','PATCH','SUPPOSITORY','POWDER','SUSPENSION','GEL','LOTION','SPRAY','OTHER']),
-  category: z.string().optional(),
-  strength: z.string().min(1),
+  hsn: z.string().min(1),
+  // Everything else optional — sensible defaults applied on create.
+  genericName: z.preprocess(optStr, z.string().optional()),
+  brandName: z.preprocess(optStr, z.string().optional()),
+  division: z.preprocess(optStr, z.string().optional()),
+  dosageForm: z.enum(['TABLET','CAPSULE','SYRUP','INJECTION','CREAM','OINTMENT','DROPS','INHALER','PATCH','SUPPOSITORY','POWDER','SUSPENSION','GEL','LOTION','SPRAY','OTHER']).default('TABLET'),
+  category: z.preprocess(optStr, z.string().optional()),
+  strength: z.preprocess(optStr, z.string().optional()),
   strengthNumeric: z.number().optional(),
-  strengthUnit: z.string().optional(),
-  packSize: z.string().min(1),
+  strengthUnit: z.preprocess(optStr, z.string().optional()),
+  packSize: z.preprocess(optStr, z.string().optional()),
   packSizeNumeric: z.number().int().optional(),
   packUnit: z.string().default('tablets'),
-  mrp: z.number().positive(),
-  hsn: z.string().min(1),
+  mrp: z.number().min(0).optional(),
   gstRate: z.number().default(12),
   schedule: z.enum(['OTC','SCHEDULE_H','SCHEDULE_H1','SCHEDULE_X','SCHEDULE_G']).default('OTC'),
   requiresPrescription: z.boolean().default(false),
@@ -130,6 +134,12 @@ export async function medicineRoutes(app: FastifyInstance) {
     const medicine = await prisma.medicine.create({
       data: {
         ...body,
+        // Fill DB-required columns the form may leave blank, derived from essentials.
+        genericName: body.genericName || body.name,
+        brandName: body.brandName || body.name,
+        strength: body.strength || 'NA',
+        packSize: body.packSize || body.packing || '1',
+        mrp: body.mrp ?? 0,
         isVerified: false,
       },
     })
@@ -195,14 +205,14 @@ export async function medicineRoutes(app: FastifyInstance) {
         await prisma.medicine.create({
           data: {
             name: m.name,
-            genericName: m.genericName,
-            brandName: m.brandName,
+            genericName: m.genericName || m.name,
+            brandName: m.brandName || m.name,
             manufacturerName: m.manufacturerName,
             dosageForm: m.dosageForm,
-            strength: m.strength,
-            packSize: m.packSize,
+            strength: m.strength || 'NA',
+            packSize: m.packSize || m.packing || '1',
             packUnit: m.packUnit ?? 'tablets',
-            mrp: m.mrp,
+            mrp: m.mrp ?? 0,
             hsn: m.hsn,
             gstRate: m.gstRate ?? 12,
             schedule: m.schedule ?? 'OTC',

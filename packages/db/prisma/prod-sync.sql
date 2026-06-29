@@ -481,3 +481,7 @@ ALTER TABLE "Batch" ADD COLUMN IF NOT EXISTS "discountPercent" DOUBLE PRECISION 
 -- ─── 2026-06-29-supplier-gst-type.sql ───────────────────────────────────────────
 -- Supplier GST registration type (Regular / Composite / Non-GST)
 ALTER TABLE "Supplier" ADD COLUMN IF NOT EXISTS "gstRegistrationType" TEXT DEFAULT 'REGULAR';
+
+-- ─── 2026-06-29-medicine-division.sql ───────────────────────────────────────────
+-- Medicine division (marketing division within a manufacturer)
+ALTER TABLE "Medicine" ADD COLUMN IF NOT EXISTS "division" TEXT;

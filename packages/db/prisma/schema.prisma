@@ -380,6 +380,7 @@ model Medicine {
   fastSearchName       String?
   description          String?
   composition          String?
+  division             String?
   // Units & packaging
   packing              String?
   primaryUnit          String       @default("PCS")
