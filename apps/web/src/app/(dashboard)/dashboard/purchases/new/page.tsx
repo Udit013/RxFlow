@@ -9,6 +9,7 @@ import { api } from '@/lib/api'
 import { authService } from '@/lib/auth'
 import { cn, formatCurrency } from '@/lib/utils'
 import { CsvImportFlow } from '@/components/purchases/csv-import-flow'
+import { SmartCsvImport } from '@/components/purchases/smart-csv-import'
 
 interface POLine {
   medicineId: string
@@ -35,6 +36,7 @@ export default function NewPurchasePage() {
   const [medQuery, setMedQuery] = useState('')
   const [lines, setLines] = useState<POLine[]>([])
   const [mode, setMode] = useState<'manual' | 'csv'>('manual')
+  const [csvMode, setCsvMode] = useState<'smart' | 'generic'>('smart')
   const [transportCharge, setTransportCharge] = useState<number>(0)
   const [salesman, setSalesman] = useState<SalesRep | null>(null)
   const [commissionPercent, setCommissionPercent] = useState<number>(0)
@@ -190,7 +192,9 @@ export default function NewPurchasePage() {
       </div>
 
       {mode === 'csv' ? (
-        <CsvImportFlow />
+        csvMode === 'smart'
+          ? <SmartCsvImport onUseGenericMapper={() => setCsvMode('generic')} />
+          : <CsvImportFlow />
       ) : (
         <ManualFlow {...{ supplier, setSupplier, supplierSearch, setSupplierSearch, medQuery, setMedQuery, lines, setLines, supplierResults, medicineResults, addLine, updateLine, removeLine, subtotal, tax, total, submit, router, transportCharge, setTransportCharge, salesman, setSalesman, commissionPercent, setCommissionPercent, commissionAmount, salesReps }} />
       )}
