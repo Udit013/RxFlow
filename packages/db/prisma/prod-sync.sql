@@ -477,3 +477,7 @@ CREATE INDEX IF NOT EXISTS "OtpToken_expiresAt_idx" ON "OtpToken"("expiresAt");
 ALTER TABLE "Order" ADD COLUMN IF NOT EXISTS "transportCharge" DOUBLE PRECISION DEFAULT 0;
 ALTER TABLE "Order" ADD COLUMN IF NOT EXISTS "purchaseDiscountPercent" DOUBLE PRECISION;
 ALTER TABLE "Batch" ADD COLUMN IF NOT EXISTS "discountPercent" DOUBLE PRECISION NOT NULL DEFAULT 0;
+
+-- ─── 2026-06-29-supplier-gst-type.sql ───────────────────────────────────────────
+-- Supplier GST registration type (Regular / Composite / Non-GST)
+ALTER TABLE "Supplier" ADD COLUMN IF NOT EXISTS "gstRegistrationType" TEXT DEFAULT 'REGULAR';

@@ -196,7 +196,8 @@ export async function purchaseRoutes(app: FastifyInstance) {
   // POST /api/v1/purchases/match-medicines — bulk fuzzy-match medicine names from CSV
   // Body: { names: string[] } → returns [{ input, candidates: [{ id, name, score }] }]
   app.post('/match-medicines', { preHandler: [authenticate] }, async (request, reply) => {
-    const body = z.object({ names: z.array(z.string().min(1)).max(500) }).parse(request.body)
+    // Tolerant: allow blank cells (footer rows) and large invoices; results stay 1:1 with input order.
+    const body = z.object({ names: z.array(z.string()).max(2000) }).parse(request.body)
 
     const allMedicines = await prisma.medicine.findMany({
       where: { isActive: true },
@@ -231,6 +232,7 @@ export async function purchaseRoutes(app: FastifyInstance) {
 
     const results = body.names.map((input) => {
       const q = normalize(input)
+      if (!q) return { input, candidates: [] } // blank cell → no match (avoids matching everything)
       const ranked = indexed
         .map((m) => ({ medicine: m, score: scoreMatch(q, m._idx) }))
         .filter((r) => r.score > 0.4)

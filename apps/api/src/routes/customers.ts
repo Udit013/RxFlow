@@ -8,8 +8,8 @@ import { audit } from '../utils/audit.js'
 const customerSchema = z.object({
   name: z.string().min(1),
   phone: z.string().min(10),
-  email: z.string().email().optional(),
-  dateOfBirth: z.string().transform((d) => new Date(d)).optional(),
+  email: z.preprocess((v) => (v === '' ? undefined : v), z.string().email().optional()),
+  dateOfBirth: z.preprocess((v) => (v === '' ? undefined : v), z.string().transform((d) => new Date(d)).optional()),
   addressLine1: z.string().optional(),
   city: z.string().optional(),
   state: z.string().optional(),

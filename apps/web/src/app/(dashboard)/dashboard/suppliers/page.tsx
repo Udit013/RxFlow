@@ -30,6 +30,7 @@ interface SupplierForm {
   phone: string
   email?: string
   gstin?: string
+  gstRegistrationType: 'REGULAR' | 'COMPOSITE' | 'NON_GST'
   city?: string
   state?: string
   creditDays: number
@@ -115,9 +116,10 @@ export default function SuppliersPage() {
 }
 
 function CreateSupplierModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
-  const { register, handleSubmit, formState: { errors } } = useForm<SupplierForm>({
-    defaultValues: { creditDays: 30 },
+  const { register, handleSubmit, watch, formState: { errors } } = useForm<SupplierForm>({
+    defaultValues: { creditDays: 30, gstRegistrationType: 'REGULAR' },
   })
+  const gstType = watch('gstRegistrationType')
 
   const mutation = useMutation({
     mutationFn: (data: SupplierForm) => api.post('/suppliers', data),
@@ -152,11 +154,21 @@ function CreateSupplierModal({ onClose, onCreated }: { onClose: () => void; onCr
           </div>
           <div>
             <label className="label">Email</label>
-            <input className="input" type="email" {...register('email')} />
+            <input className="input" type="email" {...register('email')} placeholder="optional" />
           </div>
-          <div>
-            <label className="label">GSTIN</label>
-            <input className="input" {...register('gstin')} placeholder="27AAACR5055K1ZV" />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">GST Registration</label>
+              <select className="input" {...register('gstRegistrationType')}>
+                <option value="REGULAR">Regular</option>
+                <option value="COMPOSITE">Composite</option>
+                <option value="NON_GST">Non-GST</option>
+              </select>
+            </div>
+            <div>
+              <label className="label">GSTIN{gstType !== 'NON_GST' ? '' : ' (n/a)'}</label>
+              <input className="input" disabled={gstType === 'NON_GST'} {...register('gstin')} placeholder="27AAACR5055K1ZV" />
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>

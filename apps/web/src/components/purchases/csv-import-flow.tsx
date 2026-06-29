@@ -103,6 +103,8 @@ export function CsvImportFlow() {
   const [resolved, setResolved] = useState<ResolvedRow[]>([])
   const [isMatching, setIsMatching] = useState(false)
   const [presetApplied, setPresetApplied] = useState(false)
+  const [skipFirstRow, setSkipFirstRow] = useState(false)
+  const [lastFile, setLastFile] = useState<File | null>(null)
 
   useEffect(() => {
     const u = authService.getStoredUser()
@@ -160,10 +162,15 @@ export function CsvImportFlow() {
     },
   })
 
-  function handleFile(file: File) {
+  function handleFile(file: File, skipFirst = skipFirstRow) {
+    setLastFile(file)
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
+      // Drop an extra leading row (e.g. a title/garbage line) before header detection.
+      beforeFirstChunk: skipFirst
+        ? (chunk) => { const i = chunk.indexOf('\n'); return i >= 0 ? chunk.slice(i + 1) : chunk }
+        : undefined,
       complete: (results) => {
         const rows = (results.data as CsvRow[]).filter((r) => Object.values(r).some((v) => String(v).trim() !== ''))
         if (rows.length === 0) {
@@ -334,7 +341,17 @@ export function CsvImportFlow() {
           </div>
 
           <div className="card p-5">
-            <h3 className="font-semibold mb-3">2. Upload supplier CSV</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold">2. Upload supplier CSV</h3>
+              <label className="flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={skipFirstRow}
+                  onChange={(e) => { setSkipFirstRow(e.target.checked); if (lastFile) handleFile(lastFile, e.target.checked) }}
+                />
+                Skip first row (extra title/header line)
+              </label>
+            </div>
             <label className={cn(
               'border-2 border-dashed border-slate-300 rounded-xl p-10 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-brand-400 hover:bg-brand-50 transition-colors',
               !supplier && 'opacity-50 pointer-events-none'

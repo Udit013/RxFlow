@@ -5,15 +5,19 @@ import { authenticate } from '../middleware/auth.js'
 import { getPaginationParams, buildPaginationMeta } from '../utils/pagination.js'
 import { audit } from '../utils/audit.js'
 
+const emptyToUndefined = (v: unknown) => (v === '' ? undefined : v)
+
 const supplierSchema = z.object({
   name: z.string().min(1),
   companyName: z.string().min(1),
-  gstin: z.string().optional(),
-  panNumber: z.string().optional(),
-  drugLicenseNumber: z.string().optional(),
-  drugLicenseExpiryDate: z.string().transform((s) => new Date(s)).optional(),
+  gstin: z.preprocess(emptyToUndefined, z.string().optional()),
+  // GST registration type: REGULAR (has GSTIN), COMPOSITE (composition scheme), NON_GST (unregistered)
+  gstRegistrationType: z.enum(['REGULAR', 'COMPOSITE', 'NON_GST']).optional(),
+  panNumber: z.preprocess(emptyToUndefined, z.string().optional()),
+  drugLicenseNumber: z.preprocess(emptyToUndefined, z.string().optional()),
+  drugLicenseExpiryDate: z.preprocess(emptyToUndefined, z.string().transform((s) => new Date(s)).optional()),
   phone: z.string().min(10),
-  email: z.string().email().optional(),
+  email: z.preprocess(emptyToUndefined, z.string().email().optional()),
   addressLine1: z.string().optional(),
   city: z.string().optional(),
   state: z.string().optional(),

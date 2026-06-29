@@ -131,6 +131,16 @@ export function LiveSync() {
 
 function LiveSyncBadge({ status, lastEventAt }: { status: 'connecting' | 'live' | 'offline'; lastEventAt: Date | null }) {
   const [tick, setTick] = useState(0)
+  // Track real browser connectivity separately from the live-sync (SSE) channel.
+  const [browserOnline, setBrowserOnline] = useState(true)
+  useEffect(() => {
+    setBrowserOnline(navigator.onLine)
+    const on = () => setBrowserOnline(true)
+    const off = () => setBrowserOnline(false)
+    window.addEventListener('online', on)
+    window.addEventListener('offline', off)
+    return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off) }
+  }, [])
   useEffect(() => {
     if (!lastEventAt) return
     const t = setInterval(() => setTick((n) => n + 1), 1000)
@@ -138,10 +148,13 @@ function LiveSyncBadge({ status, lastEventAt }: { status: 'connecting' | 'live' 
   }, [lastEventAt])
 
   let label = 'Connecting…'
-  let color = 'text-slate-400'
+  let color = 'text-surface-400'
   let Icon = WifiOff
-  if (status === 'live') { label = 'Live'; color = 'text-green-600'; Icon = Wifi }
-  if (status === 'offline') { label = 'Offline'; color = 'text-amber-600'; Icon = WifiOff }
+  if (status === 'live') { label = 'Live'; color = 'text-secondary-600'; Icon = Wifi }
+  // SSE down but the browser is online → live-sync is just paused; don't alarm the user.
+  else if (status === 'offline' && browserOnline) { label = 'Sync paused'; color = 'text-surface-400'; Icon = WifiOff }
+  // Truly offline (no network) → real warning.
+  else if (!browserOnline) { label = 'Offline'; color = 'text-accent-600'; Icon = WifiOff }
 
   const sinceLast = lastEventAt ? Math.floor((Date.now() - lastEventAt.getTime()) / 1000) : null
 
