@@ -60,6 +60,9 @@ export function SmartCsvImport({ onUseGenericMapper }: { onUseGenericMapper?: ()
   const [rows, setRows] = useState<PreviewRow[]>([])
   const [matching, setMatching] = useState(false)
   const [summary, setSummary] = useState<{ imported: number; skipped: number; failed: number } | null>(null)
+  const [addCommission, setAddCommission] = useState(false)
+  const [salesRepId, setSalesRepId] = useState('')
+  const [commissionPercent, setCommissionPercent] = useState(0)
   const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -73,6 +76,12 @@ export function SmartCsvImport({ onUseGenericMapper }: { onUseGenericMapper?: ()
     queryFn: () => api.get('/suppliers', { params: { search: supplierSearch, limit: 5 } }).then((r) => r.data),
     enabled: supplierSearch.length >= 2 && !supplier,
   })
+
+  const salesRepsQuery = useQuery({
+    queryKey: ['smartimp-reps'],
+    queryFn: () => api.get('/sales-reps', { params: { active: 'true', limit: 50 } }).then((r) => r.data),
+  })
+  const salesReps: { id: string; name: string; defaultCommissionPercent: number }[] = salesRepsQuery.data?.data ?? []
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -196,6 +205,8 @@ export function SmartCsvImport({ onUseGenericMapper }: { onUseGenericMapper?: ()
         supplierId: supplier.id,
         storeId,
         notes: fileName ? `Imported from ${fileName}` : undefined,
+        salesRepId: addCommission && salesRepId ? salesRepId : undefined,
+        commissionPercent: addCommission && salesRepId ? commissionPercent : undefined,
         rows: resolved,
       })
       return {
@@ -362,6 +373,30 @@ export function SmartCsvImport({ onUseGenericMapper }: { onUseGenericMapper?: ()
           {totals.errored > 0 && (
             <p className="text-xs text-accent-700 flex items-center gap-1.5"><AlertTriangle className="w-3.5 h-3.5" /> {totals.errored} row(s) have issues — fix them or set to Skip. Only valid rows import.</p>
           )}
+
+          {/* Optional salesman commission for this bill */}
+          <div className="border border-surface-200 rounded-lg p-3">
+            <label className="flex items-center gap-2 text-sm font-medium cursor-pointer">
+              <input type="checkbox" checked={addCommission} onChange={(e) => setAddCommission(e.target.checked)} />
+              Add salesman&apos;s commission for this bill?
+            </label>
+            {addCommission && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                <div>
+                  <label className="label">Salesman</label>
+                  <select className="input" value={salesRepId} onChange={(e) => { setSalesRepId(e.target.value); const r = salesReps.find((s) => s.id === e.target.value); setCommissionPercent(r?.defaultCommissionPercent ?? 0) }}>
+                    <option value="">— select —</option>
+                    {salesReps.map((r) => <option key={r.id} value={r.id}>{r.name} ({r.defaultCommissionPercent}%)</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="label">Commission %</label>
+                  <input type="number" min="0" max="100" step="0.5" className="input" value={commissionPercent} onChange={(e) => setCommissionPercent(Math.max(0, Math.min(100, parseFloat(e.target.value) || 0)))} disabled={!salesRepId} />
+                  {salesRepId && <p className="help-text mt-1">≈ {formatCurrency(totals.value * commissionPercent / 100)} on this purchase</p>}
+                </div>
+              </div>
+            )}
+          </div>
 
           <div className="flex justify-end gap-2 pt-1">
             <button onClick={() => importMut.mutate()} disabled={importMut.isPending || totals.active === 0} className="btn-primary">

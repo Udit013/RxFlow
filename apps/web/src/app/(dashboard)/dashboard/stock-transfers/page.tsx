@@ -47,6 +47,37 @@ export default function StockTransfersPage() {
         </button>
       </div>
 
+      <details className="card p-4 group" open>
+        <summary className="cursor-pointer font-medium text-surface-800 flex items-center gap-2 list-none">
+          <ArrowLeftRight className="w-4 h-4 text-brand-600" />
+          What is a Stock Transfer, and when do I use it?
+          <span className="ml-auto text-xs text-surface-400 group-open:hidden">show</span>
+          <span className="ml-auto text-xs text-surface-400 hidden group-open:inline">hide</span>
+        </summary>
+        <div className="mt-3 text-sm text-surface-600 space-y-3">
+          <p><strong className="text-surface-800">What it is:</strong> moving existing stock from one of your stores/branches to another. It does not change your total stock — it just relocates it. Use it when you have multiple stores and one branch needs units that another branch has spare.</p>
+          <div>
+            <strong className="text-surface-800">When to use it</strong>
+            <ul className="list-disc ml-5 mt-1 space-y-0.5">
+              <li>A branch is low/out of a medicine that another branch has surplus of.</li>
+              <li>Consolidating near-expiry stock to a high-traffic store to sell it faster.</li>
+              <li>Rebalancing after a bulk purchase delivered to one location.</li>
+            </ul>
+            <p className="mt-1 text-2xs text-surface-500">Not for: receiving new stock from a supplier (use <Link href="/dashboard/purchases/new" className="text-brand-600 hover:underline">New Purchase</Link>) or writing off damaged stock (use Inventory → write-off).</p>
+          </div>
+          <div>
+            <strong className="text-surface-800">Steps</strong>
+            <ol className="list-decimal ml-5 mt-1 space-y-0.5">
+              <li>Click <strong>New Transfer</strong>.</li>
+              <li>Choose the <strong>source</strong> store (sending) and <strong>destination</strong> store (receiving).</li>
+              <li>Add the medicines and quantities to move.</li>
+              <li>Confirm — the transfer is logged with a full audit trail.</li>
+            </ol>
+          </div>
+          <p><strong className="text-surface-800">How inventory updates:</strong> on confirmation the quantity is <strong>deducted</strong> from the source store and <strong>added</strong> to the destination store, batch-by-batch (expiry and batch numbers are preserved). Both stores' stock levels update immediately; your company-wide total is unchanged.</p>
+        </div>
+      </details>
+
       {!canTransfer && (
         <div className="card p-4 bg-amber-50 border-amber-200 text-sm text-amber-900">
           You currently have one store. Stock transfers require at least two stores. Add another store from{' '}
