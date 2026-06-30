@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useMutation, useQuery } from '@tanstack/react-query'
-import { Trash2, Search, PackagePlus, Save, Edit3, FileSpreadsheet } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Trash2, Search, PackagePlus, Save, Edit3, FileSpreadsheet, Clock, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { authService } from '@/lib/auth'
-import { cn, formatCurrency } from '@/lib/utils'
+import { cn, formatCurrency, formatDate } from '@/lib/utils'
 import { CsvImportFlow } from '@/components/purchases/csv-import-flow'
 import { SmartCsvImport } from '@/components/purchases/smart-csv-import'
 
@@ -191,6 +191,8 @@ export default function NewPurchasePage() {
         </button>
       </div>
 
+      {supplier && storeId && <TemporaryPurchaseBanner supplier={supplier} storeId={storeId} onConverted={(orderId: string) => router.push(`/dashboard/orders/${orderId}`)} />}
+
       {mode === 'csv' ? (
         csvMode === 'smart'
           ? <SmartCsvImport onUseGenericMapper={() => setCsvMode('generic')} />
@@ -371,6 +373,92 @@ function ManualFlow(props: any) {
           {submit.isPending ? 'Saving...' : `Save Purchase (${formatCurrency(total)})`}
         </button>
       </div>
+    </>
+  )
+}
+
+// ── Temporary purchase → bill conversion ──────────────────────────────────────
+
+interface TempItem {
+  id: string; medicineId: string; medicineName: string; strength: string; gstRate: number
+  batchNumber: string; expiryDate: string; quantity: number; purchasePrice: number; mrp: number
+}
+
+function TemporaryPurchaseBanner({ supplier, storeId, onConverted }: { supplier: { id: string; name: string }; storeId: string; onConverted: (orderId: string) => void }) {
+  const queryClient = useQueryClient()
+  const [open, setOpen] = useState(false)
+  const [prices, setPrices] = useState<Record<string, number>>({})
+
+  const { data } = useQuery({
+    queryKey: ['temp-purchases', supplier.id],
+    queryFn: () => api.get('/inventory/temporary', { params: { supplierId: supplier.id } }).then((r) => r.data),
+  })
+  const items: TempItem[] = data?.data ?? []
+
+  const convert = useMutation({
+    mutationFn: () => api.post('/inventory/temporary/convert', {
+      supplierId: supplier.id,
+      storeId,
+      items: items.map((it) => ({ batchId: it.id, purchasePrice: prices[it.id] ?? it.purchasePrice ?? 0 })),
+    }),
+    onSuccess: (res) => {
+      toast.success(`Converted ${res.data.data.convertedCount} item(s) into ${res.data.data.orderNumber}`)
+      queryClient.invalidateQueries({ queryKey: ['temp-purchases'] })
+      queryClient.invalidateQueries({ queryKey: ['inventory'] })
+      onConverted(res.data.data.orderId)
+    },
+    onError: (e: any) => toast.error(e.response?.data?.error ?? 'Failed to convert'),
+  })
+
+  if (items.length === 0) return null
+
+  return (
+    <>
+      <div className="card p-3 bg-accent-50 border-accent-200 flex items-center justify-between gap-3">
+        <p className="text-sm text-surface-700 flex items-center gap-2">
+          <Clock className="w-4 h-4 text-accent-600" />
+          <span><strong className="text-surface-900">{items.length}</strong> temporary purchase item(s) pending for <strong>{supplier.name}</strong>. Convert them into this bill instead of re-entering.</span>
+        </p>
+        <button onClick={() => setOpen(true)} className="btn-accent shrink-0">Convert to bill</button>
+      </div>
+
+      {open && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-elevated w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-surface-200 sticky top-0 bg-white">
+              <div>
+                <h2 className="font-semibold text-surface-900">Convert temporary purchases — {supplier.name}</h2>
+                <p className="text-2xs text-surface-500">Enter the invoiced purchase price for each item. Stock is already in inventory; this only records the bill.</p>
+              </div>
+              <button onClick={() => setOpen(false)}><X className="w-4 h-4 text-surface-400" /></button>
+            </div>
+            <div className="p-5">
+              <table className="w-full text-sm">
+                <thead className="bg-surface-50 text-2xs uppercase text-surface-500">
+                  <tr><th className="text-left px-2 py-2">Item</th><th className="text-center px-2 py-2">Qty</th><th className="text-right px-2 py-2">Purchase Price</th><th className="text-right px-2 py-2">Line</th></tr>
+                </thead>
+                <tbody className="divide-y divide-surface-100">
+                  {items.map((it) => {
+                    const price = prices[it.id] ?? it.purchasePrice ?? 0
+                    return (
+                      <tr key={it.id}>
+                        <td className="px-2 py-2"><p className="font-medium text-xs">{it.medicineName}</p><p className="text-2xs text-surface-500">{it.strength} · Batch {it.batchNumber} · exp {formatDate(it.expiryDate)}</p></td>
+                        <td className="px-2 py-2 text-center">{it.quantity}</td>
+                        <td className="px-2 py-2 text-right"><input type="number" step="0.01" className="w-24 text-right border border-surface-300 rounded px-2 py-1" value={price} onChange={(e) => setPrices((p) => ({ ...p, [it.id]: parseFloat(e.target.value) || 0 }))} /></td>
+                        <td className="px-2 py-2 text-right">{formatCurrency(it.quantity * price)}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+              <div className="flex justify-end gap-2 pt-4">
+                <button onClick={() => setOpen(false)} className="btn-secondary">Cancel</button>
+                <button onClick={() => convert.mutate()} disabled={convert.isPending} className="btn-primary">{convert.isPending ? 'Converting…' : 'Convert to Purchase Bill'}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }

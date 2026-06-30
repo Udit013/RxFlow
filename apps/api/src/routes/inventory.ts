@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '@rxflow/db'
 import { authenticate } from '../middleware/auth.js'
 import { getPaginationParams, buildPaginationMeta } from '../utils/pagination.js'
+import { getFinancialYear, getFinancialYearBounds, formatFyNumber } from '../utils/financial-year.js'
 import { audit } from '../utils/audit.js'
 
 const addBatchSchema = z.object({
@@ -11,12 +12,14 @@ const addBatchSchema = z.object({
   expiryDate: z.string().transform((d) => new Date(d)),
   manufacturingDate: z.string().transform((d) => new Date(d)).optional(),
   quantity: z.number().int().positive(),
-  purchasePrice: z.number().positive(),
+  // Optional for temporary purchases (price unknown until the invoice arrives)
+  purchasePrice: z.number().min(0).optional(),
   discountPercent: z.number().min(0).max(100).optional(),
   mrp: z.number().positive(),
   supplierId: z.string().optional(),
   purchaseOrderId: z.string().optional(),
   sellingPrice: z.number().positive().optional(),
+  isTemporary: z.boolean().optional(),
 })
 
 const updateStockSchema = z.object({
@@ -134,6 +137,11 @@ export async function inventoryRoutes(app: FastifyInstance) {
     const body = addBatchSchema.parse(request.body)
     const storeId = (request.query as { storeId?: string }).storeId ?? request.user.storeIds[0]
 
+    // A temporary purchase (goods received before invoice) must name the supplier.
+    if (body.isTemporary && !body.supplierId) {
+      return reply.status(400).send({ success: false, error: 'A supplier is required for a temporary purchase' })
+    }
+
     const result = await prisma.$transaction(async (tx) => {
       // Find or create inventory item
       let inventoryItem = await tx.inventoryItem.findUnique({
@@ -164,11 +172,12 @@ export async function inventoryRoutes(app: FastifyInstance) {
           expiryDate: body.expiryDate,
           manufacturingDate: body.manufacturingDate,
           quantity: body.quantity,
-          purchasePrice: body.purchasePrice,
+          purchasePrice: body.purchasePrice ?? 0,
           discountPercent: body.discountPercent ?? 0,
           mrp: body.mrp,
           supplierId: body.supplierId,
           purchaseOrderId: body.purchaseOrderId,
+          isTemporary: body.isTemporary ?? false,
         },
       })
 
@@ -194,6 +203,101 @@ export async function inventoryRoutes(app: FastifyInstance) {
     })
 
     return reply.status(201).send({ success: true, data: result })
+  })
+
+  // GET /api/v1/inventory/temporary?supplierId= — pending temporary purchases
+  app.get('/temporary', { preHandler: [authenticate] }, async (request, reply) => {
+    const { tenantId } = request.user
+    const { supplierId } = request.query as { supplierId?: string }
+    const batches = await prisma.batch.findMany({
+      where: {
+        isTemporary: true,
+        ...(supplierId && { supplierId }),
+        inventoryItem: { tenantId },
+      },
+      include: { inventoryItem: { include: { medicine: { select: { id: true, name: true, strength: true, gstRate: true } } } } },
+      orderBy: { createdAt: 'desc' },
+    })
+    const data = batches.map((b) => ({
+      id: b.id,
+      medicineId: b.inventoryItem.medicineId,
+      medicineName: b.inventoryItem.medicine.name,
+      strength: b.inventoryItem.medicine.strength,
+      gstRate: b.inventoryItem.medicine.gstRate,
+      batchNumber: b.batchNumber,
+      expiryDate: b.expiryDate,
+      quantity: b.quantity,
+      purchasePrice: b.purchasePrice,
+      mrp: b.mrp,
+      supplierId: b.supplierId,
+    }))
+    return reply.send({ success: true, data })
+  })
+
+  // POST /api/v1/inventory/temporary/convert — turn temp batches into a real purchase bill.
+  // Does NOT re-add stock (already in inventory); just records prices + a PURCHASE order.
+  app.post('/temporary/convert', { preHandler: [authenticate] }, async (request, reply) => {
+    const { tenantId, userId } = request.user
+    const body = z.object({
+      supplierId: z.string(),
+      storeId: z.string(),
+      items: z.array(z.object({ batchId: z.string(), purchasePrice: z.number().min(0) })).min(1),
+    }).parse(request.body)
+
+    const batches = await prisma.batch.findMany({
+      where: { id: { in: body.items.map((i) => i.batchId) }, isTemporary: true, inventoryItem: { tenantId } },
+      include: { inventoryItem: { include: { medicine: { select: { id: true, gstRate: true } } } } },
+    })
+    if (batches.length === 0) return reply.status(400).send({ success: false, error: 'No matching temporary purchases found' })
+
+    const priceById = new Map(body.items.map((i) => [i.batchId, i.purchasePrice]))
+    let subtotal = 0, taxAmount = 0
+    for (const b of batches) {
+      const price = priceById.get(b.id) ?? b.purchasePrice
+      const line = b.quantity * price
+      subtotal += line
+      taxAmount += (line * b.inventoryItem.medicine.gstRate) / 100
+    }
+    const total = subtotal + taxAmount
+
+    const fy = getFinancialYear()
+    const { from, to } = getFinancialYearBounds()
+    const seq = await prisma.order.count({ where: { tenantId, type: 'PURCHASE', createdAt: { gte: from, lt: to } } })
+    const orderNumber = formatFyNumber('PO', fy.label, seq + 1)
+
+    const order = await prisma.$transaction(async (tx) => {
+      const o = await tx.order.create({
+        data: {
+          orderNumber, tenantId, storeId: body.storeId, type: 'PURCHASE', status: 'CONFIRMED',
+          supplierId: body.supplierId, subtotal, taxAmount, total, paymentMethod: 'CREDIT',
+          notes: 'Converted from temporary purchase', createdBy: userId,
+          items: {
+            create: batches.map((b) => {
+              const price = priceById.get(b.id) ?? b.purchasePrice
+              return {
+                medicineId: b.inventoryItem.medicine.id, quantity: b.quantity, unitPrice: price,
+                discountPercent: 0, taxRate: b.inventoryItem.medicine.gstRate,
+                taxAmount: (b.quantity * price * b.inventoryItem.medicine.gstRate) / 100,
+                total: b.quantity * price * (1 + b.inventoryItem.medicine.gstRate / 100),
+              }
+            }),
+          },
+        },
+      })
+      // Stamp prices + clear temporary flag (stock already counted — do NOT re-add)
+      for (const b of batches) {
+        await tx.batch.update({ where: { id: b.id }, data: { purchasePrice: priceById.get(b.id) ?? b.purchasePrice, isTemporary: false, purchaseOrderId: o.id } })
+      }
+      await tx.supplier.update({ where: { id: body.supplierId }, data: { totalPurchases: { increment: total } } })
+      return o
+    })
+
+    await audit(request, {
+      action: 'inventory.temporary.convert', entityType: 'Order', entityId: order.id,
+      newValues: { orderNumber, batchCount: batches.length, total },
+      invalidate: ['inventory', 'orders', 'reorder-inventory'],
+    })
+    return reply.status(201).send({ success: true, data: { orderId: order.id, orderNumber, convertedCount: batches.length } })
   })
 
   // PATCH /api/v1/inventory/:id — Update stock settings

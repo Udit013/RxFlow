@@ -490,3 +490,8 @@ ALTER TABLE "Medicine" ADD COLUMN IF NOT EXISTS "division" TEXT;
 -- Link sales rep to customers (shops). Selecting a shop at billing suggests the rep.
 ALTER TABLE "Customer" ADD COLUMN IF NOT EXISTS "salesRepId" TEXT;
 CREATE INDEX IF NOT EXISTS "Customer_salesRepId_idx" ON "Customer"("salesRepId");
+
+-- ─── 2026-06-29-temporary-purchase.sql ───────────────────────────────────────────
+-- Temporary purchase flag on batches (goods received before invoice)
+ALTER TABLE "Batch" ADD COLUMN IF NOT EXISTS "isTemporary" BOOLEAN NOT NULL DEFAULT false;
+CREATE INDEX IF NOT EXISTS "Batch_isTemporary_idx" ON "Batch"("isTemporary");

@@ -509,6 +509,9 @@ model Batch {
   purchaseOrderId     String?
   isQuarantined       Boolean   @default(false)
   quarantineReason    String?
+  // Temporary purchase: goods received before the supplier invoice arrived.
+  // Price may be 0 until the bill comes; converted into a real purchase later.
+  isTemporary         Boolean   @default(false)
   // Write-off tracking
   writeOffQuantity    Int       @default(0)
   writeOffReason      String?

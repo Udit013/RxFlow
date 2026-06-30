@@ -421,20 +421,27 @@ function AddStockModal({ onClose, onSaved }: { onClose: () => void; onSaved: () 
   })
 
   const mutation = useMutation({
-    mutationFn: (data: AddStockForm) => api.post('/inventory/batches', {
-      ...data,
-      quantity: Number(data.quantity),
-      purchasePrice: Number(data.purchasePrice),
-      mrp: Number(data.mrp),
-      sellingPrice: data.sellingPrice ? Number(data.sellingPrice) : undefined,
-      expiryDate: new Date(data.expiryDate).toISOString(),
-      supplierId: selectedSupplier?.id,
-    }),
+    mutationFn: (data: AddStockForm) => {
+      if (!selectedSupplier) throw new Error('__nosupplier__')
+      return api.post('/inventory/batches', {
+        ...data,
+        quantity: Number(data.quantity),
+        purchasePrice: data.purchasePrice ? Number(data.purchasePrice) : undefined,
+        mrp: Number(data.mrp),
+        sellingPrice: data.sellingPrice ? Number(data.sellingPrice) : undefined,
+        expiryDate: new Date(data.expiryDate).toISOString(),
+        supplierId: selectedSupplier.id,
+        isTemporary: true,
+      })
+    },
     onSuccess: () => {
-      toast.success('Stock added')
+      toast.success('Temporary stock added — convert it to a bill when the invoice arrives')
       onSaved()
     },
-    onError: (e: any) => toast.error(e.response?.data?.error ?? 'Failed to add stock'),
+    onError: (e: any) => {
+      if (e?.message === '__nosupplier__') { toast.error('Select a supplier — required for a temporary purchase'); return }
+      toast.error(e.response?.data?.error ?? 'Failed to add stock')
+    },
   })
 
   const pickMedicine = (m: any) => {
@@ -449,10 +456,14 @@ function AddStockModal({ onClose, onSaved }: { onClose: () => void; onSaved: () 
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between px-5 py-4 border-b sticky top-0 bg-white">
-          <h2 className="font-semibold text-slate-900">Add Stock Batch</h2>
+          <h2 className="font-semibold text-slate-900">Add Stock · Temporary Purchase</h2>
           <button onClick={onClose}><X className="w-4 h-4 text-slate-400" /></button>
         </div>
         <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="p-5 space-y-3">
+          <div className="bg-brand-50 border border-brand-200 rounded-lg p-2.5 text-xs text-surface-700">
+            Use this when <strong>goods have arrived but the invoice hasn&apos;t</strong>. Supplier is required; purchase price can be left blank.
+            When the bill comes, open <strong>New Purchase</strong> for this supplier and convert it into a proper purchase.
+          </div>
           {/* Medicine picker */}
           <div>
             <label className="label">Medicine *</label>
@@ -483,9 +494,9 @@ function AddStockModal({ onClose, onSaved }: { onClose: () => void; onSaved: () 
             {errors.medicineId && <p className="text-xs text-red-600 mt-1">Pick a medicine</p>}
           </div>
 
-          {/* Supplier picker (optional) */}
+          {/* Supplier picker (required for temporary purchase) */}
           <div>
-            <label className="label">Supplier (optional)</label>
+            <label className="label">Supplier *</label>
             {selectedSupplier ? (
               <div className="flex items-center justify-between p-2 bg-brand-50 rounded-lg">
                 <div>
@@ -530,8 +541,8 @@ function AddStockModal({ onClose, onSaved }: { onClose: () => void; onSaved: () 
               <input type="number" className="input" {...register('quantity', { required: true, valueAsNumber: true, min: 1 })} />
             </div>
             <div>
-              <label className="label">Purchase Price *</label>
-              <input type="number" step="0.01" className="input" {...register('purchasePrice', { required: true, valueAsNumber: true, min: 0.01 })} />
+              <label className="label">Purchase Price</label>
+              <input type="number" step="0.01" className="input" placeholder="blank until invoice" {...register('purchasePrice', optionalNumber)} />
             </div>
             <div>
               <label className="label">MRP *</label>
