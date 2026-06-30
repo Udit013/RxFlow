@@ -18,6 +18,7 @@ const customerSchema = z.object({
   creditLimit: z.number().default(0),
   tags: z.array(z.string()).default([]),
   notes: z.string().optional(),
+  salesRepId: z.preprocess((v) => (v === '' ? undefined : v), z.string().optional()),
 })
 
 export async function customerRoutes(app: FastifyInstance) {

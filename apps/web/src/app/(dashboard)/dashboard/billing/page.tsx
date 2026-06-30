@@ -32,7 +32,7 @@ interface CartLine {
   batchPurchaseDiscount: number
 }
 
-interface Customer { id: string; name: string; phone: string }
+interface Customer { id: string; name: string; phone: string; salesRepId?: string | null }
 interface SalesRep { id: string; name: string; defaultCommissionPercent: number }
 
 const PAYMENT_METHODS = ['CASH', 'UPI', 'CARD', 'CREDIT'] as const
@@ -522,7 +522,15 @@ function BillingPageInner() {
               {customerSearch.length >= 2 && customerResults.length > 0 && (
                 <ul className="mt-1 border border-slate-200 rounded-lg overflow-hidden">
                   {customerResults.map((c) => (
-                    <li key={c.id} onClick={() => { setCustomer(c); setCustomerSearch('') }} className="p-2 text-sm hover:bg-slate-50 cursor-pointer">
+                    <li key={c.id} onClick={() => {
+                      setCustomer(c)
+                      setCustomerSearch('')
+                      // Auto-suggest the shop's assigned sales rep
+                      if (c.salesRepId) {
+                        const rep = salesReps.find((s) => s.id === c.salesRepId)
+                        if (rep) { setSalesRep(rep); setCommissionPercent(rep.defaultCommissionPercent ?? 0); toast.info(`Sales rep ${rep.name} auto-selected for ${c.name}`) }
+                      }
+                    }} className="p-2 text-sm hover:bg-slate-50 cursor-pointer">
                       <p className="font-medium">{c.name}</p>
                       <p className="text-xs text-slate-500">{c.phone}</p>
                     </li>

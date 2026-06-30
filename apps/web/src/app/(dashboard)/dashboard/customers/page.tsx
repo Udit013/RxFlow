@@ -34,6 +34,7 @@ interface CustomerForm {
   pincode?: string
   gstin?: string
   creditLimit: number
+  salesRepId?: string
 }
 
 const customerColumns: DataTableColumn<Customer>[] = [
@@ -121,6 +122,11 @@ function CreateCustomerModal({ onClose, onCreated }: { onClose: () => void; onCr
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<CustomerForm>({
     defaultValues: { creditLimit: 0 },
   })
+  const { data: repsData } = useQuery({
+    queryKey: ['customer-reps'],
+    queryFn: () => api.get('/sales-reps', { params: { active: 'true', limit: 50 } }).then((r) => r.data),
+  })
+  const reps: { id: string; name: string }[] = repsData?.data ?? []
 
   const mutation = useMutation({
     mutationFn: (data: CustomerForm) => api.post('/customers', data),
@@ -167,9 +173,19 @@ function CreateCustomerModal({ onClose, onCreated }: { onClose: () => void; onCr
             <label className="label">GSTIN (optional — makes this customer B2B)</label>
             <input className="input font-mono text-xs" placeholder="27AAACR5055K1ZV" {...register('gstin')} />
           </div>
-          <div>
-            <label className="label">Credit Limit (₹)</label>
-            <input className="input" type="number" {...register('creditLimit', optionalNumber)} />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">Credit Limit (₹)</label>
+              <input className="input" type="number" {...register('creditLimit', optionalNumber)} />
+            </div>
+            <div>
+              <label className="label">Assigned Sales Rep</label>
+              <select className="input" {...register('salesRepId')}>
+                <option value="">— none —</option>
+                {reps.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+              </select>
+              <p className="help-text">Auto-suggested at billing for this shop</p>
+            </div>
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>

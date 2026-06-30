@@ -584,11 +584,14 @@ model Customer {
   tags               String[]
   notes              String?
   isActive           Boolean   @default(true)
+  // Assigned sales rep — selecting this shop at billing auto-suggests the rep.
+  salesRepId         String?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 
   // Relations
   tenant        Tenant        @relation(fields: [tenantId], references: [id])
+  salesRep      SalesRep?     @relation(fields: [salesRepId], references: [id])
   orders        Order[]
   invoices      Invoice[]
   payments      Payment[]
@@ -674,8 +677,9 @@ model SalesRep {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  tenant Tenant  @relation(fields: [tenantId], references: [id])
-  orders Order[]
+  tenant    Tenant     @relation(fields: [tenantId], references: [id])
+  orders    Order[]
+  customers Customer[]
 
   @@unique([tenantId, phone])
   @@index([tenantId])
