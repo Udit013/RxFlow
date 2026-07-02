@@ -1,5 +1,7 @@
 # RxFlow — Pharmacy Management & Distribution Platform
 
+[![CI](https://github.com/Udit013/RxFlow/actions/workflows/ci.yml/badge.svg)](https://github.com/Udit013/RxFlow/actions/workflows/ci.yml)
+
 > A modern, full-featured pharmacy ERP for the Indian market — inventory, GST billing, multi-store, accounts, payroll, and compliance — built to replace legacy tools like Marg, Tally, and Pharmarack.
 
 **Live demo:** [rx-flow-web.vercel.app](https://rx-flow-web.vercel.app) — click **Create account** to spin up your own pharmacy workspace.

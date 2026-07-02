@@ -161,10 +161,10 @@ export async function orderRoutes(app: FastifyInstance) {
       }
     }
 
-    const order = await prisma.$transaction(async (tx) => {
+    const createOrderOnce = (orderNumber: string) => prisma.$transaction(async (tx) => {
       const newOrder = await tx.order.create({
         data: {
-          orderNumber: await generateOrderNumber(tenantId, body.type),
+          orderNumber,
           tenantId,
           storeId: body.storeId,
           type: body.type as any,
@@ -277,6 +277,22 @@ export async function orderRoutes(app: FastifyInstance) {
 
       return newOrder
     })
+
+    // Numbering is count-then-create, which races under concurrent checkouts.
+    // The unique (tenantId, orderNumber) constraint catches the loser — retry
+    // with a freshly generated number instead of surfacing a confusing 409.
+    let order: Awaited<ReturnType<typeof createOrderOnce>> | undefined
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        order = await createOrderOnce(await generateOrderNumber(tenantId, body.type))
+        break
+      } catch (e) {
+        const isNumberCollision = (e as { code?: string })?.code === 'P2002'
+        if (!isNumberCollision || attempt === 3) throw e
+        request.log.warn({ attempt }, 'order number collision, retrying with a fresh number')
+      }
+    }
+    if (!order) throw new Error('Failed to create order')
 
     await audit(request, {
       action: body.type === 'SALE' ? 'order.sale.create' : 'order.purchase.create',
