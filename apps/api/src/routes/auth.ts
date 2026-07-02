@@ -66,7 +66,7 @@ export async function authRoutes(app: FastifyInstance) {
   }
 
   // POST /api/v1/auth/login
-  app.post('/login', async (request, reply) => {
+  app.post('/login', { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (request, reply) => {
     const { email, password } = loginSchema.parse(request.body)
 
     const user = await prisma.user.findFirst({
@@ -149,7 +149,7 @@ export async function authRoutes(app: FastifyInstance) {
   })
 
   // POST /api/v1/auth/register
-  app.post('/register', async (request, reply) => {
+  app.post('/register', { config: { rateLimit: { max: 5, timeWindow: '1 minute' } } }, async (request, reply) => {
     const body = registerSchema.parse(request.body)
 
     const existingUser = await prisma.user.findFirst({ where: { email: body.email } })
@@ -317,7 +317,7 @@ export async function authRoutes(app: FastifyInstance) {
   }
 
   // POST /auth/forgot-password — always responds 200 (no account enumeration)
-  app.post('/forgot-password', async (request, reply) => {
+  app.post('/forgot-password', { config: { rateLimit: { max: 5, timeWindow: '5 minutes' } } }, async (request, reply) => {
     const { email } = z.object({ email: z.string().email() }).parse(request.body)
     const normalized = email.toLowerCase().trim()
     const user = await prisma.user.findFirst({ where: { email: normalized, isActive: true } })
@@ -334,7 +334,7 @@ export async function authRoutes(app: FastifyInstance) {
   })
 
   // POST /auth/reset-password — verify OTP + set new password
-  app.post('/reset-password', async (request, reply) => {
+  app.post('/reset-password', { config: { rateLimit: { max: 10, timeWindow: '5 minutes' } } }, async (request, reply) => {
     const body = z.object({
       email: z.string().email(),
       otp: z.string().length(6),
@@ -357,7 +357,7 @@ export async function authRoutes(app: FastifyInstance) {
 
   // POST /auth/otp/request — passwordless login. Accepts email OR registered phone.
   // The code is delivered to the account's email (free). True SMS needs a paid gateway.
-  app.post('/otp/request', async (request, reply) => {
+  app.post('/otp/request', { config: { rateLimit: { max: 5, timeWindow: '5 minutes' } } }, async (request, reply) => {
     const { identifier } = z.object({ identifier: z.string().min(3) }).parse(request.body)
     const value = identifier.toLowerCase().trim()
     // Look up by email or phone
@@ -381,7 +381,7 @@ export async function authRoutes(app: FastifyInstance) {
   })
 
   // POST /auth/otp/verify — verify login OTP, issue a session
-  app.post('/otp/verify', async (request, reply) => {
+  app.post('/otp/verify', { config: { rateLimit: { max: 10, timeWindow: '5 minutes' } } }, async (request, reply) => {
     const body = z.object({ identifier: z.string().min(3), otp: z.string().length(6) }).parse(request.body)
     const value = body.identifier.toLowerCase().trim()
     const user = await prisma.user.findFirst({

@@ -4,6 +4,7 @@ import { prisma } from '@rxflow/db'
 import { authenticate } from '../middleware/auth.js'
 import { getPaginationParams, buildPaginationMeta } from '../utils/pagination.js'
 import { getFinancialYear, getFinancialYearBounds, formatFyNumber } from '../utils/financial-year.js'
+import { calculateOrderTotals, computeCommission } from '../utils/order-math.js'
 import { audit } from '../utils/audit.js'
 
 const orderItemSchema = z.object({
@@ -45,25 +46,6 @@ async function generateOrderNumber(tenantId: string, type: string): Promise<stri
     where: { tenantId, type: type as any, createdAt: { gte: from, lt: to } },
   })
   return formatFyNumber(prefix, fy.label, seq + 1)
-}
-
-function calculateOrderTotals(items: z.infer<typeof orderItemSchema>[]) {
-  return items.reduce(
-    (acc, item) => {
-      const lineTotal = item.quantity * item.unitPrice
-      const discountAmount = (lineTotal * item.discountPercent) / 100
-      const taxableAmount = lineTotal - discountAmount
-      const taxAmount = (taxableAmount * item.taxRate) / 100
-      const total = taxableAmount + taxAmount
-
-      acc.subtotal += lineTotal
-      acc.discountAmount += discountAmount
-      acc.taxAmount += taxAmount
-      acc.total += total
-      return acc
-    },
-    { subtotal: 0, discountAmount: 0, taxAmount: 0, total: 0 }
-  )
 }
 
 export async function orderRoutes(app: FastifyInstance) {
@@ -175,9 +157,7 @@ export async function orderRoutes(app: FastifyInstance) {
       })
       if (rep) {
         commissionPercent = body.commissionPercent ?? rep.defaultCommissionPercent
-        // Commission is on the net value (subtotal − discount), excluding tax & transport.
-        const commissionBase = totals.subtotal - totals.discountAmount
-        commissionAmount = (commissionBase * commissionPercent) / 100 + (rep.flatBonusAmount ?? 0)
+        commissionAmount = computeCommission(totals, commissionPercent, rep.flatBonusAmount ?? 0)
       }
     }
 

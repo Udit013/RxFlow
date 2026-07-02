@@ -4,8 +4,10 @@
  */
 
 export function getFinancialYear(date: Date = new Date()): { startYear: number; endYear: number; label: string } {
-  const month = date.getMonth() // 0-indexed: 0=Jan, 3=Apr
-  const year = date.getFullYear()
+  // UTC getters keep numbering deterministic across server timezones and
+  // consistent with getFinancialYearBounds (which builds UTC boundaries).
+  const month = date.getUTCMonth() // 0-indexed: 0=Jan, 3=Apr
+  const year = date.getUTCFullYear()
   // If month is Jan-Mar (0,1,2), FY started in previous calendar year
   const startYear = month < 3 ? year - 1 : year
   const endYear = startYear + 1

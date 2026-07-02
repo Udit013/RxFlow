@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '@rxflow/db'
 import { authenticate } from '../middleware/auth.js'
 import { getFinancialYear, getFinancialYearBounds, formatFyNumber } from '../utils/financial-year.js'
+import { computeCommission } from '../utils/order-math.js'
 
 const importRowSchema = z.object({
   medicineId: z.string(),
@@ -81,7 +82,7 @@ export async function purchaseRoutes(app: FastifyInstance) {
       if (!rep) return reply.status(400).send({ success: false, error: 'Purchase salesman not found' })
       commissionPercent = body.commissionPercent ?? rep.defaultCommissionPercent
       // Commission is charged on the purchase value (taxable subtotal less discount)
-      commissionAmount = (totals.subtotal - totals.discountAmount) * commissionPercent / 100
+      commissionAmount = computeCommission(totals, commissionPercent)
     }
 
     // Generate FY-aware PO number

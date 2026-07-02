@@ -82,6 +82,8 @@ rxflow/                         ← Monorepo (pnpm workspaces + Turborepo)
 | Auth | JWT (access + refresh), bcrypt |
 | Search | Fuse.js (in-memory) with optional Meilisearch |
 | Exports | jsPDF (invoices), SheetJS (Excel), papaparse (CSV) |
+| Testing | Vitest — unit tests for financial-year, GST/commission math, and distributor CSV parsers (pinned to real invoice rows) |
+| CI | GitHub Actions — typecheck + tests + production build on every push/PR |
 | Build | Turborepo + pnpm |
 
 ### Production hosting (all free tier)
@@ -132,6 +134,15 @@ pnpm dev
 | API docs (Swagger) | http://localhost:3001/docs |
 
 Create your account from the **Create account** link on the login page.
+
+### Tests
+
+```bash
+pnpm test          # run the unit suite (Vitest)
+pnpm test:watch    # watch mode
+```
+
+Covers the money-critical pure logic: Indian financial-year boundaries (order numbering), GST/discount/commission arithmetic, and the multi-distributor CSV parsers — the parser tests are pinned to verbatim rows from real supplier invoices, so a config regression can't silently break an import format.
 
 ---
 
