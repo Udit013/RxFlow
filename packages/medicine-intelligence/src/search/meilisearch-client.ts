@@ -1,3 +1,4 @@
+/// <reference path="./meilisearch.d.ts" />
 /**
  * Meilisearch Integration
  * ─────────────────────────────────────────────────────────────────────────────

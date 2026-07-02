@@ -34,6 +34,9 @@ jobs:
       - name: Typecheck (web)
         run: pnpm --filter @rxflow/web exec tsc --noEmit
 
+      - name: Typecheck (api)
+        run: pnpm --filter @rxflow/api exec tsc --noEmit
+
       - name: Unit tests
         run: pnpm test
 

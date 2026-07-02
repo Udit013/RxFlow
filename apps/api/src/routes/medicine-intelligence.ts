@@ -45,7 +45,7 @@ export async function medicineIntelligenceRoutes(app: FastifyInstance) {
       await ensureMatcherLoaded()
       app.log.info('✅ Medicine Intelligence matcher loaded')
     } catch (err) {
-      app.log.warn('⚠️  Medicine Intelligence matcher failed to initialize:', err)
+      app.log.warn({ err }, '⚠️  Medicine Intelligence matcher failed to initialize')
     }
   })
 
@@ -149,7 +149,7 @@ export async function medicineIntelligenceRoutes(app: FastifyInstance) {
 
   // POST /api/v1/medicine-intelligence/reload
   // Reload matcher (call after importing new medicines)
-  app.post('/reload', { preHandler: [authenticate] }, async (request, reply) => {
+  app.post('/reload', { preHandler: [authenticate] }, async (_request, reply) => {
     matcherReady = false
     await ensureMatcherLoaded()
     return reply.send({ success: true, message: 'Matcher reloaded' })

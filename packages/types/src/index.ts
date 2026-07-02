@@ -527,6 +527,8 @@ export interface AuthTokens {
 export interface JwtPayload {
   userId: string
   tenantId: string
-  role: UserRole
+  // String-literal union (not the nominal enum) so values from BOTH this
+  // package's UserRole enum and Prisma's generated UserRole are assignable.
+  role: `${UserRole}`
   storeIds: string[]
 }

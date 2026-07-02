@@ -3,7 +3,8 @@ import type { JwtPayload, UserRole } from '@rxflow/types'
 
 declare module '@fastify/jwt' {
   interface FastifyJWT {
-    payload: JwtPayload
+    // Access tokens carry the full payload; refresh tokens sign only { userId }.
+    payload: JwtPayload | { userId: string }
     user: JwtPayload
   }
 }
@@ -16,7 +17,7 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
   }
 }
 
-export function requireRole(...roles: UserRole[]) {
+export function requireRole(...roles: `${UserRole}`[]) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
     await authenticate(request, reply)
     if (!roles.includes(request.user.role)) {
