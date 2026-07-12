@@ -1,5 +1,29 @@
 import type { Config } from 'tailwindcss'
 
+/**
+ * RxFlow design tokens — "Dispensary Ledger"
+ * ─────────────────────────────────────────────────────────────────────────────
+ * A pharmacy ERP is a book of record. The visual language borrows from the
+ * pharmacist's ledger: warm paper surfaces, ink text, hairline rules, sharp
+ * corners, tabular numerals — and one signature color, viridian (the deep
+ * green of the pharmacy cross), used to mean something, never to decorate.
+ */
+
+// Warm chalk/bone neutrals — replaces cool gray everywhere (incl. legacy `slate`)
+const chalk = {
+  50: '#faf9f6',
+  100: '#f2f0ea',
+  200: '#e5e2d8',
+  300: '#cfcbbe',
+  400: '#a3a094',
+  500: '#77756b',
+  600: '#57564e',
+  700: '#403f39',
+  800: '#2b2b26',
+  900: '#1f1f1b',
+  950: '#131311',
+}
+
 const config: Config = {
   darkMode: ['class'],
   content: [
@@ -10,89 +34,81 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Primary = healthcare blue. Trust, calm, clinical — the spine of the UI.
+        // Signature viridian — identity, active states, links, focus
         brand: {
-          50: '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3b82f6', // accents
-          600: '#2563eb', // primary action
-          700: '#1d4ed8',
-          800: '#1e40af',
-          900: '#1e3a8a',
-          950: '#172554',
+          50: '#eef7f3',
+          100: '#d8ede4',
+          200: '#b0dbc9',
+          300: '#7dc2a9',
+          400: '#46a186',
+          500: '#1d8169',
+          600: '#0e5f52', // signature
+          700: '#0b4d43',
+          800: '#0a3e37',
+          900: '#08322d',
+          950: '#052220',
         },
-        // Secondary = health/inventory green. For positive, stock, and growth states.
+        // Positive/stock states — moss, adjacent to brand but lighter-hearted
         secondary: {
-          50: '#ecfdf3',
-          100: '#d1fae0',
-          200: '#a6f4c5',
-          300: '#6ee7a8',
-          400: '#34d186',
-          500: '#12b76a',
-          600: '#0a8a52',
-          700: '#077043',
-          800: '#085a38',
-          900: '#074a30',
+          50: '#f1f8ec',
+          100: '#deeed3',
+          200: '#bfdda9',
+          300: '#98c579',
+          400: '#74aa50',
+          500: '#578d38',
+          600: '#43702c',
+          700: '#365825',
+          800: '#2d4721',
+          900: '#263c1e',
         },
-        // Accent = orange. Used sparingly for alerts, urgency, and standout CTAs.
+        // Attention — burnt saffron (warm, ledger-marginalia amber)
         accent: {
-          50: '#fff7ed',
-          100: '#ffedd5',
-          400: '#fb923c',
-          500: '#f97316',
-          600: '#ea580c',
-          700: '#c2410c',
+          50: '#fdf6ec',
+          100: '#f9e8cd',
+          400: '#e39a3b',
+          500: '#d47f16',
+          600: '#b4640a',
+          700: '#8f4c0b',
         },
-        // Neutral surface scale — cool, flat, ERP-grade (relies on borders not shadows)
-        surface: {
-          50: '#f8fafb',
-          100: '#f1f4f6',
-          200: '#e3e8ec',
-          300: '#cdd5db',
-          400: '#9aa5af',
-          500: '#6a7681',
-          600: '#4b555f',
-          700: '#353d45',
-          800: '#21272d',
-          900: '#12161a',
-        },
-        success: { 50: '#f0fdf4', 500: '#22c55e', 600: '#16a34a', 700: '#15803d' },
-        warning: { 50: '#fff8eb', 500: '#f59e0b', 600: '#d97706', 700: '#b45309' },
-        danger:  { 50: '#fef2f2', 500: '#ef4444', 600: '#dc2626', 700: '#b91c1c' },
+        // Paper + chalk neutral system (also aliased over legacy `slate`)
+        surface: chalk,
+        slate: chalk,
+        paper: '#fdfcf9',
+        ink: '#1f231f',
+        success: { 50: '#f1f8ec', 500: '#578d38', 600: '#43702c', 700: '#365825' },
+        warning: { 50: '#fdf6ec', 500: '#d47f16', 600: '#b4640a', 700: '#8f4c0b' },
+        danger:  { 50: '#fbf0ee', 500: '#c03b2d', 600: '#a02c21', 700: '#82251c' },
       },
       fontFamily: {
-        sans: ['Geist', 'Inter', 'system-ui', 'sans-serif'],
-        mono: ['Geist Mono', 'JetBrains Mono', 'monospace'],
+        sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
+        display: ['var(--font-display)', 'var(--font-sans)', 'sans-serif'],
+        mono: ['var(--font-mono)', 'ui-monospace', 'monospace'],
       },
       fontSize: {
-        // Compact, dense scale for an information-heavy ERP
         '2xs': ['0.6875rem', { lineHeight: '1rem' }],
       },
       spacing: {
         '4.5': '1.125rem',
       },
       borderRadius: {
-        // 8px design system. Nothing balloons into rounded SaaS cards.
+        // Ledger geometry: sharp. Softness comes from paper, not corners.
         none: '0',
-        sm: '0.25rem',     // 4px
-        DEFAULT: '0.375rem', // 6px — inputs, chips
-        md: '0.375rem',
-        lg: '0.5rem',      // 8px — cards, the system default
-        xl: '0.5rem',
-        '2xl': '0.625rem',
+        sm: '2px',
+        DEFAULT: '2px',
+        md: '3px',
+        lg: '4px',
+        xl: '6px',
+        '2xl': '8px',
         full: '9999px',
       },
       boxShadow: {
-        // Minimal. Depth comes from borders, not big shadows.
-        xs: '0 1px 1px 0 rgb(18 22 26 / 0.04)',
-        sm: '0 1px 2px 0 rgb(18 22 26 / 0.05)',
-        card: '0 1px 2px 0 rgb(18 22 26 / 0.04)',
-        'card-hover': '0 2px 6px -1px rgb(18 22 26 / 0.08)',
-        elevated: '0 8px 24px -8px rgb(18 22 26 / 0.16)',
-        dropdown: '0 4px 16px -4px rgb(18 22 26 / 0.14)',
+        // Depth from surface tint and hairlines, not blur.
+        xs: 'none',
+        sm: 'none',
+        card: 'none',
+        'card-hover': 'none',
+        elevated: '0 16px 40px -16px rgb(19 19 17 / 0.28)',
+        dropdown: '0 8px 24px -8px rgb(19 19 17 / 0.22)',
       },
       animation: {
         'fade-in': 'fade-in 0.2s ease-out',

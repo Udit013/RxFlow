@@ -48,15 +48,13 @@ export default function ForgotPasswordPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-surface-100">
       <div className="w-full max-w-sm">
-        <div className="flex items-center gap-2 mb-8 justify-center">
-          <div className="w-9 h-9 bg-brand-600 rounded-lg flex items-center justify-center">
-            <Pill className="w-5 h-5 text-white" />
-          </div>
-          <span className="text-xl font-bold text-surface-900">RxFlow</span>
+        <div className="flex items-baseline gap-2 mb-8 justify-center">
+          <Pill className="w-4 h-4 text-brand-600 self-center" />
+          <span className="font-display text-xl font-bold text-surface-900 tracking-tight">RxFlow</span>
         </div>
 
         <div className="card p-6">
-          <h1 className="text-lg font-semibold text-surface-900">
+          <h1 className="font-display text-lg font-semibold text-surface-900">
             {step === 'request' ? 'Forgot your password?' : 'Enter your reset code'}
           </h1>
           <p className="text-sm text-surface-500 mt-1 mb-5">

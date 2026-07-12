@@ -190,21 +190,22 @@ export default function DashboardPage() {
 
 function ExpiryCard({ d, loading }: { d?: DashboardData; loading: boolean }) {
   return (
-    <Link href="/dashboard/alerts" className="metric-card group">
-      <div className="flex items-center justify-between mb-0.5">
-        <span className="w-7 h-7 rounded-md bg-danger-50 text-danger-600 flex items-center justify-center"><Clock className="w-4 h-4" /></span>
+    <Link href="/dashboard/alerts" className="card-hover px-4 pt-3 pb-3.5 flex flex-col gap-1 h-full">
+      <div className="h-[3px] w-5 rounded-full mb-2.5 bg-danger-500" />
+      <div className="flex items-start justify-between gap-2">
+        <p className="microlabel">Expiry Buckets</p>
+        <Clock className="w-3.5 h-3.5 text-surface-400 shrink-0 mt-px" />
       </div>
-      <p className="text-2xs font-semibold uppercase tracking-wide text-surface-500">Expiry Buckets</p>
-      {loading ? <div className="h-5 w-20 skeleton" /> : (
-        <div className="flex items-center gap-2 text-[13px] font-semibold tabular-nums">
+      {loading ? <div className="h-5 w-20 skeleton mt-1" /> : (
+        <div className="flex items-baseline gap-2 font-display text-lg font-semibold tabular-nums mt-0.5">
           <span className="text-danger-600" title="≤30 days">{d?.inventory.expiry30 ?? 0}</span>
-          <span className="text-surface-300">/</span>
+          <span className="text-surface-300 text-sm">/</span>
           <span className="text-warning-600" title="31–60 days">{d?.inventory.expiry60 ?? 0}</span>
-          <span className="text-surface-300">/</span>
+          <span className="text-surface-300 text-sm">/</span>
           <span className="text-surface-500" title="61–90 days">{d?.inventory.expiry90 ?? 0}</span>
         </div>
       )}
-      <p className="text-2xs text-surface-500">30 / 60 / 90 days</p>
+      <p className="text-xs text-surface-500">30 / 60 / 90 days</p>
     </Link>
   )
 }

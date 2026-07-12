@@ -2,24 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  :root {
-    --rx-surface: #f1f4f6;
-  }
+/*
+ * RxFlow — "Dispensary Ledger" component system
+ * Paper surfaces · ink actions · viridian meaning · hairline rules ·
+ * tabular numerals · sharp geometry.
+ */
 
+@layer base {
   * { box-sizing: border-box; padding: 0; margin: 0; }
 
   html, body { max-width: 100vw; overflow-x: hidden; }
 
   body {
-    font-family: 'Geist', 'Inter', system-ui, sans-serif;
-    background-color: var(--rx-surface);
-    color: theme('colors.surface.800');
+    background-color: theme('colors.surface.100');
+    color: theme('colors.surface.900');
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
-    font-feature-settings: 'cv01', 'cv03', 'ss03';
   }
+
+  /* Every number in a ledger lines up. */
+  body { font-variant-numeric: tabular-nums; }
 
   /* Thin, quiet scrollbars — ERP density */
   ::-webkit-scrollbar { width: 10px; height: 10px; }
@@ -32,7 +35,7 @@
   }
   ::-webkit-scrollbar-thumb:hover { background: theme('colors.surface.400'); background-clip: content-box; }
 
-  ::selection { background: theme('colors.brand.100'); color: theme('colors.brand.900'); }
+  ::selection { background: theme('colors.brand.200'); color: theme('colors.brand.950'); }
 
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
@@ -43,62 +46,67 @@
 }
 
 @layer components {
-  /* ── Cards: flat, bordered, minimal shadow ─────────────────────────────── */
+  /* ── Micro-label: the system's smallest voice ──────────────────────────── */
+  .microlabel {
+    @apply text-[10px] font-semibold uppercase tracking-[0.14em] text-surface-500;
+  }
+
+  /* ── Cards: paper sheets divided by hairlines ──────────────────────────── */
   .card {
-    @apply bg-white rounded-lg border border-surface-200 shadow-card;
+    @apply bg-paper rounded-sm border border-surface-200;
   }
   .card-hover {
-    @apply card transition-colors hover:border-surface-300;
+    @apply card transition-colors hover:border-surface-400;
   }
   .card-header {
     @apply px-4 py-2.5 border-b border-surface-200 flex items-center justify-between;
   }
   .card-body { @apply px-4 py-3.5; }
 
-  /* ── Badges: compact, squared-ish ──────────────────────────────────────── */
+  /* ── Badges: stamped tags — square, bordered, smallcaps ────────────────── */
   .badge-base {
-    @apply inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-2xs font-medium uppercase tracking-wide;
+    @apply inline-flex items-center gap-1 px-1.5 py-px rounded-sm border text-[10px] font-semibold uppercase tracking-[0.08em];
   }
-  .badge-success { @apply badge-base bg-success-50 text-success-700 ring-1 ring-inset ring-success-600/20; }
-  .badge-warning { @apply badge-base bg-warning-50 text-warning-700 ring-1 ring-inset ring-warning-600/20; }
-  .badge-danger  { @apply badge-base bg-danger-50  text-danger-700  ring-1 ring-inset ring-danger-600/20; }
-  .badge-info    { @apply badge-base bg-brand-50    text-brand-700   ring-1 ring-inset ring-brand-600/20; }
-  .badge-neutral { @apply badge-base bg-surface-100 text-surface-600 ring-1 ring-inset ring-surface-300/40; }
+  .badge-success { @apply badge-base border-success-600/30 bg-success-50 text-success-700; }
+  .badge-warning { @apply badge-base border-warning-600/30 bg-warning-50 text-warning-700; }
+  .badge-danger  { @apply badge-base border-danger-600/30  bg-danger-50  text-danger-700; }
+  .badge-info    { @apply badge-base border-brand-600/30   bg-brand-50   text-brand-700; }
+  .badge-neutral { @apply badge-base border-surface-300    bg-surface-100 text-surface-600; }
 
-  /* ── Buttons: compact, no bounce, speed-first ──────────────────────────── */
+  /* ── Buttons: ink for action, viridian for identity, press feedback ────── */
   .btn-base {
-    @apply inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md text-[13px] font-medium
-           transition-colors disabled:opacity-50 disabled:cursor-not-allowed
+    @apply inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-sm text-[13px] font-medium
+           transition-colors active:translate-y-px disabled:opacity-50 disabled:cursor-not-allowed disabled:active:translate-y-0
            focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-brand-500;
   }
-  .btn-primary   { @apply btn-base bg-brand-600 text-white hover:bg-brand-700; }
-  .btn-secondary { @apply btn-base bg-white border border-surface-300 text-surface-700 hover:bg-surface-50; }
-  .btn-ghost     { @apply btn-base bg-transparent text-surface-600 hover:bg-surface-100 hover:text-surface-900; }
-  .btn-danger    { @apply btn-base bg-danger-600 text-white hover:bg-danger-700; }
-  .btn-accent    { @apply btn-base bg-accent-600 text-white hover:bg-accent-700; }
+  .btn-primary   { @apply btn-base bg-ink text-paper hover:bg-surface-700; }
+  .btn-secondary { @apply btn-base bg-paper border border-surface-300 text-surface-700 hover:border-surface-500 hover:text-surface-900; }
+  .btn-ghost     { @apply btn-base bg-transparent text-surface-600 hover:bg-surface-200/60 hover:text-surface-900; }
+  .btn-danger    { @apply btn-base bg-danger-600 text-paper hover:bg-danger-700; }
+  .btn-accent    { @apply btn-base bg-accent-600 text-paper hover:bg-accent-700; }
 
-  /* ── Form fields: compact, 6px radius ──────────────────────────────────── */
+  /* ── Form fields: flat paper, ink focus, viridian ring ─────────────────── */
   .input {
-    @apply w-full px-2.5 py-1.5 rounded border border-surface-300 text-[13px] bg-white
+    @apply w-full px-2.5 py-1.5 rounded-sm border border-surface-300 text-[13px] bg-paper
            placeholder:text-surface-400 transition-colors
-           focus:outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-500/15
-           disabled:bg-surface-50 disabled:text-surface-400;
+           focus:outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-500/20
+           disabled:bg-surface-100 disabled:text-surface-400;
   }
   .label { @apply block text-xs font-medium text-surface-600 mb-1; }
   .help-text { @apply mt-1 text-xs text-surface-500; }
 
-  /* ── Page primitives ───────────────────────────────────────────────────── */
+  /* ── Page primitives: display voice for titles ─────────────────────────── */
   .page-header { @apply flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5; }
-  .page-title { @apply text-lg sm:text-xl font-semibold text-surface-900 tracking-tight; }
-  .page-eyebrow { @apply text-2xs font-semibold uppercase tracking-[0.1em] text-brand-600 mb-0.5; }
+  .page-title { @apply font-display text-xl sm:text-[22px] font-semibold text-surface-900 tracking-tight; }
+  .page-eyebrow { @apply microlabel text-brand-600 mb-1; }
 
-  /* ── Metric card: tight, bordered, accent stripe ───────────────────────── */
+  /* ── Stat block: ledger tick, not icon chip ────────────────────────────── */
   .metric-card { @apply card-hover p-3.5 flex flex-col gap-1; }
 
   /* ── Skeleton ──────────────────────────────────────────────────────────── */
   .skeleton {
     @apply bg-gradient-to-r from-surface-100 via-surface-200 to-surface-100
-           bg-[length:200%_100%] rounded;
+           bg-[length:200%_100%] rounded-sm;
     animation: shimmer 1.4s linear infinite;
   }
   @keyframes shimmer {
@@ -106,18 +114,18 @@
     100% { background-position: 200% 0; }
   }
 
-  .section-heading { @apply text-xs font-semibold uppercase tracking-[0.08em] text-surface-500; }
-  .chip { @apply inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium bg-surface-100 text-surface-600 border border-surface-200; }
+  .section-heading { @apply microlabel; }
+  .chip { @apply inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-xs font-medium bg-surface-100 text-surface-600 border border-surface-200; }
   .divider { @apply border-t border-surface-200; }
 
-  /* ── Dense data tables ─────────────────────────────────────────────────── */
+  /* ── Dense data tables: rules, smallcaps heads, tabular numerals ───────── */
   .data-table { @apply w-full text-[13px]; }
   .data-table thead th {
-    @apply text-left px-3 py-2 text-2xs font-semibold text-surface-500 uppercase tracking-[0.06em]
-           bg-surface-50 border-b border-surface-200 sticky top-0 z-10;
+    @apply text-left px-3 py-2 text-[10px] font-semibold text-surface-500 uppercase tracking-[0.1em]
+           bg-surface-100/80 border-b border-surface-300 sticky top-0 z-10;
   }
-  .data-table tbody td { @apply px-3 py-2 border-b border-surface-100; }
-  .data-table tbody tr:hover { @apply bg-surface-50/70; }
+  .data-table tbody td { @apply px-3 py-2 border-b border-surface-200/70 tabular-nums; }
+  .data-table tbody tr:hover { @apply bg-brand-50/40; }
 }
 
 /* GSAP entrance baseline */

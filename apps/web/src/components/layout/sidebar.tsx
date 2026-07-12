@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import {
   LayoutDashboard, Package, ShoppingCart, FileText,
   Users, Truck, Pill, BarChart3, Settings,
-  ChevronRight, Bell, Search, Store, Receipt, PackagePlus,
+  Bell, Search, Store, Receipt, PackagePlus,
   UserCheck, FileSpreadsheet, ClipboardList, History, Database, ArrowLeftRight, ShieldCheck, Wallet, Users2, Tags, RotateCcw,
 } from 'lucide-react'
 
@@ -67,26 +67,24 @@ export function Sidebar() {
   const pathname = usePathname()
 
   return (
-    <aside className="w-64 bg-white border-r border-surface-200 flex flex-col h-full overflow-hidden shrink-0">
-      {/* Logo */}
-      <div className="flex items-center gap-2.5 px-5 py-4 border-b border-surface-100">
-        <div className="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center">
-          <Pill className="w-4.5 h-4.5 text-white" />
+    <aside className="w-60 bg-brand-950 flex flex-col h-full overflow-hidden shrink-0">
+      {/* Wordmark */}
+      <div className="px-5 pt-5 pb-4 border-b border-white/10">
+        <div className="flex items-baseline gap-2">
+          <Pill className="w-4 h-4 text-brand-300 self-center" />
+          <span className="font-display font-bold text-paper text-[19px] tracking-tight">RxFlow</span>
         </div>
-        <div>
-          <span className="font-bold text-surface-900 text-base">RxFlow</span>
-          <p className="text-2xs text-surface-500 -mt-0.5">Pharma Network</p>
-        </div>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-brand-300/70 mt-1">Pharmacy OS</p>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto py-3 px-2.5">
+      <nav className="flex-1 overflow-y-auto py-4">
         {navItems.map((section) => (
           <div key={section.label} className="mb-5">
-            <p className="text-2xs font-semibold text-surface-400 uppercase tracking-wider px-2 mb-1.5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-300/60 px-5 mb-1.5">
               {section.label}
             </p>
-            <ul className="space-y-0.5">
+            <ul>
               {section.items.map((item) => {
                 // Exact match for the dashboard root; prefix match for nested routes.
                 const isActive = item.href === '/dashboard'
@@ -97,15 +95,16 @@ export function Sidebar() {
                     <Link
                       href={item.href}
                       className={cn(
-                        'flex items-center gap-2.5 px-3 py-1.5 rounded-md text-[13px] font-medium transition-colors',
+                        'relative flex items-center gap-2.5 pl-5 pr-4 py-[7px] text-[13px] transition-colors',
+                        // ledger rule: a 2px left marker, not a pill highlight
+                        'border-l-2',
                         isActive
-                          ? 'bg-brand-50 text-brand-700'
-                          : 'text-surface-600 hover:bg-surface-50 hover:text-surface-900'
+                          ? 'border-brand-300 bg-white/[0.06] text-paper font-medium'
+                          : 'border-transparent text-brand-100/60 hover:text-brand-50 hover:bg-white/[0.03]'
                       )}
                     >
-                      <item.icon className={cn('w-4.5 h-4.5', isActive ? 'text-brand-600' : 'text-surface-400')} />
+                      <item.icon className={cn('w-4 h-4 shrink-0', isActive ? 'text-brand-300' : 'text-brand-200/40')} />
                       {item.label}
-                      {isActive && <ChevronRight className="w-3.5 h-3.5 ml-auto text-brand-400" />}
                     </Link>
                   </li>
                 )
@@ -114,6 +113,11 @@ export function Sidebar() {
           </div>
         ))}
       </nav>
+
+      {/* Footer rule */}
+      <div className="px-5 py-3 border-t border-white/10">
+        <p className="text-[10px] text-brand-200/40 tracking-wide font-mono">v1 · book of record</p>
+      </div>
     </aside>
   )
 }

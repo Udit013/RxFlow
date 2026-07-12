@@ -1,10 +1,29 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Bricolage_Grotesque, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google'
 import './globals.css'
 import { Providers } from '@/components/providers'
 import { Toaster } from 'sonner'
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
+// Display voice — headings, wordmark, big numbers on auth screens.
+const display = Bricolage_Grotesque({
+  subsets: ['latin'],
+  variable: '--font-display',
+  weight: ['500', '600', '700'],
+})
+
+// Working voice — dense, engineered UI text.
+const sans = IBM_Plex_Sans({
+  subsets: ['latin'],
+  variable: '--font-sans',
+  weight: ['400', '500', '600', '700'],
+})
+
+// Record voice — every invoice number, batch code, and ₹ amount.
+const mono = IBM_Plex_Mono({
+  subsets: ['latin'],
+  variable: '--font-mono',
+  weight: ['400', '500', '600'],
+})
 
 export const metadata: Metadata = {
   title: { default: 'RxFlow', template: '%s | RxFlow' },
@@ -15,7 +34,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} font-sans antialiased bg-slate-50 text-slate-900`}>
+      <body className={`${display.variable} ${sans.variable} ${mono.variable} font-sans antialiased bg-surface-100 text-surface-900`}>
         <Providers>
           {children}
           <Toaster position="top-right" richColors />

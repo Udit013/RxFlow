@@ -24,14 +24,15 @@ export function EmptyState({
     <div className={cn('flex flex-col items-center text-center px-6', py, className)}>
       {Icon && (
         <div className={cn(
-          'mb-3 rounded-2xl bg-gradient-to-br from-surface-100 to-surface-50',
-          'border border-surface-200/60 flex items-center justify-center',
+          // an empty ledger cell: dashed hairline frame, nothing inside yet
+          'mb-3 rounded-sm border border-dashed border-surface-300 bg-surface-50',
+          'flex items-center justify-center',
           iconSize
         )}>
-          <Icon className="w-1/2 h-1/2 text-surface-400" />
+          <Icon className="w-1/2 h-1/2 text-surface-400" strokeWidth={1.5} />
         </div>
       )}
-      <h3 className="font-semibold text-surface-800">{title}</h3>
+      <h3 className="font-display font-semibold text-surface-800">{title}</h3>
       {description && <p className="text-sm text-surface-500 mt-1 max-w-md">{description}</p>}
       {action && <div className="mt-4">{action}</div>}
     </div>

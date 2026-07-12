@@ -18,7 +18,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [router])
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50">
+    <div className="flex h-screen overflow-hidden bg-surface-100">
       <Sidebar />
       <div className="flex flex-col flex-1 overflow-hidden">
         <TopBar />
