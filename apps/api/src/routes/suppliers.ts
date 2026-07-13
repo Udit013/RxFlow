@@ -7,10 +7,13 @@ import { audit } from '../utils/audit.js'
 
 const emptyToUndefined = (v: unknown) => (v === '' ? undefined : v)
 
+// 15-char Indian GSTIN: 2-digit state code, PAN, entity code, 'Z', checksum
+export const GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/
+
 const supplierSchema = z.object({
   name: z.string().min(1),
   companyName: z.string().min(1),
-  gstin: z.preprocess(emptyToUndefined, z.string().optional()),
+  gstin: z.preprocess(emptyToUndefined, z.string().regex(GSTIN_REGEX, 'Invalid GSTIN format (e.g. 27AAACR5055K1ZV)').optional()),
   // GST registration type: REGULAR (has GSTIN), COMPOSITE (composition scheme), NON_GST (unregistered)
   gstRegistrationType: z.enum(['REGULAR', 'COMPOSITE', 'NON_GST']).optional(),
   panNumber: z.preprocess(emptyToUndefined, z.string().optional()),

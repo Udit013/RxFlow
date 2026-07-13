@@ -31,10 +31,15 @@ interface SupplierForm {
   email?: string
   gstin?: string
   gstRegistrationType: 'REGULAR' | 'COMPOSITE' | 'NON_GST'
+  drugLicenseNumber?: string
+  drugLicenseExpiryDate?: string
   city?: string
   state?: string
   creditDays: number
 }
+
+// 15-char Indian GSTIN
+const GSTIN_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/
 
 const supplierColumns: DataTableColumn<Supplier>[] = [
   {
@@ -166,8 +171,27 @@ function CreateSupplierModal({ onClose, onCreated }: { onClose: () => void; onCr
               </select>
             </div>
             <div>
-              <label className="label">GSTIN{gstType !== 'NON_GST' ? '' : ' (n/a)'}</label>
-              <input className="input" disabled={gstType === 'NON_GST'} {...register('gstin')} placeholder="27AAACR5055K1ZV" />
+              <label className="label">GSTIN{gstType !== 'NON_GST' ? ' (optional)' : ' (n/a)'}</label>
+              <input
+                className="input font-mono text-xs uppercase"
+                disabled={gstType === 'NON_GST'}
+                {...register('gstin', {
+                  validate: (v) => !v || GSTIN_PATTERN.test(v.toUpperCase().trim()) || 'Invalid GSTIN — 15 chars, e.g. 27AAACR5055K1ZV',
+                  setValueAs: (v: string) => (v ? v.toUpperCase().trim() : v),
+                })}
+                placeholder="27AAACR5055K1ZV"
+              />
+              {errors.gstin && <p className="text-xs text-red-600 mt-1">{errors.gstin.message}</p>}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">Drug License No.</label>
+              <input className="input font-mono text-xs" {...register('drugLicenseNumber')} placeholder="WB/HGL/20B-21B/1234" />
+            </div>
+            <div>
+              <label className="label">License Valid Till</label>
+              <input className="input" type="date" {...register('drugLicenseExpiryDate')} />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">

@@ -497,6 +497,8 @@ model Batch {
   id                  String    @id @default(cuid())
   inventoryItemId     String
   batchNumber         String
+  // Optional supplier lot number, distinct from the manufacturer batch number
+  lotNumber           String?
   expiryDate          DateTime
   manufacturingDate   DateTime?
   quantity            Int
@@ -580,6 +582,9 @@ model Customer {
   state              String?
   pincode            String?
   gstin              String?
+  gstRegistrationType String?  @default("REGULAR") // REGULAR | COMPOSITE | NON_GST
+  drugLicenseNumber  String?
+  drugLicenseExpiryDate DateTime?
   outstandingBalance Float     @default(0)
   creditLimit        Float     @default(0)
   totalPurchases     Float     @default(0)
@@ -640,6 +645,9 @@ model Order {
   // Purchase-only costs
   transportCharge         Float?  @default(0) // fixed delivery/transport charge, added to purchase cost
   purchaseDiscountPercent Float?  // supplier's bill discount %, for reporting context
+  // Bill-level special discount (on top of line discounts); GST recomputed on the reduced base
+  specialDiscountType     String? // PERCENT | AMOUNT
+  specialDiscountValue    Float?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 

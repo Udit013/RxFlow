@@ -16,12 +16,27 @@ interface POLine {
   medicineName: string
   strength: string
   batchNumber: string
+  lotNumber: string
+  /** Manual entry: MM/YY or MM/YYYY */
   expiryDate: string
   quantity: number
   purchasePrice: number
   mrp: number
+  /** Sell rate — defaults to MRP, overridable per line */
+  sellRate: number
   gstRate: number
   discountPercent: number
+}
+
+/** Parse manual expiry entry (MM/YY or MM/YYYY) → ISO date (last day of month), or null. */
+function parseExpiryInput(raw: string): string | null {
+  const m = raw.trim().match(/^(\d{1,2})\s*[/-]\s*(\d{2}|\d{4})$/)
+  if (!m) return null
+  const month = parseInt(m[1]!, 10)
+  let year = parseInt(m[2]!, 10)
+  if (year < 100) year += 2000
+  if (month < 1 || month > 12 || year < 2024 || year > 2099) return null
+  return new Date(Date.UTC(year, month, 0)).toISOString()
 }
 
 interface Supplier { id: string; name: string; companyName: string }
@@ -40,6 +55,8 @@ export default function NewPurchasePage() {
   const [transportCharge, setTransportCharge] = useState<number>(0)
   const [salesman, setSalesman] = useState<SalesRep | null>(null)
   const [commissionPercent, setCommissionPercent] = useState<number>(0)
+  const [specialDiscType, setSpecialDiscType] = useState<'PERCENT' | 'AMOUNT'>('PERCENT')
+  const [specialDiscValue, setSpecialDiscValue] = useState<number>(0)
 
   const salesRepResults = useQuery({
     queryKey: ['po-salesreps'],
@@ -73,10 +90,12 @@ export default function NewPurchasePage() {
         medicineName: m.name,
         strength: m.strength,
         batchNumber: '',
+        lotNumber: '',
         expiryDate: '',
         quantity: 1,
         purchasePrice: Number((m.mrp * 0.8).toFixed(2)),
         mrp: m.mrp,
+        sellRate: m.mrp, // defaults to current selling price (MRP); overridable
         gstRate: m.gstRate ?? 12,
         discountPercent: 0,
       },
@@ -93,8 +112,14 @@ export default function NewPurchasePage() {
   }
 
   const lineNet = (l: POLine) => l.quantity * l.purchasePrice * (1 - l.discountPercent / 100)
-  const subtotal = lines.reduce((s, l) => s + lineNet(l), 0)
-  const tax = lines.reduce((s, l) => s + (lineNet(l) * l.gstRate) / 100, 0)
+  const taxableBase = lines.reduce((s, l) => s + lineNet(l), 0)
+  const baseTax = lines.reduce((s, l) => s + (lineNet(l) * l.gstRate) / 100, 0)
+  // Bill-level special discount: GST is charged on the reduced base (mirrors server math)
+  const specialDiscAmount = specialDiscValue > 0 && taxableBase > 0
+    ? Math.min(specialDiscType === 'PERCENT' ? (taxableBase * specialDiscValue) / 100 : specialDiscValue, taxableBase)
+    : 0
+  const subtotal = taxableBase - specialDiscAmount
+  const tax = taxableBase > 0 ? baseTax * (subtotal / taxableBase) : 0
   const commissionAmount = salesman ? subtotal * commissionPercent / 100 : 0
   const total = subtotal + tax + (transportCharge || 0)
 
@@ -103,9 +128,14 @@ export default function NewPurchasePage() {
       if (!supplier) throw new Error('Pick a supplier')
       if (!storeId) throw new Error('No store assigned')
       if (lines.length === 0) throw new Error('Add at least one line')
-      for (const l of lines) {
-        if (!l.batchNumber || !l.expiryDate) throw new Error(`Batch number and expiry required for ${l.medicineName}`)
-      }
+      const expiryByLine = new Map<number, string>()
+      lines.forEach((l, i) => {
+        if (!l.batchNumber) throw new Error(`Batch number required for ${l.medicineName}`)
+        const iso = parseExpiryInput(l.expiryDate)
+        if (!iso) throw new Error(`Invalid expiry "${l.expiryDate}" for ${l.medicineName} — enter MM/YY or MM/YYYY`)
+        if (!(l.sellRate > 0)) throw new Error(`Sell rate must be positive for ${l.medicineName}`)
+        expiryByLine.set(i, iso)
+      })
 
       // 1. Create PURCHASE order
       const orderRes = await api.post('/orders', {
@@ -116,6 +146,7 @@ export default function NewPurchasePage() {
         transportCharge: transportCharge || undefined,
         salesRepId: salesman?.id,
         commissionPercent: salesman ? commissionPercent : undefined,
+        specialDiscount: specialDiscValue > 0 ? { type: specialDiscType, value: specialDiscValue } : undefined,
         items: lines.map((l) => ({
           medicineId: l.medicineId,
           quantity: l.quantity,
@@ -126,19 +157,21 @@ export default function NewPurchasePage() {
       })
       const orderId = orderRes.data.data.id
 
-      // 2. Create batches for each line — adds to inventory
+      // 2. Create batches for each line — adds to inventory, lot-wise
       let batchFailures = 0
-      for (const l of lines) {
+      for (let i = 0; i < lines.length; i++) {
+        const l = lines[i]!
         try {
           await api.post('/inventory/batches', {
             medicineId: l.medicineId,
             batchNumber: l.batchNumber,
-            expiryDate: new Date(l.expiryDate).toISOString(),
+            lotNumber: l.lotNumber || undefined,
+            expiryDate: expiryByLine.get(i),
             quantity: l.quantity,
             purchasePrice: l.purchasePrice,
             discountPercent: l.discountPercent,
             mrp: l.mrp,
-            sellingPrice: l.mrp,
+            sellingPrice: l.sellRate,
             supplierId: supplier.id,
             purchaseOrderId: orderId,
           })
@@ -198,14 +231,14 @@ export default function NewPurchasePage() {
           ? <SmartCsvImport onUseGenericMapper={() => setCsvMode('generic')} />
           : <CsvImportFlow />
       ) : (
-        <ManualFlow {...{ supplier, setSupplier, supplierSearch, setSupplierSearch, medQuery, setMedQuery, lines, setLines, supplierResults, medicineResults, addLine, updateLine, removeLine, subtotal, tax, total, submit, router, transportCharge, setTransportCharge, salesman, setSalesman, commissionPercent, setCommissionPercent, commissionAmount, salesReps }} />
+        <ManualFlow {...{ supplier, setSupplier, supplierSearch, setSupplierSearch, medQuery, setMedQuery, lines, setLines, supplierResults, medicineResults, addLine, updateLine, removeLine, subtotal, tax, total, submit, router, transportCharge, setTransportCharge, salesman, setSalesman, commissionPercent, setCommissionPercent, commissionAmount, salesReps, specialDiscType, setSpecialDiscType, specialDiscValue, setSpecialDiscValue, specialDiscAmount }} />
       )}
     </div>
   )
 }
 
 function ManualFlow(props: any) {
-  const { supplier, setSupplier, supplierSearch, setSupplierSearch, medQuery, setMedQuery, lines, supplierResults, medicineResults, addLine, updateLine, removeLine, subtotal, tax, total, submit, router, transportCharge, setTransportCharge, salesman, setSalesman, commissionPercent, setCommissionPercent, commissionAmount, salesReps } = props
+  const { supplier, setSupplier, supplierSearch, setSupplierSearch, medQuery, setMedQuery, lines, supplierResults, medicineResults, addLine, updateLine, removeLine, subtotal, tax, total, submit, router, transportCharge, setTransportCharge, salesman, setSalesman, commissionPercent, setCommissionPercent, commissionAmount, salesReps, specialDiscType, setSpecialDiscType, specialDiscValue, setSpecialDiscValue, specialDiscAmount } = props
   return (
     <>
       {/* Supplier */}
@@ -263,11 +296,13 @@ function ManualFlow(props: any) {
               <tr className="bg-slate-50 text-xs uppercase text-slate-500">
                 <th className="text-left px-2 py-2">Medicine</th>
                 <th className="text-left px-2 py-2">Batch *</th>
-                <th className="text-left px-2 py-2">Expiry *</th>
+                <th className="text-left px-2 py-2">Lot</th>
+                <th className="text-left px-2 py-2">Expiry * <span className="normal-case font-normal">(MM/YY)</span></th>
                 <th className="text-center px-2 py-2">Qty</th>
                 <th className="text-right px-2 py-2">Buy ₹</th>
                 <th className="text-center px-2 py-2">Disc %</th>
                 <th className="text-right px-2 py-2">MRP</th>
+                <th className="text-right px-2 py-2">Sell ₹</th>
                 <th className="text-center px-2 py-2">GST</th>
                 <th className="text-right px-2 py-2">Line</th>
                 <th />
@@ -284,7 +319,19 @@ function ManualFlow(props: any) {
                     <input className="w-24 border border-slate-200 rounded px-2 py-1 text-xs" value={l.batchNumber} onChange={(e) => updateLine(i, { batchNumber: e.target.value })} />
                   </td>
                   <td className="px-2 py-2">
-                    <input type="date" className="w-32 border border-slate-200 rounded px-2 py-1 text-xs" value={l.expiryDate} onChange={(e) => updateLine(i, { expiryDate: e.target.value })} />
+                    <input className="w-20 border border-slate-200 rounded px-2 py-1 text-xs" placeholder="—" value={l.lotNumber} onChange={(e) => updateLine(i, { lotNumber: e.target.value })} />
+                  </td>
+                  <td className="px-2 py-2">
+                    <input
+                      inputMode="numeric"
+                      placeholder="MM/YY"
+                      className={cn(
+                        'w-20 border rounded px-2 py-1 text-xs font-mono',
+                        l.expiryDate && !parseExpiryInput(l.expiryDate) ? 'border-danger-500 bg-danger-50 text-danger-700' : 'border-slate-200'
+                      )}
+                      value={l.expiryDate}
+                      onChange={(e) => updateLine(i, { expiryDate: e.target.value })}
+                    />
                   </td>
                   <td className="px-2 py-2">
                     <input type="number" min="1" className="w-16 text-center border border-slate-200 rounded px-2 py-1 text-xs" value={l.quantity} onChange={(e) => updateLine(i, { quantity: parseInt(e.target.value) || 0 })} />
@@ -296,7 +343,10 @@ function ManualFlow(props: any) {
                     <input type="number" step="0.5" min="0" max="100" className="w-14 text-center border border-slate-200 rounded px-2 py-1 text-xs" value={l.discountPercent} onChange={(e) => updateLine(i, { discountPercent: parseFloat(e.target.value) || 0 })} />
                   </td>
                   <td className="px-2 py-2">
-                    <input type="number" step="0.01" className="w-20 text-right border border-slate-200 rounded px-2 py-1 text-xs" value={l.mrp} onChange={(e) => updateLine(i, { mrp: parseFloat(e.target.value) || 0 })} />
+                    <input type="number" step="0.01" className="w-20 text-right border border-slate-200 rounded px-2 py-1 text-xs" value={l.mrp} onChange={(e) => { const mrp = parseFloat(e.target.value) || 0; updateLine(i, { mrp, ...(l.sellRate === l.mrp ? { sellRate: mrp } : {}) }) }} />
+                  </td>
+                  <td className="px-2 py-2">
+                    <input type="number" step="0.01" title="Sell rate — defaults to MRP, override before saving" className="w-20 text-right border border-slate-200 rounded px-2 py-1 text-xs" value={l.sellRate} onChange={(e) => updateLine(i, { sellRate: parseFloat(e.target.value) || 0 })} />
                   </td>
                   <td className="px-2 py-2 text-center">
                     <input type="number" step="0.5" className="w-14 text-center border border-slate-200 rounded px-2 py-1 text-xs" value={l.gstRate} onChange={(e) => updateLine(i, { gstRate: parseFloat(e.target.value) || 0 })} />
@@ -311,11 +361,12 @@ function ManualFlow(props: any) {
               ))}
             </tbody>
             <tfoot className="bg-slate-50 text-sm">
-              <tr><td colSpan={8} className="px-3 py-2 text-right text-slate-600">Subtotal (after discount)</td><td className="px-2 py-2 text-right">{formatCurrency(subtotal)}</td><td/></tr>
-              <tr><td colSpan={8} className="px-3 py-2 text-right text-slate-600">GST</td><td className="px-2 py-2 text-right">{formatCurrency(tax)}</td><td/></tr>
-              {transportCharge > 0 && <tr><td colSpan={8} className="px-3 py-2 text-right text-slate-600">Transport</td><td className="px-2 py-2 text-right">{formatCurrency(transportCharge)}</td><td/></tr>}
-              <tr className="border-t"><td colSpan={8} className="px-3 py-2 text-right font-bold">Total</td><td className="px-2 py-2 text-right font-bold">{formatCurrency(total)}</td><td/></tr>
-              {salesman && commissionAmount > 0 && <tr><td colSpan={8} className="px-3 py-1 text-right text-xs text-accent-700">Salesman commission ({commissionPercent}%)</td><td className="px-2 py-1 text-right text-xs text-accent-700">{formatCurrency(commissionAmount)}</td><td/></tr>}
+              {specialDiscAmount > 0 && <tr><td colSpan={10} className="px-3 py-2 text-right text-slate-600">Special discount ({specialDiscType === 'PERCENT' ? `${specialDiscValue}%` : 'flat'})</td><td className="px-2 py-2 text-right text-danger-600">−{formatCurrency(specialDiscAmount)}</td><td/></tr>}
+              <tr><td colSpan={10} className="px-3 py-2 text-right text-slate-600">Subtotal (after discounts)</td><td className="px-2 py-2 text-right">{formatCurrency(subtotal)}</td><td/></tr>
+              <tr><td colSpan={10} className="px-3 py-2 text-right text-slate-600">GST</td><td className="px-2 py-2 text-right">{formatCurrency(tax)}</td><td/></tr>
+              {transportCharge > 0 && <tr><td colSpan={10} className="px-3 py-2 text-right text-slate-600">Transport</td><td className="px-2 py-2 text-right">{formatCurrency(transportCharge)}</td><td/></tr>}
+              <tr className="border-t"><td colSpan={10} className="px-3 py-2 text-right font-bold">Total</td><td className="px-2 py-2 text-right font-bold">{formatCurrency(total)}</td><td/></tr>
+              {salesman && commissionAmount > 0 && <tr><td colSpan={10} className="px-3 py-1 text-right text-xs text-accent-700">Salesman commission ({commissionPercent}%)</td><td className="px-2 py-1 text-right text-xs text-accent-700">{formatCurrency(commissionAmount)}</td><td/></tr>}
             </tfoot>
           </table>
         )}
@@ -327,9 +378,20 @@ function ManualFlow(props: any) {
 
       {/* Costs & Commission */}
       <div className="card p-5">
-        <h3 className="font-semibold text-slate-900 mb-1">3. Costs &amp; Commission <span className="text-xs font-normal text-surface-400">(optional)</span></h3>
-        <p className="text-xs text-surface-500 mb-3">Transport is added to the bill. Commission is only recorded if a salesman is selected.</p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <h3 className="font-semibold text-slate-900 mb-1">3. Costs, Discount &amp; Commission <span className="text-xs font-normal text-surface-400">(optional)</span></h3>
+        <p className="text-xs text-surface-500 mb-3">Transport is added to the bill. Special discount reduces the taxable base (GST recalculates). Commission is only recorded if a salesman is selected.</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <label className="label">Special discount</label>
+            <div className="flex gap-1.5">
+              <select className="input w-20" value={specialDiscType} onChange={(e) => setSpecialDiscType(e.target.value as 'PERCENT' | 'AMOUNT')} aria-label="Special discount type">
+                <option value="PERCENT">%</option>
+                <option value="AMOUNT">₹</option>
+              </select>
+              <input type="number" min="0" step="0.5" className="input flex-1" value={specialDiscValue} onChange={(e) => setSpecialDiscValue(Math.max(0, parseFloat(e.target.value) || 0))} placeholder="0" />
+            </div>
+            {specialDiscAmount > 0 && <p className="help-text">−{formatCurrency(specialDiscAmount)} off the taxable base</p>}
+          </div>
           <div>
             <label className="label">Transportation / Delivery charge (₹)</label>
             <input type="number" min="0" step="1" className="input" value={transportCharge} onChange={(e) => setTransportCharge(parseFloat(e.target.value) || 0)} placeholder="0" />

@@ -54,3 +54,6 @@ services:
       # ── Optional (set when you add these integrations) ──
       - key: RESEND_API_KEY
         sync: false   # free email for password reset / OTP
+      - key: EMAIL_FROM
+        sync: false   # e.g. 'RxFlow <no-reply@yourdomain.com>' — domain must be verified in Resend;
+                      # without this, sandbox mail only reaches the Resend account owner

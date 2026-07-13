@@ -9,6 +9,7 @@ import { audit } from '../utils/audit.js'
 const addBatchSchema = z.object({
   medicineId: z.string(),
   batchNumber: z.string().min(1),
+  lotNumber: z.preprocess((v) => (v === '' ? undefined : v), z.string().optional()),
   expiryDate: z.string().transform((d) => new Date(d)),
   manufacturingDate: z.string().transform((d) => new Date(d)).optional(),
   quantity: z.number().int().positive(),
@@ -169,6 +170,7 @@ export async function inventoryRoutes(app: FastifyInstance) {
         data: {
           inventoryItemId: inventoryItem.id,
           batchNumber: body.batchNumber,
+          lotNumber: body.lotNumber,
           expiryDate: body.expiryDate,
           manufacturingDate: body.manufacturingDate,
           quantity: body.quantity,

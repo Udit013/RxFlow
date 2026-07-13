@@ -4,7 +4,7 @@ import { prisma } from '@rxflow/db'
 import { authenticate } from '../middleware/auth.js'
 import { getPaginationParams, buildPaginationMeta } from '../utils/pagination.js'
 import { getFinancialYear, getFinancialYearBounds, formatFyNumber } from '../utils/financial-year.js'
-import { calculateOrderTotals, computeCommission } from '../utils/order-math.js'
+import { calculateOrderTotals, computeCommission, applySpecialDiscount } from '../utils/order-math.js'
 import { audit } from '../utils/audit.js'
 
 const orderItemSchema = z.object({
@@ -30,6 +30,8 @@ const createOrderSchema = z.object({
   commissionPercent: z.number().min(0).max(100).optional(),
   // Purchase-only: fixed transport/delivery charge added to the bill
   transportCharge: z.number().min(0).optional(),
+  // Bill-level special discount — GST recomputed on the reduced base
+  specialDiscount: z.object({ type: z.enum(['PERCENT', 'AMOUNT']), value: z.number().min(0) }).optional(),
   deliveryAddress: z.object({
     line1: z.string(),
     city: z.string(),
@@ -142,7 +144,9 @@ export async function orderRoutes(app: FastifyInstance) {
     const { tenantId, userId } = request.user
     const body = createOrderSchema.parse(request.body)
 
-    const totals = calculateOrderTotals(body.items)
+    const baseTotals = calculateOrderTotals(body.items)
+    // Bill-level special discount reduces the taxable base; GST scales with it.
+    const { specialDiscountAmount, ...totals } = applySpecialDiscount(baseTotals, body.specialDiscount)
     const transportCharge = body.type === 'PURCHASE' ? (body.transportCharge ?? 0) : 0
     totals.total += transportCharge
 
@@ -182,6 +186,8 @@ export async function orderRoutes(app: FastifyInstance) {
           commissionAmount,
           commissionStatus: commissionAmount ? 'PENDING' : null,
           transportCharge,
+          specialDiscountType: specialDiscountAmount > 0 ? body.specialDiscount!.type : null,
+          specialDiscountValue: specialDiscountAmount > 0 ? body.specialDiscount!.value : null,
           items: {
             create: body.items.map((item) => {
               const lineTotal = item.quantity * item.unitPrice

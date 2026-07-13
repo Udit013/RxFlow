@@ -327,7 +327,11 @@ export async function authRoutes(app: FastifyInstance) {
         const { sendEmail, otpEmailHtml } = await import('../utils/email.js')
         await sendEmail({ to: normalized, subject: 'Reset your RxFlow password', html: otpEmailHtml(code, 'reset') })
       } catch (e) {
-        request.log.error({ err: e }, 'password-reset email failed')
+        // Delivery failed (misconfigured key / unverified sender). Log the code
+        // as an operator rescue: an admin can read it from server logs and help
+        // the user complete the reset. The OTP is short-lived and single-use.
+        request.log.error({ err: e }, 'password-reset email failed — check RESEND_API_KEY / EMAIL_FROM (verified domain)')
+        request.log.warn({ email: normalized, code }, '[rescue] password-reset OTP (email delivery failed)')
       }
     }
     return reply.send({ success: true, message: 'If an account exists for that email, a reset code has been sent.' })
@@ -372,7 +376,8 @@ export async function authRoutes(app: FastifyInstance) {
         await sendEmail({ to: user.email, subject: 'Your RxFlow login code', html: otpEmailHtml(code, 'login') })
         delivered = true
       } catch (e) {
-        request.log.error({ err: e }, 'login OTP email failed')
+        request.log.error({ err: e }, 'login OTP email failed — check RESEND_API_KEY / EMAIL_FROM (verified domain)')
+        request.log.warn({ email: user.email, code }, '[rescue] login OTP (email delivery failed)')
       }
     }
     // Mask the email for the UI (e.g., r***@gmail.com) when we found a user

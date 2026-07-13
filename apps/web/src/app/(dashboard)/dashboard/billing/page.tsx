@@ -215,8 +215,17 @@ function BillingPageInner() {
   }
 
   const lineNet = (l: CartLine) => l.quantity * l.unitPrice * (1 - l.discountPercent / 100)
-  const subtotal = cart.reduce((sum, l) => sum + lineNet(l), 0)
-  const tax = cart.reduce((sum, l) => sum + (lineNet(l) * l.taxRate) / 100, 0)
+  const [specialDiscType, setSpecialDiscType] = useState<'PERCENT' | 'AMOUNT'>('PERCENT')
+  const [specialDiscValue, setSpecialDiscValue] = useState<number>(0)
+
+  const taxableBase = cart.reduce((sum, l) => sum + lineNet(l), 0)
+  const baseTax = cart.reduce((sum, l) => sum + (lineNet(l) * l.taxRate) / 100, 0)
+  // Bill-level special discount: GST charged on the reduced base (mirrors server math)
+  const specialDiscAmount = specialDiscValue > 0 && taxableBase > 0
+    ? Math.min(specialDiscType === 'PERCENT' ? (taxableBase * specialDiscValue) / 100 : specialDiscValue, taxableBase)
+    : 0
+  const subtotal = taxableBase - specialDiscAmount
+  const tax = taxableBase > 0 ? baseTax * (subtotal / taxableBase) : 0
   const total = subtotal + tax
 
   const [showParkedList, setShowParkedList] = useState(false)
@@ -308,6 +317,7 @@ function BillingPageInner() {
         customerId: customer?.id,
         salesRepId: salesRep?.id,
         commissionPercent: salesRep ? commissionPercent : undefined,
+        specialDiscount: specialDiscValue > 0 ? { type: specialDiscType, value: specialDiscValue } : undefined,
         paymentMethod,
         items: cart.map((l) => ({
           medicineId: l.medicineId,
@@ -332,6 +342,7 @@ function BillingPageInner() {
       setCustomer(null)
       setSalesRep(null)
       setCommissionPercent(0)
+      setSpecialDiscValue(0)
       router.push(`/dashboard/orders/${orderId}`)
     },
     onError: (e: any) => {
@@ -595,6 +606,19 @@ function BillingPageInner() {
         </div>
 
         <div className="border-t pt-4 space-y-2 text-sm">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-slate-600">Special discount</span>
+            <div className="flex items-center gap-1">
+              <select className="border border-surface-300 rounded-sm text-xs px-1 py-0.5 bg-paper" value={specialDiscType} onChange={(e) => setSpecialDiscType(e.target.value as 'PERCENT' | 'AMOUNT')} aria-label="Special discount type">
+                <option value="PERCENT">%</option>
+                <option value="AMOUNT">₹</option>
+              </select>
+              <input type="number" min="0" step="0.5" className="w-16 text-right border border-surface-300 rounded-sm px-1.5 py-0.5 text-xs bg-paper" value={specialDiscValue} onChange={(e) => setSpecialDiscValue(Math.max(0, parseFloat(e.target.value) || 0))} aria-label="Special discount value" />
+            </div>
+          </div>
+          {specialDiscAmount > 0 && (
+            <div className="flex justify-between text-danger-600"><span>Discount applied</span><span>−{formatCurrency(specialDiscAmount)}</span></div>
+          )}
           <div className="flex justify-between"><span className="text-slate-600">Subtotal</span><span>{formatCurrency(subtotal)}</span></div>
           <div className="flex justify-between"><span className="text-slate-600">Tax</span><span>{formatCurrency(tax)}</span></div>
           <div className="flex justify-between text-base font-bold pt-2 border-t"><span>Total</span><span>{formatCurrency(total)}</span></div>

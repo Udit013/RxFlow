@@ -33,9 +33,15 @@ interface CustomerForm {
   state?: string
   pincode?: string
   gstin?: string
+  gstRegistrationType: 'REGULAR' | 'COMPOSITE' | 'NON_GST'
+  drugLicenseNumber?: string
+  drugLicenseExpiryDate?: string
   creditLimit: number
   salesRepId?: string
 }
+
+// 15-char Indian GSTIN
+const GSTIN_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/
 
 const customerColumns: DataTableColumn<Customer>[] = [
   {
@@ -120,7 +126,7 @@ export default function CustomersPage() {
 
 function CreateCustomerModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<CustomerForm>({
-    defaultValues: { creditLimit: 0 },
+    defaultValues: { creditLimit: 0, gstRegistrationType: 'REGULAR' },
   })
   const { data: repsData } = useQuery({
     queryKey: ['customer-reps'],
@@ -169,9 +175,37 @@ function CreateCustomerModal({ onClose, onCreated }: { onClose: () => void; onCr
               <input className="input" {...register('state')} />
             </div>
           </div>
-          <div>
-            <label className="label">GSTIN (optional — makes this customer B2B)</label>
-            <input className="input font-mono text-xs" placeholder="27AAACR5055K1ZV" {...register('gstin')} />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">GST Registration</label>
+              <select className="input" {...register('gstRegistrationType')}>
+                <option value="REGULAR">Regular</option>
+                <option value="COMPOSITE">Composite</option>
+                <option value="NON_GST">Non-GST</option>
+              </select>
+            </div>
+            <div>
+              <label className="label">GSTIN (optional — makes B2B)</label>
+              <input
+                className="input font-mono text-xs uppercase"
+                placeholder="27AAACR5055K1ZV"
+                {...register('gstin', {
+                  validate: (v) => !v || GSTIN_PATTERN.test(v.toUpperCase().trim()) || 'Invalid GSTIN — 15 chars, e.g. 27AAACR5055K1ZV',
+                  setValueAs: (v: string) => (v ? v.toUpperCase().trim() : v),
+                })}
+              />
+              {errors.gstin && <p className="text-xs text-red-600 mt-1">{errors.gstin.message}</p>}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="label">Drug License No.</label>
+              <input className="input font-mono text-xs" {...register('drugLicenseNumber')} placeholder="WB/HGL/20B-21B/1234" />
+            </div>
+            <div>
+              <label className="label">License Valid Till</label>
+              <input className="input" type="date" {...register('drugLicenseExpiryDate')} />
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>

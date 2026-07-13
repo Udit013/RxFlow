@@ -495,3 +495,14 @@ CREATE INDEX IF NOT EXISTS "Customer_salesRepId_idx" ON "Customer"("salesRepId")
 -- Temporary purchase flag on batches (goods received before invoice)
 ALTER TABLE "Batch" ADD COLUMN IF NOT EXISTS "isTemporary" BOOLEAN NOT NULL DEFAULT false;
 CREATE INDEX IF NOT EXISTS "Batch_isTemporary_idx" ON "Batch"("isTemporary");
+
+-- ─── 2026-07-12-party-lot-special-discount.sql ───────────────────────────────────
+-- Customer party fields (drug license + GST registration type)
+ALTER TABLE "Customer" ADD COLUMN IF NOT EXISTS "gstRegistrationType" TEXT DEFAULT 'REGULAR';
+ALTER TABLE "Customer" ADD COLUMN IF NOT EXISTS "drugLicenseNumber" TEXT;
+ALTER TABLE "Customer" ADD COLUMN IF NOT EXISTS "drugLicenseExpiryDate" TIMESTAMP(3);
+-- Supplier lot number on batches
+ALTER TABLE "Batch" ADD COLUMN IF NOT EXISTS "lotNumber" TEXT;
+-- Bill-level special discount on orders
+ALTER TABLE "Order" ADD COLUMN IF NOT EXISTS "specialDiscountType" TEXT;
+ALTER TABLE "Order" ADD COLUMN IF NOT EXISTS "specialDiscountValue" DOUBLE PRECISION;
