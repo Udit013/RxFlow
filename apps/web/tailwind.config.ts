@@ -102,11 +102,16 @@ const config: Config = {
         full: '9999px',
       },
       boxShadow: {
-        // Depth from surface tint and hairlines, not blur.
-        xs: 'none',
-        sm: 'none',
-        card: 'none',
-        'card-hover': 'none',
+        // Warm, low-opacity ink shadows — paper sheets lifting off the desk.
+        // Two-layer construction keeps them soft at tiny radii (no blue haze).
+        xs: '0 1px 1.5px -0.5px rgb(19 19 17 / 0.05)',
+        sm: '0 1px 2px 0 rgb(19 19 17 / 0.05), 0 1px 3px -1px rgb(19 19 17 / 0.04)',
+        card: '0 1px 2px 0 rgb(19 19 17 / 0.04), 0 2px 5px -2px rgb(19 19 17 / 0.05)',
+        'card-hover': '0 3px 6px -2px rgb(19 19 17 / 0.08), 0 8px 18px -6px rgb(19 19 17 / 0.10)',
+        // Dark sidebar rail floating over the chalk workspace (rightward cast).
+        rail: '6px 0 20px -10px rgb(19 19 17 / 0.30)',
+        // Slim toolbar separating from scrolled content.
+        toolbar: '0 1px 3px -1px rgb(19 19 17 / 0.06)',
         elevated: '0 16px 40px -16px rgb(19 19 17 / 0.28)',
         dropdown: '0 8px 24px -8px rgb(19 19 17 / 0.22)',
       },

@@ -32,7 +32,7 @@ export function TopBar() {
   }
 
   return (
-    <header className="bg-surface-100 border-b border-surface-300 px-6 h-12 flex items-center justify-between shrink-0 gap-4">
+    <header className="bg-surface-100 border-b border-surface-300 px-6 h-12 flex items-center justify-between shrink-0 gap-4 shadow-toolbar relative z-10">
       {/* Search trigger — opens command palette (Cmd+K) */}
       <button
         type="button"
