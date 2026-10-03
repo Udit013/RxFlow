@@ -197,7 +197,7 @@ function LicenseTab() {
         <div className="card-header">
           <h3 className="font-semibold">Drug Licenses</h3>
         </div>
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto"><table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-50 text-xs uppercase text-slate-500">
               <th className="text-left px-3 py-2">Owner</th>
@@ -244,7 +244,7 @@ function LicenseTab() {
               ))
             )}
           </tbody>
-        </table>
+        </table></div>
       </div>
     </div>
   )

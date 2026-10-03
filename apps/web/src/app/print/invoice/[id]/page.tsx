@@ -130,6 +130,12 @@ export default function PrintInvoicePage() {
           <span>{formatCurrency(inv.igst)}</span>
         </div>
       )}
+      {inv.otherCharges > 0 && (
+        <div className="r-row r-sm">
+          <span>Transport / Other</span>
+          <span>{formatCurrency(inv.otherCharges)}</span>
+        </div>
+      )}
       {inv.roundOff !== 0 && (
         <div className="r-row r-sm">
           <span>Round Off</span>

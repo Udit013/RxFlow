@@ -197,7 +197,7 @@ function ExpensesTab({ period }: { period: string }) {
         action={<button onClick={() => setShowAdd(true)} className="btn-primary !py-1.5 !px-3 text-xs"><Plus className="w-3.5 h-3.5" /> Add</button>}
         flush
       >
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto"><table className="w-full text-sm">
           <thead>
             <tr className="bg-surface-50/60 text-[10px] uppercase tracking-[0.1em] text-surface-500">
               <th className="text-left px-4 py-2.5">Date</th>
@@ -234,7 +234,7 @@ function ExpensesTab({ period }: { period: string }) {
               ))
             )}
           </tbody>
-        </table>
+        </table></div>
       </SectionCard>
 
       {showAdd && <AddExpenseModal onClose={() => setShowAdd(false)} onSaved={() => { setShowAdd(false); queryClient.invalidateQueries({ queryKey: ['expenses'] }) }} />}
@@ -350,7 +350,7 @@ function CashFlowTab({ period }: { period: string }) {
         {d.byMethod.length === 0 ? (
           <EmptyState icon={Wallet} title="No cash movement" description="Payments and expenses in this period will show here." />
         ) : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto"><table className="w-full text-sm">
             <thead>
               <tr className="bg-surface-50/60 text-[10px] uppercase tracking-[0.1em] text-surface-500">
                 <th className="text-left px-4 py-2.5">Method</th>
@@ -369,7 +369,7 @@ function CashFlowTab({ period }: { period: string }) {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         )}
       </SectionCard>
     </div>

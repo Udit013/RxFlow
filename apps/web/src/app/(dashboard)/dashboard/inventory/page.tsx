@@ -56,17 +56,17 @@ export default function InventoryPage() {
   async function exportInventoryCsv() {
     setExporting(true)
     try {
-      // Pull everything (cap 500 SKUs per page to keep one request reasonable)
+      // Pull everything, one API page at a time (the API caps `limit` at 100)
       const all: any[] = []
       let page = 1
-      while (true) {
-        const res = await api.get('/inventory', { params: { limit: 200, page } })
+      for (;;) {
+        const res = await api.get('/inventory', { params: { limit: 100, page } })
         const rows = res.data?.data ?? []
         all.push(...rows)
         const meta = res.data?.meta
         if (!meta || page >= (meta.totalPages ?? 1)) break
         page++
-        if (page > 50) break // safety: at most 10,000 rows
+        if (page > 50) break // safety: at most 5,000 rows
       }
 
       // Flatten: one row per batch (most useful for reconciliation)

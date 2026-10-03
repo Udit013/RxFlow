@@ -2,7 +2,8 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '@rxflow/db'
 import { authenticate } from '../middleware/auth.js'
-import { getFinancialYear, getFinancialYearBounds, formatFyNumber } from '../utils/financial-year.js'
+import { catalogWhere, usableWhere } from '../utils/medicine-scope.js'
+import { nextFyNumber, withUniqueRetry } from '../utils/numbering.js'
 import { computeCommission } from '../utils/order-math.js'
 
 const importRowSchema = z.object({
@@ -31,7 +32,7 @@ const importSchema = z.object({
 
 export async function purchaseRoutes(app: FastifyInstance) {
   // POST /api/v1/purchases/bulk-import — Create a PURCHASE order + batches from resolved rows
-  app.post('/bulk-import', { preHandler: [authenticate] }, async (request, reply) => {
+  app.post('/bulk-import', { preHandler: [authenticate], bodyLimit: 5 * 1024 * 1024 }, async (request, reply) => {
     const { tenantId, userId } = request.user
     const body = importSchema.parse(request.body)
 
@@ -45,7 +46,7 @@ export async function purchaseRoutes(app: FastifyInstance) {
 
     // Verify all medicine IDs exist
     const medicineIds = Array.from(new Set(body.rows.map((r) => r.medicineId)))
-    const medicines = await prisma.medicine.findMany({ where: { id: { in: medicineIds } } })
+    const medicines = await prisma.medicine.findMany({ where: { id: { in: medicineIds }, ...usableWhere(tenantId) } })
     const medicineMap = new Map(medicines.map((m) => [m.id, m]))
     const missing = medicineIds.filter((id) => !medicineMap.has(id))
     if (missing.length > 0) {
@@ -86,106 +87,104 @@ export async function purchaseRoutes(app: FastifyInstance) {
     }
 
     // Generate FY-aware PO number
-    const fy = getFinancialYear()
-    const { from, to } = getFinancialYearBounds()
-    const seq = await prisma.order.count({
-      where: { tenantId, type: 'PURCHASE', createdAt: { gte: from, lt: to } },
-    })
-    const orderNumber = formatFyNumber('PO', fy.label, seq + 1)
+    let orderNumber = ''
 
-    const result = await prisma.$transaction(async (tx) => {
-      // 1. Create PURCHASE order
-      const order = await tx.order.create({
-        data: {
-          orderNumber,
-          tenantId,
-          storeId: body.storeId,
-          type: 'PURCHASE',
-          status: 'CONFIRMED',
-          supplierId: body.supplierId,
-          ...totals,
-          transportCharge,
-          salesRepId: body.salesRepId ?? null,
-          commissionPercent,
-          commissionAmount,
-          commissionStatus: commissionAmount ? 'PENDING' : null,
-          paymentMethod: 'CREDIT',
-          notes: body.notes,
-          createdBy: userId,
-          items: {
-            create: body.rows.map((r) => {
-              const lineTotal = r.quantity * r.purchasePrice
-              const discountAmount = (lineTotal * r.discountPercent) / 100
-              const taxable = lineTotal - discountAmount
-              const taxAmount = (taxable * r.gstRate) / 100
-              return {
-                medicineId: r.medicineId,
-                quantity: r.quantity,
-                unitPrice: r.purchasePrice,
-                discountPercent: r.discountPercent,
-                taxRate: r.gstRate,
-                taxAmount,
-                total: taxable + taxAmount,
-              }
-            }),
+    const result = await withUniqueRetry(async () => {
+      orderNumber = await nextFyNumber('order', tenantId, 'PO')
+      return prisma.$transaction(async (tx) => {
+        // 1. Create PURCHASE order
+        const order = await tx.order.create({
+          data: {
+            orderNumber,
+            tenantId,
+            storeId: body.storeId,
+            type: 'PURCHASE',
+            status: 'CONFIRMED',
+            supplierId: body.supplierId,
+            ...totals,
+            transportCharge,
+            salesRepId: body.salesRepId ?? null,
+            commissionPercent,
+            commissionAmount,
+            commissionStatus: commissionAmount ? 'PENDING' : null,
+            paymentMethod: 'CREDIT',
+            notes: body.notes,
+            createdBy: userId,
+            items: {
+              create: body.rows.map((r) => {
+                const lineTotal = r.quantity * r.purchasePrice
+                const discountAmount = (lineTotal * r.discountPercent) / 100
+                const taxable = lineTotal - discountAmount
+                const taxAmount = (taxable * r.gstRate) / 100
+                return {
+                  medicineId: r.medicineId,
+                  quantity: r.quantity,
+                  unitPrice: r.purchasePrice,
+                  discountPercent: r.discountPercent,
+                  taxRate: r.gstRate,
+                  taxAmount,
+                  total: taxable + taxAmount,
+                }
+              }),
+            },
           },
-        },
-      })
-
-      // 2. Create batches + ensure inventory items exist
-      const createdBatches: Array<{ batchId: string; medicineId: string; quantity: number }> = []
-      for (const r of body.rows) {
-        const med = medicineMap.get(r.medicineId)!
-
-        let inventoryItem = await tx.inventoryItem.findUnique({
-          where: { tenantId_storeId_medicineId: { tenantId, storeId: body.storeId, medicineId: r.medicineId } },
         })
-        if (!inventoryItem) {
-          inventoryItem = await tx.inventoryItem.create({
+  
+        // 2. Create batches + ensure inventory items exist
+        const createdBatches: Array<{ batchId: string; medicineId: string; quantity: number }> = []
+        for (const r of body.rows) {
+          const med = medicineMap.get(r.medicineId)!
+  
+          let inventoryItem = await tx.inventoryItem.findUnique({
+            where: { tenantId_storeId_medicineId: { tenantId, storeId: body.storeId, medicineId: r.medicineId } },
+          })
+          if (!inventoryItem) {
+            inventoryItem = await tx.inventoryItem.create({
+              data: {
+                tenantId,
+                storeId: body.storeId,
+                medicineId: r.medicineId,
+                sellingPrice: r.sellingPrice ?? r.mrp,
+                reorderLevel: 10,
+                reorderQuantity: 50,
+              },
+            })
+          }
+  
+          const batch = await tx.batch.create({
             data: {
-              tenantId,
-              storeId: body.storeId,
-              medicineId: r.medicineId,
-              sellingPrice: r.sellingPrice ?? r.mrp,
-              reorderLevel: 10,
-              reorderQuantity: 50,
+              inventoryItemId: inventoryItem.id,
+              batchNumber: r.batchNumber,
+              expiryDate: r.expiryDate,
+              quantity: r.quantity,
+              purchasePrice: r.purchasePrice,
+              discountPercent: r.discountPercent,
+              mrp: r.mrp,
+              supplierId: body.supplierId,
+              purchaseOrderId: order.id,
             },
           })
+  
+          await tx.inventoryItem.update({
+            where: { id: inventoryItem.id },
+            data: {
+              totalQuantity: { increment: r.quantity },
+              availableQuantity: { increment: r.quantity },
+            },
+          })
+  
+          createdBatches.push({ batchId: batch.id, medicineId: r.medicineId, quantity: r.quantity })
+          void med // keep ref for future logging
         }
-
-        const batch = await tx.batch.create({
-          data: {
-            inventoryItemId: inventoryItem.id,
-            batchNumber: r.batchNumber,
-            expiryDate: r.expiryDate,
-            quantity: r.quantity,
-            purchasePrice: r.purchasePrice,
-            discountPercent: r.discountPercent,
-            mrp: r.mrp,
-            supplierId: body.supplierId,
-            purchaseOrderId: order.id,
-          },
+  
+        // 3. Bump supplier totals
+        await tx.supplier.update({
+          where: { id: body.supplierId },
+          data: { totalPurchases: { increment: totals.total } },
         })
-
-        await tx.inventoryItem.update({
-          where: { id: inventoryItem.id },
-          data: {
-            totalQuantity: { increment: r.quantity },
-            availableQuantity: { increment: r.quantity },
-          },
-        })
-
-        createdBatches.push({ batchId: batch.id, medicineId: r.medicineId, quantity: r.quantity })
-        void med // keep ref for future logging
-      }
-
-      // 3. Bump supplier totals
-      await tx.supplier.update({
-        where: { id: body.supplierId },
-        data: { totalPurchases: { increment: totals.total } },
+  
+        return { order, batchCount: createdBatches.length }
       })
-
-      return { order, batchCount: createdBatches.length }
     })
 
     return reply.status(201).send({
@@ -201,7 +200,7 @@ export async function purchaseRoutes(app: FastifyInstance) {
     const body = z.object({ names: z.array(z.string()).max(2000) }).parse(request.body)
 
     const allMedicines = await prisma.medicine.findMany({
-      where: { isActive: true },
+      where: { isActive: true, ...catalogWhere(request.user.tenantId) },
       select: { id: true, name: true, genericName: true, brandName: true, strength: true, manufacturerName: true, mrp: true, hsn: true, gstRate: true, dosageForm: true },
       take: 5000,
     })

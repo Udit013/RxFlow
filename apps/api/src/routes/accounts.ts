@@ -4,6 +4,7 @@ import { prisma } from '@rxflow/db'
 import { authenticate } from '../middleware/auth.js'
 import { getPaginationParams, buildPaginationMeta } from '../utils/pagination.js'
 import { audit } from '../utils/audit.js'
+import { assertTenantRefs } from '../utils/tenant-guard.js'
 
 // Common expense categories — used to seed the dropdown. Free text also allowed.
 export const EXPENSE_CATEGORIES = [
@@ -61,6 +62,8 @@ export async function accountRoutes(app: FastifyInstance) {
       incurredAt: z.string().transform((s) => new Date(s)).optional(),
       storeId: z.string().optional(),
     }).parse(request.body)
+
+    if (body.storeId) await assertTenantRefs(tenantId, { storeIds: [body.storeId] })
 
     const expense = await prisma.expense.create({
       data: {

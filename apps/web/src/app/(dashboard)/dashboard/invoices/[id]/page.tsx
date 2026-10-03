@@ -89,7 +89,7 @@ export default function InvoiceDetailPage() {
         total: it.total,
       })),
       totalTax: inv.totalTax ?? 0,
-    }, tenantHeader)
+    }, tenantHeader).catch(() => toast.error('Failed to generate PDF'))
   }
 
   const shareWhatsApp = () => {
@@ -173,7 +173,7 @@ export default function InvoiceDetailPage() {
 
       <div className="card overflow-hidden">
         <div className="card-header"><h3 className="font-semibold text-slate-900">Line items</h3></div>
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto"><table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-50 text-xs uppercase text-slate-500">
               <th className="text-left px-3 py-2">Item</th>
@@ -206,9 +206,11 @@ export default function InvoiceDetailPage() {
             <tr><td colSpan={7} className="px-3 py-2 text-right text-slate-600">CGST</td><td className="px-3 py-2 text-right">{formatCurrency(inv.cgst)}</td></tr>
             <tr><td colSpan={7} className="px-3 py-2 text-right text-slate-600">SGST</td><td className="px-3 py-2 text-right">{formatCurrency(inv.sgst)}</td></tr>
             {inv.igst > 0 && <tr><td colSpan={7} className="px-3 py-2 text-right text-slate-600">IGST</td><td className="px-3 py-2 text-right">{formatCurrency(inv.igst)}</td></tr>}
+            {inv.otherCharges > 0 && <tr><td colSpan={7} className="px-3 py-2 text-right text-slate-600">Transport / other charges</td><td className="px-3 py-2 text-right">{formatCurrency(inv.otherCharges)}</td></tr>}
+            {Math.abs(inv.roundOff ?? 0) >= 0.01 && <tr><td colSpan={7} className="px-3 py-2 text-right text-slate-600">Round off</td><td className="px-3 py-2 text-right">{formatCurrency(inv.roundOff)}</td></tr>}
             <tr className="border-t"><td colSpan={7} className="px-3 py-2 text-right font-bold">Grand Total</td><td className="px-3 py-2 text-right font-bold">{formatCurrency(inv.grandTotal)}</td></tr>
           </tfoot>
-        </table>
+        </table></div>
       </div>
 
       <div className="card overflow-hidden">
@@ -225,7 +227,7 @@ export default function InvoiceDetailPage() {
         {payments.length === 0 ? (
           <div className="p-8 text-center text-slate-400 text-sm">No payments recorded yet</div>
         ) : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto"><table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-50 text-xs uppercase text-slate-500">
                 <th className="text-left px-3 py-2">Date</th>
@@ -244,7 +246,7 @@ export default function InvoiceDetailPage() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         )}
       </div>
 
@@ -385,7 +387,7 @@ function CreditNoteModal({ invoice, onClose, onCreated }: { invoice: any; onClos
 
           <div>
             <label className="label">Select items to return</label>
-            <table className="w-full text-sm border rounded-lg overflow-hidden">
+            <div className="overflow-x-auto"><table className="w-full text-sm border rounded-lg overflow-hidden">
               <thead className="bg-slate-50">
                 <tr className="text-xs uppercase text-slate-500">
                   <th className="text-left px-3 py-2">Item</th>
@@ -450,7 +452,7 @@ function CreditNoteModal({ invoice, onClose, onCreated }: { invoice: any; onClos
                   <td className="px-3 py-2 text-right font-bold text-amber-700">{formatCurrency(totalReturning)}</td>
                 </tr>
               </tfoot>
-            </table>
+            </table></div>
           </div>
 
           <p className="text-xs text-slate-500">
@@ -512,7 +514,7 @@ function PurchaseReturnModal({ invoice, onClose, onCreated }: { invoice: any; on
             <input className="input" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Damaged, near expiry, wrong item, excess..." />
           </div>
 
-          <table className="w-full text-sm border rounded-lg overflow-hidden">
+          <div className="overflow-x-auto"><table className="w-full text-sm border rounded-lg overflow-hidden">
             <thead className="bg-surface-50">
               <tr className="text-xs uppercase text-surface-500">
                 <th className="text-left px-3 py-2">Item</th>
@@ -554,7 +556,7 @@ function PurchaseReturnModal({ invoice, onClose, onCreated }: { invoice: any; on
                 <td className="px-3 py-2 text-right font-bold text-amber-700">{formatCurrency(totalReturning)}</td>
               </tr>
             </tfoot>
-          </table>
+          </table></div>
 
           <p className="text-xs text-surface-500">
             Returned units are removed from your stock (the batch must still physically have them). Supplier payable and total purchases reduce by the return value. A DEBIT NOTE is created.

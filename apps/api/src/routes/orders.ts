@@ -2,10 +2,13 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '@rxflow/db'
 import { authenticate } from '../middleware/auth.js'
+import { assertMedicinesUsable } from '../utils/medicine-scope.js'
 import { getPaginationParams, buildPaginationMeta } from '../utils/pagination.js'
-import { getFinancialYear, getFinancialYearBounds, formatFyNumber } from '../utils/financial-year.js'
 import { calculateOrderTotals, computeCommission, applySpecialDiscount } from '../utils/order-math.js'
 import { audit } from '../utils/audit.js'
+import { nextFyNumber, withUniqueRetry } from '../utils/numbering.js'
+import { httpError } from '../utils/http-error.js'
+import { assertTenantRefs } from '../utils/tenant-guard.js'
 
 const orderItemSchema = z.object({
   medicineId: z.string(),
@@ -13,7 +16,7 @@ const orderItemSchema = z.object({
   quantity: z.number().int().positive(),
   unitPrice: z.number().positive(),
   discountPercent: z.number().min(0).max(100).default(0),
-  taxRate: z.number().default(12),
+  taxRate: z.number().min(0).max(100).default(12),
 })
 
 const createOrderSchema = z.object({
@@ -41,13 +44,7 @@ const createOrderSchema = z.object({
 })
 
 async function generateOrderNumber(tenantId: string, type: string): Promise<string> {
-  const prefix = type === 'SALE' ? 'INV' : 'PO'
-  const fy = getFinancialYear()
-  const { from, to } = getFinancialYearBounds()
-  const seq = await prisma.order.count({
-    where: { tenantId, type: type as any, createdAt: { gte: from, lt: to } },
-  })
-  return formatFyNumber(prefix, fy.label, seq + 1)
+  return nextFyNumber('order', tenantId, type === 'SALE' ? 'INV' : 'PO')
 }
 
 export async function orderRoutes(app: FastifyInstance) {
@@ -144,6 +141,15 @@ export async function orderRoutes(app: FastifyInstance) {
     const { tenantId, userId } = request.user
     const body = createOrderSchema.parse(request.body)
 
+    await assertTenantRefs(tenantId, {
+      storeIds: [body.storeId],
+      customerId: body.customerId,
+      supplierId: body.supplierId,
+      prescriptionId: body.prescriptionId,
+      batchIds: body.items.map((i) => i.batchId),
+    })
+    await assertMedicinesUsable(tenantId, body.items.map((i) => i.medicineId))
+
     const baseTotals = calculateOrderTotals(body.items)
     // Bill-level special discount reduces the taxable base; GST scales with it.
     const { specialDiscountAmount, ...totals } = applySpecialDiscount(baseTotals, body.specialDiscount)
@@ -226,7 +232,7 @@ export async function orderRoutes(app: FastifyInstance) {
 
           if (!inv) {
             if (!allowNegative) {
-              throw new Error(`Insufficient stock for medicine ${item.medicineId}`)
+              throw httpError(400, `Insufficient stock for medicine ${item.medicineId}`)
             }
             // Auto-create inventory item when allowing negative stock
             const med = await tx.medicine.findUnique({ where: { id: item.medicineId } })
@@ -242,16 +248,22 @@ export async function orderRoutes(app: FastifyInstance) {
             })
             void med
           } else if (inv.availableQuantity < item.quantity && !allowNegative) {
-            throw new Error(`Insufficient stock for medicine ${item.medicineId} (have ${inv.availableQuantity}, need ${item.quantity})`)
+            throw httpError(400, `Insufficient stock for medicine ${item.medicineId} (have ${inv.availableQuantity}, need ${item.quantity})`)
           }
 
-          await tx.inventoryItem.update({
-            where: { id: inv.id },
+          // Conditional decrement: the stock check above ran on a snapshot, so two concurrent
+          // checkouts could both pass it. Re-asserting the floor in the UPDATE itself makes the
+          // check-and-decrement atomic — the loser gets a clear 400 instead of negative stock.
+          const dec = await tx.inventoryItem.updateMany({
+            where: allowNegative ? { id: inv.id } : { id: inv.id, availableQuantity: { gte: item.quantity } },
             data: {
               availableQuantity: { decrement: item.quantity },
               totalQuantity: { decrement: item.quantity },
             },
           })
+          if (dec.count === 0) {
+            throw httpError(409, `Stock for medicine ${item.medicineId} changed while billing — please retry`)
+          }
 
           if (item.batchId) {
             await tx.batch.update({
@@ -284,21 +296,9 @@ export async function orderRoutes(app: FastifyInstance) {
       return newOrder
     })
 
-    // Numbering is count-then-create, which races under concurrent checkouts.
-    // The unique (tenantId, orderNumber) constraint catches the loser — retry
-    // with a freshly generated number instead of surfacing a confusing 409.
-    let order: Awaited<ReturnType<typeof createOrderOnce>> | undefined
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      try {
-        order = await createOrderOnce(await generateOrderNumber(tenantId, body.type))
-        break
-      } catch (e) {
-        const isNumberCollision = (e as { code?: string })?.code === 'P2002'
-        if (!isNumberCollision || attempt === 3) throw e
-        request.log.warn({ attempt }, 'order number collision, retrying with a fresh number')
-      }
-    }
-    if (!order) throw new Error('Failed to create order')
+    // Numbering races under concurrent checkouts; the unique (tenantId, orderNumber)
+    // constraint catches the loser and withUniqueRetry re-runs with a fresh number.
+    const order = await withUniqueRetry(async () => createOrderOnce(await generateOrderNumber(tenantId, body.type)))
 
     await audit(request, {
       action: body.type === 'SALE' ? 'order.sale.create' : 'order.purchase.create',
@@ -354,43 +354,53 @@ export async function orderRoutes(app: FastifyInstance) {
       items: z.array(orderItemSchema).min(1),
     }).parse(request.body)
 
-    const totals = calculateOrderTotals(body.items)
-    const orderNumber = await generateOrderNumber(tenantId, 'SALE')
+    await assertTenantRefs(tenantId, {
+      storeIds: [body.storeId],
+      customerId: body.customerId,
+      salesRepId: body.salesRepId,
+      batchIds: body.items.map((i) => i.batchId),
+    })
+    await assertMedicinesUsable(tenantId, body.items.map((i) => i.medicineId))
 
-    const order = await prisma.order.create({
-      data: {
-        orderNumber,
-        tenantId,
-        storeId: body.storeId,
-        type: 'SALE',
-        status: 'DRAFT',
-        customerId: body.customerId,
-        salesRepId: body.salesRepId,
-        ...totals,
-        paymentMethod: body.paymentMethod as any,
-        notes: body.notes,
-        createdBy: userId,
-        parkedAt: new Date(),
-        parkedLabel: body.label,
-        items: {
-          create: body.items.map((item) => {
-            const lineTotal = item.quantity * item.unitPrice
-            const discountAmount = (lineTotal * item.discountPercent) / 100
-            const taxableAmount = lineTotal - discountAmount
-            const taxAmount = (taxableAmount * item.taxRate) / 100
-            return {
-              medicineId: item.medicineId,
-              batchId: item.batchId,
-              quantity: item.quantity,
-              unitPrice: item.unitPrice,
-              discountPercent: item.discountPercent,
-              taxRate: item.taxRate,
-              taxAmount,
-              total: taxableAmount + taxAmount,
-            }
-          }),
+    const totals = calculateOrderTotals(body.items)
+    let orderNumber = ''
+    const order = await withUniqueRetry(async () => {
+      orderNumber = await generateOrderNumber(tenantId, 'SALE')
+      return prisma.order.create({
+        data: {
+          orderNumber,
+          tenantId,
+          storeId: body.storeId,
+          type: 'SALE',
+          status: 'DRAFT',
+          customerId: body.customerId,
+          salesRepId: body.salesRepId,
+          ...totals,
+          paymentMethod: body.paymentMethod as any,
+          notes: body.notes,
+          createdBy: userId,
+          parkedAt: new Date(),
+          parkedLabel: body.label,
+          items: {
+            create: body.items.map((item) => {
+              const lineTotal = item.quantity * item.unitPrice
+              const discountAmount = (lineTotal * item.discountPercent) / 100
+              const taxableAmount = lineTotal - discountAmount
+              const taxAmount = (taxableAmount * item.taxRate) / 100
+              return {
+                medicineId: item.medicineId,
+                batchId: item.batchId,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                discountPercent: item.discountPercent,
+                taxRate: item.taxRate,
+                taxAmount,
+                total: taxableAmount + taxAmount,
+              }
+            }),
+          },
         },
-      },
+      })
     })
 
     await audit(request, {

@@ -3,8 +3,9 @@ import { z } from 'zod'
 import { prisma } from '@rxflow/db'
 import { authenticate } from '../middleware/auth.js'
 import { getPaginationParams, buildPaginationMeta } from '../utils/pagination.js'
-import { getFinancialYear, getFinancialYearBounds, formatFyNumber } from '../utils/financial-year.js'
 import { audit } from '../utils/audit.js'
+import { nextFyNumber, withUniqueRetry } from '../utils/numbering.js'
+import { httpError } from '../utils/http-error.js'
 
 const transferItemSchema = z.object({
   medicineId: z.string(),
@@ -116,113 +117,113 @@ export async function stockTransferRoutes(app: FastifyInstance) {
     if (!toStore) return reply.status(400).send({ success: false, error: 'Destination store not found' })
 
     // FY-aware code: TR/2025-26/00001
-    const fy = getFinancialYear()
-    const { from, to } = getFinancialYearBounds()
-    const seq = await prisma.stockTransfer.count({
-      where: { tenantId, createdAt: { gte: from, lt: to } },
-    })
-    const code = formatFyNumber('TR', fy.label, seq + 1)
+    let code = ''
 
     // Atomic: validate availability, decrement source, increment dest
-    const transfer = await prisma.$transaction(async (tx) => {
-      // Pre-validation: every item must have enough source stock
-      for (const item of body.items) {
-        const sourceInv = await tx.inventoryItem.findUnique({
-          where: { tenantId_storeId_medicineId: { tenantId, storeId: body.fromStoreId, medicineId: item.medicineId } },
-        })
-        if (!sourceInv || sourceInv.availableQuantity < item.quantity) {
-          throw new Error(`Insufficient stock at source for medicine ${item.medicineId} (have ${sourceInv?.availableQuantity ?? 0}, need ${item.quantity})`)
-        }
-        if (item.fromBatchId) {
-          const sourceBatch = await tx.batch.findUnique({ where: { id: item.fromBatchId } })
-          if (!sourceBatch || sourceBatch.quantity < item.quantity) {
-            throw new Error(`Insufficient quantity in batch for medicine ${item.medicineId}`)
+    const transfer = await withUniqueRetry(async () => {
+      code = await nextFyNumber('stockTransfer', tenantId, 'TR')
+      return prisma.$transaction(async (tx) => {
+        // Pre-validation: every item must have enough source stock
+        for (const item of body.items) {
+          const sourceInv = await tx.inventoryItem.findUnique({
+            where: { tenantId_storeId_medicineId: { tenantId, storeId: body.fromStoreId, medicineId: item.medicineId } },
+          })
+          if (!sourceInv || sourceInv.availableQuantity < item.quantity) {
+            throw httpError(400, `Insufficient stock at source for medicine ${item.medicineId} (have ${sourceInv?.availableQuantity ?? 0}, need ${item.quantity})`)
+          }
+          if (item.fromBatchId) {
+            const sourceBatch = await tx.batch.findUnique({ where: { id: item.fromBatchId } })
+            // The batch must belong to THIS source inventory row — otherwise any batch id
+            // (including another tenant's) could be decremented below.
+            if (!sourceBatch || sourceBatch.inventoryItemId !== sourceInv.id || sourceBatch.quantity < item.quantity) {
+              throw httpError(400, `Insufficient quantity in batch for medicine ${item.medicineId}`)
+            }
           }
         }
-      }
-
-      // Create the transfer record (COMPLETED in one shot for now — could be IN_TRANSIT later)
-      const t = await tx.stockTransfer.create({
-        data: {
-          tenantId,
-          code,
-          fromStoreId: body.fromStoreId,
-          toStoreId: body.toStoreId,
-          status: 'COMPLETED',
-          notes: body.notes,
-          createdBy: userId,
-          completedBy: userId,
-          completedAt: new Date(),
-          items: { create: body.items },
-        },
+  
+        // Create the transfer record (COMPLETED in one shot for now — could be IN_TRANSIT later)
+        const t = await tx.stockTransfer.create({
+          data: {
+            tenantId,
+            code,
+            fromStoreId: body.fromStoreId,
+            toStoreId: body.toStoreId,
+            status: 'COMPLETED',
+            notes: body.notes,
+            createdBy: userId,
+            completedBy: userId,
+            completedAt: new Date(),
+            items: { create: body.items },
+          },
+        })
+  
+        // Move stock
+        for (const item of body.items) {
+          // Source: decrement inventoryItem + (optionally) specific batch
+          const sourceInv = await tx.inventoryItem.findUnique({
+            where: { tenantId_storeId_medicineId: { tenantId, storeId: body.fromStoreId, medicineId: item.medicineId } },
+          })
+          await tx.inventoryItem.update({
+            where: { id: sourceInv!.id },
+            data: {
+              totalQuantity: { decrement: item.quantity },
+              availableQuantity: { decrement: item.quantity },
+            },
+          })
+  
+          let sourceBatchRecord = null as null | { batchNumber: string; expiryDate: Date; purchasePrice: number; mrp: number; manufacturingDate: Date | null }
+          if (item.fromBatchId) {
+            const b = await tx.batch.update({
+              where: { id: item.fromBatchId },
+              data: { quantity: { decrement: item.quantity } },
+            })
+            sourceBatchRecord = { batchNumber: b.batchNumber, expiryDate: b.expiryDate, purchasePrice: b.purchasePrice, mrp: b.mrp, manufacturingDate: b.manufacturingDate }
+          }
+  
+          // Destination: find-or-create inventoryItem; create a new batch row mirroring the source
+          let destInv = await tx.inventoryItem.findUnique({
+            where: { tenantId_storeId_medicineId: { tenantId, storeId: body.toStoreId, medicineId: item.medicineId } },
+          })
+          if (!destInv) {
+            const med = await tx.medicine.findUnique({ where: { id: item.medicineId } })
+            destInv = await tx.inventoryItem.create({
+              data: {
+                tenantId,
+                storeId: body.toStoreId,
+                medicineId: item.medicineId,
+                sellingPrice: med?.mrp ?? sourceBatchRecord?.mrp ?? 0,
+                reorderLevel: 10,
+                reorderQuantity: 50,
+              },
+            })
+          }
+  
+          await tx.inventoryItem.update({
+            where: { id: destInv.id },
+            data: {
+              totalQuantity: { increment: item.quantity },
+              availableQuantity: { increment: item.quantity },
+            },
+          })
+  
+          if (sourceBatchRecord) {
+            // Mirror the batch to destination so expiry/price tracking continues
+            await tx.batch.create({
+              data: {
+                inventoryItemId: destInv.id,
+                batchNumber: sourceBatchRecord.batchNumber,
+                expiryDate: sourceBatchRecord.expiryDate,
+                manufacturingDate: sourceBatchRecord.manufacturingDate,
+                quantity: item.quantity,
+                purchasePrice: sourceBatchRecord.purchasePrice,
+                mrp: sourceBatchRecord.mrp,
+              },
+            })
+          }
+        }
+  
+        return t
       })
-
-      // Move stock
-      for (const item of body.items) {
-        // Source: decrement inventoryItem + (optionally) specific batch
-        const sourceInv = await tx.inventoryItem.findUnique({
-          where: { tenantId_storeId_medicineId: { tenantId, storeId: body.fromStoreId, medicineId: item.medicineId } },
-        })
-        await tx.inventoryItem.update({
-          where: { id: sourceInv!.id },
-          data: {
-            totalQuantity: { decrement: item.quantity },
-            availableQuantity: { decrement: item.quantity },
-          },
-        })
-
-        let sourceBatchRecord = null as null | { batchNumber: string; expiryDate: Date; purchasePrice: number; mrp: number; manufacturingDate: Date | null }
-        if (item.fromBatchId) {
-          const b = await tx.batch.update({
-            where: { id: item.fromBatchId },
-            data: { quantity: { decrement: item.quantity } },
-          })
-          sourceBatchRecord = { batchNumber: b.batchNumber, expiryDate: b.expiryDate, purchasePrice: b.purchasePrice, mrp: b.mrp, manufacturingDate: b.manufacturingDate }
-        }
-
-        // Destination: find-or-create inventoryItem; create a new batch row mirroring the source
-        let destInv = await tx.inventoryItem.findUnique({
-          where: { tenantId_storeId_medicineId: { tenantId, storeId: body.toStoreId, medicineId: item.medicineId } },
-        })
-        if (!destInv) {
-          const med = await tx.medicine.findUnique({ where: { id: item.medicineId } })
-          destInv = await tx.inventoryItem.create({
-            data: {
-              tenantId,
-              storeId: body.toStoreId,
-              medicineId: item.medicineId,
-              sellingPrice: med?.mrp ?? sourceBatchRecord?.mrp ?? 0,
-              reorderLevel: 10,
-              reorderQuantity: 50,
-            },
-          })
-        }
-
-        await tx.inventoryItem.update({
-          where: { id: destInv.id },
-          data: {
-            totalQuantity: { increment: item.quantity },
-            availableQuantity: { increment: item.quantity },
-          },
-        })
-
-        if (sourceBatchRecord) {
-          // Mirror the batch to destination so expiry/price tracking continues
-          await tx.batch.create({
-            data: {
-              inventoryItemId: destInv.id,
-              batchNumber: sourceBatchRecord.batchNumber,
-              expiryDate: sourceBatchRecord.expiryDate,
-              manufacturingDate: sourceBatchRecord.manufacturingDate,
-              quantity: item.quantity,
-              purchasePrice: sourceBatchRecord.purchasePrice,
-              mrp: sourceBatchRecord.mrp,
-            },
-          })
-        }
-      }
-
-      return t
     })
 
     await audit(request, {

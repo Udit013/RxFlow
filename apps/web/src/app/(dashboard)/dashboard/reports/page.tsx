@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { FileSpreadsheet, Calendar, Package } from 'lucide-react'
 import { api } from '@/lib/api'
 import { formatCurrency, formatDate } from '@/lib/utils'
+import { toast } from 'sonner'
 import { exportCsv, exportXlsxMultiSheet } from '@/lib/export'
 import { AnimatedSection, PageHeader, ExportButton } from '@/components/ui'
 
@@ -136,7 +137,7 @@ function Gstr1View({ data, isLoading, period, onExport }: any) {
     if ((data.b2bInvoices ?? []).length > 0) sheets.push({ name: 'B2B', rows: data.b2bInvoices })
     if ((data.cdnr ?? []).length > 0) sheets.push({ name: 'CDNR', rows: data.cdnr })
     if ((data.cdnur ?? []).length > 0) sheets.push({ name: 'CDNUR', rows: data.cdnur })
-    exportXlsxMultiSheet(`GSTR1-${period}`, sheets)
+    exportXlsxMultiSheet(`GSTR1-${period}`, sheets).catch(() => toast.error('Export failed — please try again'))
   }
   const exportAllCsv = () => {
     onExport(`GSTR1-${period}-hsn.csv`, data.hsnRollup)
@@ -180,7 +181,7 @@ function Gstr1View({ data, isLoading, period, onExport }: any) {
 
       <div className="card overflow-hidden">
         <div className="card-header"><h3 className="font-semibold">Rate-wise Summary</h3></div>
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto"><table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-50 text-xs uppercase text-slate-500">
               <th className="text-left px-4 py-2">Rate</th>
@@ -203,7 +204,7 @@ function Gstr1View({ data, isLoading, period, onExport }: any) {
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       </div>
 
       {((data.cdnr ?? []).length > 0 || (data.cdnur ?? []).length > 0) && (
@@ -215,7 +216,7 @@ function Gstr1View({ data, isLoading, period, onExport }: any) {
           {(data.cdnr ?? []).length > 0 && (
             <>
               <div className="px-4 py-2 text-xs uppercase text-slate-500 bg-slate-50">CDNR — Registered (with GSTIN)</div>
-              <table className="w-full text-sm">
+              <div className="overflow-x-auto"><table className="w-full text-sm">
                 <thead>
                   <tr className="bg-slate-50 text-xs uppercase text-slate-500">
                     <th className="text-left px-4 py-2">CN #</th>
@@ -240,13 +241,13 @@ function Gstr1View({ data, isLoading, period, onExport }: any) {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></div>
             </>
           )}
           {(data.cdnur ?? []).length > 0 && (
             <>
               <div className="px-4 py-2 text-xs uppercase text-slate-500 bg-slate-50 border-t">CDNUR — Unregistered (B2C returns)</div>
-              <table className="w-full text-sm">
+              <div className="overflow-x-auto"><table className="w-full text-sm">
                 <thead>
                   <tr className="bg-slate-50 text-xs uppercase text-slate-500">
                     <th className="text-left px-4 py-2">CN #</th>
@@ -269,7 +270,7 @@ function Gstr1View({ data, isLoading, period, onExport }: any) {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></div>
             </>
           )}
           {data.netOutward && (
@@ -284,7 +285,7 @@ function Gstr1View({ data, isLoading, period, onExport }: any) {
       {(data.b2bInvoices ?? []).length > 0 && (
         <div className="card overflow-hidden">
           <div className="card-header"><h3 className="font-semibold">B2B Supplies (Section 4)</h3></div>
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto"><table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-50 text-xs uppercase text-slate-500">
                 <th className="text-left px-4 py-2">Invoice #</th>
@@ -311,13 +312,13 @@ function Gstr1View({ data, isLoading, period, onExport }: any) {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         </div>
       )}
 
       <div className="card overflow-hidden">
         <div className="card-header"><h3 className="font-semibold">HSN-wise Summary (Section 12)</h3></div>
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto"><table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-50 text-xs uppercase text-slate-500">
               <th className="text-left px-4 py-2">HSN</th>
@@ -342,7 +343,7 @@ function Gstr1View({ data, isLoading, period, onExport }: any) {
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       </div>
     </div>
   )
@@ -356,7 +357,7 @@ function Gstr3bView({ data, isLoading }: any) {
     <div className="space-y-5">
       <div className="card p-5">
         <h3 className="font-semibold text-slate-900 mb-3">Table 3.1 — Outward Supplies (net of credit notes)</h3>
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto"><table className="w-full text-sm">
           <tbody className="divide-y divide-slate-100">
             <tr><td className="py-2 text-slate-600">Invoice Count</td><td className="py-2 text-right font-medium">{data.outwardSupplies.invoiceCount}</td></tr>
             <tr><td className="py-2 text-slate-600">Taxable Value (net)</td><td className="py-2 text-right font-medium">{formatCurrency(data.outwardSupplies.taxableValue)}</td></tr>
@@ -365,7 +366,7 @@ function Gstr3bView({ data, isLoading }: any) {
             <tr><td className="py-2 text-slate-600">State Tax (SGST)</td><td className="py-2 text-right">{formatCurrency(data.outwardSupplies.sgst)}</td></tr>
             <tr className="border-t-2"><td className="py-2 font-semibold">Total Output Tax (net)</td><td className="py-2 text-right font-bold">{formatCurrency(data.outwardSupplies.totalTax)}</td></tr>
           </tbody>
-        </table>
+        </table></div>
         {data.creditNotes?.count > 0 && (
           <div className="mt-3 pt-3 border-t-2 border-amber-200 bg-amber-50 -m-5 mt-3 p-4">
             <p className="text-xs uppercase font-semibold text-amber-900 mb-2">Credit Notes Issued This Period (-)</p>
@@ -379,7 +380,7 @@ function Gstr3bView({ data, isLoading }: any) {
 
       <div className="card p-5">
         <h3 className="font-semibold text-slate-900 mb-3">Table 4 — Eligible ITC (Inward Supplies)</h3>
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto"><table className="w-full text-sm">
           <tbody className="divide-y divide-slate-100">
             <tr><td className="py-2 text-slate-600">Purchase Invoice Count</td><td className="py-2 text-right font-medium">{data.inwardSuppliesItc.invoiceCount}</td></tr>
             <tr><td className="py-2 text-slate-600">Taxable Value</td><td className="py-2 text-right font-medium">{formatCurrency(data.inwardSuppliesItc.taxableValue)}</td></tr>
@@ -388,12 +389,12 @@ function Gstr3bView({ data, isLoading }: any) {
             <tr><td className="py-2 text-slate-600">SGST</td><td className="py-2 text-right">{formatCurrency(data.inwardSuppliesItc.sgst)}</td></tr>
             <tr className="border-t-2"><td className="py-2 font-semibold">Total ITC Available</td><td className="py-2 text-right font-bold text-green-600">{formatCurrency(data.inwardSuppliesItc.totalItc)}</td></tr>
           </tbody>
-        </table>
+        </table></div>
       </div>
 
       <div className="card p-5 bg-amber-50 border-amber-200">
         <h3 className="font-semibold text-slate-900 mb-3">Net Tax Payable (Output − ITC)</h3>
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto"><table className="w-full text-sm">
           <tbody className="divide-y divide-amber-200">
             <tr><td className="py-2 text-slate-600">IGST</td><td className="py-2 text-right font-medium">{formatCurrency(data.netTaxPayable.igst)}</td></tr>
             <tr><td className="py-2 text-slate-600">CGST</td><td className="py-2 text-right font-medium">{formatCurrency(data.netTaxPayable.cgst)}</td></tr>
@@ -402,7 +403,7 @@ function Gstr3bView({ data, isLoading }: any) {
               {formatCurrency(data.netTaxPayable.igst + data.netTaxPayable.cgst + data.netTaxPayable.sgst)}
             </td></tr>
           </tbody>
-        </table>
+        </table></div>
       </div>
     </div>
   )
@@ -425,7 +426,7 @@ function RegisterView({ title, data, isLoading, period, filename }: any) {
         {rows.length === 0 ? (
           <p className="p-12 text-center text-slate-400 text-sm">No entries in this period</p>
         ) : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto"><table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-50 text-xs uppercase text-slate-500">
                 <th className="text-left px-3 py-2">Invoice #</th>
@@ -450,7 +451,7 @@ function RegisterView({ title, data, isLoading, period, filename }: any) {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         )}
       </div>
     </div>
@@ -515,7 +516,7 @@ function StockValuationView({ data, isLoading }: any) {
       {topMfrs.length > 0 && (
         <div className="card overflow-hidden">
           <div className="card-header"><h3 className="font-semibold">Top Manufacturers by Inventory Value</h3></div>
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto"><table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-50 text-xs uppercase text-slate-500">
                 <th className="text-left px-4 py-2">Manufacturer</th>
@@ -538,7 +539,7 @@ function StockValuationView({ data, isLoading }: any) {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         </div>
       )}
 

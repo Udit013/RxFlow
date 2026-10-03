@@ -106,7 +106,7 @@ function EmployeesTab() {
       </div>
 
       <SectionCard flush>
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto"><table className="w-full text-sm">
           <thead>
             <tr className="bg-surface-50/60 text-[10px] uppercase tracking-[0.1em] text-surface-500">
               <th className="text-left px-4 py-2.5">Name</th>
@@ -138,7 +138,7 @@ function EmployeesTab() {
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       </SectionCard>
 
       {edit && <EmployeeModal existing={edit === 'new' ? undefined : edit} onClose={() => setEdit(null)} onSaved={() => { setEdit(null); queryClient.invalidateQueries({ queryKey: ['employees'] }) }} />}
@@ -384,7 +384,7 @@ function PayrollTab() {
       </div>
 
       <SectionCard flush>
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto"><table className="w-full text-sm">
           <thead>
             <tr className="bg-surface-50/60 text-[10px] uppercase tracking-[0.1em] text-surface-500">
               <th className="text-left px-4 py-2.5">Period</th>
@@ -409,7 +409,7 @@ function PayrollTab() {
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       </SectionCard>
     </div>
   )
@@ -510,7 +510,7 @@ function PerformanceTab() {
       </div>
 
       <SectionCard flush title="Staff Performance" description="Attendance rate + sales attributed to each staff member (requires login link for sales)">
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto"><table className="w-full text-sm">
           <thead>
             <tr className="bg-surface-50/60 text-[10px] uppercase tracking-[0.1em] text-surface-500">
               <th className="text-left px-4 py-2.5">Employee</th>
@@ -543,7 +543,7 @@ function PerformanceTab() {
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       </SectionCard>
       <p className="text-xs text-surface-400">Sales attribution links a staff member to their login account. Set the user link on the employee (coming soon) — until then sales show against whoever rang the bill.</p>
     </div>

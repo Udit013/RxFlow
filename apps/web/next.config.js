@@ -11,6 +11,13 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  // Auth endpoints are proxied through this app's own origin so the API's httpOnly refresh
+  // cookie is FIRST-party (same site as the UI). A cross-site cookie from the API's domain
+  // would be dropped by Safari / third-party-cookie blocking. All other API calls go direct.
+  async rewrites() {
+    const api = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1').replace(/\/+$/, '')
+    return [{ source: '/api/v1/auth/:path*', destination: `${api}/auth/:path*` }]
+  },
 }
 
 module.exports = nextConfig

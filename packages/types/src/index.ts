@@ -532,3 +532,102 @@ export interface JwtPayload {
   role: `${UserRole}`
   storeIds: string[]
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Role-based access control
+// One matrix, shared by the API (enforced in `authenticate`) and the web app
+// (used to hide navigation the user can't use). Paths are API route templates
+// relative to /api/v1, e.g. 'orders/:id/status'. A trailing '/*' matches the
+// whole subtree. First matching rule wins.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type RoleName = `${UserRole}`
+
+const ADMIN: RoleName[] = ['SUPER_ADMIN', 'TENANT_ADMIN']
+const MANAGER: RoleName[] = [...ADMIN, 'STORE_MANAGER']
+const STOCK: RoleName[] = [...MANAGER, 'PHARMACIST']
+const SALES: RoleName[] = [...STOCK, 'SALES_REP']
+const FINANCE: RoleName[] = [...MANAGER, 'ACCOUNTANT']
+const ALL = '*' as const
+
+type Rule = { methods: string[] | '*'; path: string; roles: RoleName[] | typeof ALL }
+const R = (methods: Rule['methods'], path: string, roles: Rule['roles']): Rule => ({ methods, path, roles })
+const READ = ['GET', 'HEAD']
+const WRITE = ['POST', 'PUT', 'PATCH', 'DELETE']
+
+const RULES: Rule[] = [
+  // ── Sensitive reads ────────────────────────────────────────────────────────
+  R(READ, 'audit-logs/since', ALL), // live-sync replay for every signed-in user
+  R(READ, 'audit-logs/*', MANAGER),
+  R(READ, 'backup/*', ADMIN),
+  R(READ, 'hr/*', FINANCE), // salaries, payroll
+  R(READ, 'accounts/*', FINANCE),
+  R(READ, 'reports/schedule-h1-register', [...FINANCE, 'PHARMACIST']),
+  R(READ, 'reports/license-expiry', [...FINANCE, 'PHARMACIST']),
+  R(READ, 'reports/*', FINANCE),
+  R(READ, 'sales-reps/:id/commission-report', FINANCE),
+  R(READ, 'tenant/users', FINANCE), // staff & payroll screens list user accounts
+
+  // ── Sales & billing ────────────────────────────────────────────────────────
+  R(WRITE, 'orders/:id/status', [...SALES, 'DELIVERY_STAFF']),
+  R(WRITE, 'orders/*', SALES),
+  R(WRITE, 'invoices/from-order/:orderId', [...SALES, 'ACCOUNTANT']),
+  R(WRITE, 'invoices/:id/payment', [...SALES, 'ACCOUNTANT']),
+  R(WRITE, 'invoices/*', [...STOCK, 'ACCOUNTANT']), // credit notes, purchase returns
+  R(['DELETE'], 'customers/:id', MANAGER),
+  R(WRITE, 'customers/*', [...SALES, 'ACCOUNTANT']),
+
+  // ── Stock & catalog ────────────────────────────────────────────────────────
+  R(['DELETE'], 'suppliers/:id', MANAGER),
+  R(WRITE, 'suppliers/*', [...STOCK, 'ACCOUNTANT']),
+  R(['DELETE'], 'categories/:id', MANAGER),
+  R(WRITE, 'categories/*', STOCK),
+  R(WRITE, 'medicines/*', STOCK),
+  R(WRITE, 'inventory/*', STOCK),
+  R(WRITE, 'stock-takes/*', STOCK),
+  R(WRITE, 'stock-transfers/*', STOCK),
+  R(WRITE, 'purchases/match-medicines', ALL), // read-only fuzzy match
+  R(WRITE, 'purchases/*', STOCK),
+  R(WRITE, 'medicine-intelligence/reload', ADMIN),
+  R(WRITE, 'medicine-intelligence/*', ALL), // search / normalize / extract are read-only
+
+  // ── People & money ─────────────────────────────────────────────────────────
+  R(WRITE, 'sales-reps/:id/settle', FINANCE),
+  R(WRITE, 'sales-reps/*', MANAGER),
+  R(WRITE, 'accounts/*', FINANCE),
+  R(WRITE, 'hr/payroll/*', FINANCE),
+  R(WRITE, 'hr/*', MANAGER),
+
+  // ── Workspace administration ───────────────────────────────────────────────
+  R(WRITE, 'backup/import-customers', MANAGER),
+  R(WRITE, 'backup/import-suppliers', MANAGER),
+  R(WRITE, 'backup/*', ADMIN),
+  R(WRITE, 'tenant/*', ADMIN),
+
+  R(WRITE, 'auth/*', ALL), // logout etc.
+]
+
+function pathMatches(pattern: string, path: string): boolean {
+  if (pattern.endsWith('/*')) {
+    const base = pattern.slice(0, -2)
+    return path === base || path.startsWith(`${base}/`)
+  }
+  return pattern === path
+}
+
+/**
+ * May `role` call `method` on the API route template `path` (relative to /api/v1)?
+ * Unlisted reads are open to every role; unlisted writes default to managers (fail closed).
+ */
+export function canAccess(role: string | undefined | null, method: string, path: string): boolean {
+  if (!role) return false
+  if (role === 'SUPER_ADMIN') return true
+  const m = method.toUpperCase()
+  const p = path.replace(/^\/+/, '').replace(/^api\/v1\/?/, '').replace(/\/+$/, '')
+  for (const rule of RULES) {
+    if (rule.methods !== '*' && !rule.methods.includes(m)) continue
+    if (!pathMatches(rule.path, p)) continue
+    return rule.roles === ALL || rule.roles.includes(role as RoleName)
+  }
+  return READ.includes(m) ? true : MANAGER.includes(role as RoleName)
+}

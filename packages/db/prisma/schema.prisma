@@ -320,12 +320,30 @@ model User {
 
   // Relations
   tenant    Tenant      @relation(fields: [tenantId], references: [id])
+  sessions  AuthSession[]
   stores    UserStore[]
   auditLogs AuditLog[]
 
   @@unique([tenantId, email])
   @@index([tenantId])
   @@index([email])
+}
+
+// One row per signed-in device. The refresh-token cookie carries the session id (sid); only a
+// SHA-256 of the current (rotating) token is stored. Lets a user stay signed in on several
+// counters/tablets at once and sign out one device without touching the others.
+model AuthSession {
+  id         String   @id
+  userId     String
+  tokenHash  String
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  lastUsedAt DateTime @default(now())
+  expiresAt  DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model UserStore {
@@ -403,6 +421,11 @@ model Medicine {
   maxStock             Int?
   negativeAllowed      Boolean      @default(false)
   isHidden             Boolean      @default(false)
+  // Ownership — NULL = shared catalog row (read-only for tenants). A tenant that creates or
+  // edits a medicine gets a private row with ownerTenantId set; edits of a shared row produce
+  // a private copy that points back via forkedFromId and hides the original for that tenant.
+  ownerTenantId        String?
+  forkedFromId         String?
   // Metadata
   createdAt            DateTime     @default(now())
   updatedAt            DateTime     @updatedAt
@@ -415,8 +438,12 @@ model Medicine {
   orderItems      OrderItem[]
   invoiceItems    InvoiceItem[]
   manufacturer    Manufacturer?         @relation(fields: [manufacturerId], references: [id])
+  forkedFrom      Medicine?             @relation("MedicineForks", fields: [forkedFromId], references: [id])
+  forks           Medicine[]            @relation("MedicineForks")
 
   @@index([genericName])
+  @@index([ownerTenantId])
+  @@index([forkedFromId])
   @@index([manufacturerName])
   @@index([dosageForm])
   @@index([hsn])
@@ -737,6 +764,8 @@ model Invoice {
   totalTax      Float         @default(0)
   total         Float
   roundOff      Float         @default(0)
+  // Non-taxable charges carried from the order (e.g. purchase transport), included in grandTotal
+  otherCharges  Float         @default(0)
   grandTotal    Float
   paymentStatus PaymentStatus @default(PENDING)
   dueDate       DateTime?

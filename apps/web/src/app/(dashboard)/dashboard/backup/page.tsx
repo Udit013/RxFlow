@@ -381,7 +381,7 @@ function CsvImportTab({ entity }: CsvImportTabProps) {
                 Download errors as CSV
               </button>
             </div>
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto"><table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 text-xs uppercase text-slate-500">
                   <th className="text-left px-3 py-2">Row #</th>
@@ -400,7 +400,7 @@ function CsvImportTab({ entity }: CsvImportTabProps) {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
             {errors.length > 100 && (
               <p className="p-2 text-xs text-slate-500 bg-slate-50 text-center">Showing first 100 of {errors.length}. Download CSV for the full list.</p>
             )}

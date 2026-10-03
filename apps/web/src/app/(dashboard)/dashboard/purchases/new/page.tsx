@@ -291,7 +291,7 @@ function ManualFlow(props: any) {
         )}
 
         {lines.length > 0 && (
-          <table className="w-full text-sm mt-3">
+          <div className="overflow-x-auto"><table className="w-full text-sm mt-3">
             <thead>
               <tr className="bg-slate-50 text-xs uppercase text-slate-500">
                 <th className="text-left px-2 py-2">Medicine</th>
@@ -368,7 +368,7 @@ function ManualFlow(props: any) {
               <tr className="border-t"><td colSpan={10} className="px-3 py-2 text-right font-bold">Total</td><td className="px-2 py-2 text-right font-bold">{formatCurrency(total)}</td><td/></tr>
               {salesman && commissionAmount > 0 && <tr><td colSpan={10} className="px-3 py-1 text-right text-xs text-accent-700">Salesman commission ({commissionPercent}%)</td><td className="px-2 py-1 text-right text-xs text-accent-700">{formatCurrency(commissionAmount)}</td><td/></tr>}
             </tfoot>
-          </table>
+          </table></div>
         )}
 
         {lines.length === 0 && (
@@ -495,7 +495,7 @@ function TemporaryPurchaseBanner({ supplier, storeId, onConverted }: { supplier:
               <button onClick={() => setOpen(false)}><X className="w-4 h-4 text-surface-400" /></button>
             </div>
             <div className="p-5">
-              <table className="w-full text-sm">
+              <div className="overflow-x-auto"><table className="w-full text-sm">
                 <thead className="bg-surface-50 text-2xs uppercase text-surface-500">
                   <tr><th className="text-left px-2 py-2">Item</th><th className="text-center px-2 py-2">Qty</th><th className="text-right px-2 py-2">Purchase Price</th><th className="text-right px-2 py-2">Line</th></tr>
                 </thead>
@@ -512,7 +512,7 @@ function TemporaryPurchaseBanner({ supplier, storeId, onConverted }: { supplier:
                     )
                   })}
                 </tbody>
-              </table>
+              </table></div>
               <div className="flex justify-end gap-2 pt-4">
                 <button onClick={() => setOpen(false)} className="btn-secondary">Cancel</button>
                 <button onClick={() => convert.mutate()} disabled={convert.isPending} className="btn-primary">{convert.isPending ? 'Converting…' : 'Convert to Purchase Bill'}</button>

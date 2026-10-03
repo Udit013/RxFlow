@@ -11,8 +11,10 @@ let matcherReady = false
 
 async function ensureMatcherLoaded() {
   if (matcherReady) return
+  // The matcher is one process-wide index shared by all tenants, so it holds only the shared
+  // catalog — never any tenant's private medicines.
   const medicines = await prisma.medicine.findMany({
-    where: { isActive: true },
+    where: { isActive: true, ownerTenantId: null },
     include: { compositions: true },
     take: 10000,
   })

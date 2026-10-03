@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '@rxflow/db'
 import { authenticate } from '../middleware/auth.js'
 import { audit } from '../utils/audit.js'
+import { catalogWhere } from '../utils/medicine-scope.js'
 
 export async function categoryRoutes(app: FastifyInstance) {
   // GET /api/v1/categories — list with medicine counts
@@ -12,10 +13,10 @@ export async function categoryRoutes(app: FastifyInstance) {
       where: { tenantId },
       orderBy: { name: 'asc' },
     })
-    // Count medicines per category name (medicines are global; match by category string)
+    // Count medicines per category name, over the medicines this tenant actually sees
     const counts = await prisma.medicine.groupBy({
       by: ['category'],
-      where: { category: { in: categories.map((c) => c.name) }, isActive: true },
+      where: { category: { in: categories.map((c) => c.name) }, isActive: true, ...catalogWhere(tenantId) },
       _count: true,
     })
     const countMap = new Map(counts.map((c) => [c.category, c._count]))
@@ -56,9 +57,10 @@ export async function categoryRoutes(app: FastifyInstance) {
     const cat = await prisma.medicineCategory.findFirst({ where: { id, tenantId } })
     if (!cat) return reply.status(404).send({ success: false, error: 'Category not found' })
 
-    // If renaming, propagate to medicines that use the old name
+    // Renaming propagates only to this tenant's own medicines. Shared catalog rows are never
+    // rewritten by a tenant (they're re-labelled per tenant by editing → private copy).
     if (body.name && body.name !== cat.name) {
-      await prisma.medicine.updateMany({ where: { category: cat.name }, data: { category: body.name } })
+      await prisma.medicine.updateMany({ where: { category: cat.name, ownerTenantId: tenantId }, data: { category: body.name } })
     }
     const updated = await prisma.medicineCategory.update({ where: { id }, data: body })
     await audit(request, { action: 'category.update', entityType: 'MedicineCategory', entityId: id, newValues: body, invalidate: ['categories', 'medicines'] })
@@ -72,7 +74,8 @@ export async function categoryRoutes(app: FastifyInstance) {
     const cat = await prisma.medicineCategory.findFirst({ where: { id, tenantId } })
     if (!cat) return reply.status(404).send({ success: false, error: 'Category not found' })
 
-    await prisma.medicine.updateMany({ where: { category: cat.name }, data: { category: null } })
+    // Unassign only from this tenant's own medicines; shared catalog rows are left untouched.
+    await prisma.medicine.updateMany({ where: { category: cat.name, ownerTenantId: tenantId }, data: { category: null } })
     await prisma.medicineCategory.delete({ where: { id } })
     await audit(request, { action: 'category.delete', entityType: 'MedicineCategory', entityId: id, oldValues: { name: cat.name }, invalidate: ['categories', 'medicines'] })
     return reply.send({ success: true })

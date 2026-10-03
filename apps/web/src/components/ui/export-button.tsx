@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { Download, ChevronDown, FileText, FileSpreadsheet } from 'lucide-react'
+import { toast } from 'sonner'
 import { exportRows } from '@/lib/export'
 import { cn } from '@/lib/utils'
 
@@ -30,7 +31,7 @@ export function ExportButton({ filename, rows, sheetName, disabled, label = 'Exp
   const doExport = (format: 'csv' | 'xlsx') => {
     const data = typeof rows === 'function' ? rows() : rows
     if (!data || data.length === 0) return
-    exportRows(format, filename, data, sheetName)
+    exportRows(format, filename, data, sheetName).catch(() => toast.error('Export failed — please try again'))
     setOpen(false)
   }
 

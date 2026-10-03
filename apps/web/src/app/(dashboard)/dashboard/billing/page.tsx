@@ -93,7 +93,7 @@ function BillingPageInner() {
           const invRes = await api.get('/inventory', { params: { limit: 200 } })
           const allInv: InventoryItem[] = invRes.data?.data ?? []
           const newCart: CartLine[] = []
-          let missing: string[] = []
+          const missing: string[] = []
           for (const [medId, qtyStr] of pairs) {
             const qty = Math.max(1, parseInt(qtyStr ?? '1', 10) || 1)
             const inv = allInv.find((i) => i.medicineId === medId)
@@ -445,7 +445,7 @@ function BillingPageInner() {
               Add medicines to begin
             </div>
           ) : (
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto"><table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-50 text-xs uppercase text-slate-500">
                   <th className="text-left px-4 py-2">Item</th>
@@ -503,7 +503,7 @@ function BillingPageInner() {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           )}
         </div>
       </div>

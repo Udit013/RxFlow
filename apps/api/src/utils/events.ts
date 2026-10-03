@@ -44,6 +44,10 @@ export function publish(tenantId: string, event: ChangeEvent) {
 /** Send SSE headers + flush helper. */
 export function openSseStream(reply: FastifyReply) {
   reply.raw.writeHead(200, {
+    // Headers queued on the Fastify reply by plugins (CORS above all) are NOT sent by a raw
+    // writeHead unless copied in. Without Access-Control-Allow-Origin the browser rejects the
+    // cross-origin stream (web and API are on different domains) and live sync never connects.
+    ...(reply.getHeaders() as Record<string, string | string[]>),
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache, no-transform',
     Connection: 'keep-alive',

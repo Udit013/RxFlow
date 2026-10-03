@@ -1,5 +1,14 @@
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
+import type { jsPDF } from 'jspdf'
+
+// jsPDF + autotable are ~350 kB; load them on the first PDF download rather than shipping
+// them with every invoice/order page.
+async function loadPdfLib() {
+  const [{ default: JsPDF }, { default: autoTable }] = await Promise.all([
+    import('jspdf'),
+    import('jspdf-autotable'),
+  ])
+  return { JsPDF, autoTable }
+}
 import { formatCurrency, formatDate } from './utils'
 
 interface InvoiceItem {
@@ -31,6 +40,8 @@ interface InvoiceData {
   sgst: number
   igst: number
   totalTax: number
+  otherCharges?: number
+  roundOff?: number
   grandTotal: number
   paymentStatus: string
   notes?: string | null
@@ -49,8 +60,9 @@ interface TenantHeader {
   drugLicense?: string
 }
 
-export function generateInvoicePdf(invoice: InvoiceData, tenant: TenantHeader): jsPDF {
-  const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+export async function generateInvoicePdf(invoice: InvoiceData, tenant: TenantHeader): Promise<jsPDF> {
+  const { JsPDF, autoTable } = await loadPdfLib()
+  const doc = new JsPDF({ unit: 'mm', format: 'a4' })
   const margin = 14
   const pageWidth = doc.internal.pageSize.getWidth()
 
@@ -150,6 +162,8 @@ export function generateInvoicePdf(invoice: InvoiceData, tenant: TenantHeader): 
   if (invoice.cgst > 0) totalsRow('CGST', formatCurrency(invoice.cgst))
   if (invoice.sgst > 0) totalsRow('SGST', formatCurrency(invoice.sgst))
   if (invoice.igst > 0) totalsRow('IGST', formatCurrency(invoice.igst))
+  if ((invoice.otherCharges ?? 0) > 0) totalsRow('Transport / other', formatCurrency(invoice.otherCharges!))
+  if (Math.abs(invoice.roundOff ?? 0) >= 0.01) totalsRow('Round off', formatCurrency(invoice.roundOff!))
   doc.setDrawColor(200).line(totalsX, ty - 1, pageWidth - margin, ty - 1)
   ty += 2
   totalsRow(isCreditNote ? 'Refund Amount' : 'Grand Total', formatCurrency(invoice.grandTotal), true)
@@ -169,8 +183,8 @@ export function generateInvoicePdf(invoice: InvoiceData, tenant: TenantHeader): 
   return doc
 }
 
-export function downloadInvoicePdf(invoice: InvoiceData, tenant: TenantHeader) {
-  const doc = generateInvoicePdf(invoice, tenant)
+export async function downloadInvoicePdf(invoice: InvoiceData, tenant: TenantHeader) {
+  const doc = await generateInvoicePdf(invoice, tenant)
   doc.save(`${invoice.invoiceNumber}.pdf`)
 }
 

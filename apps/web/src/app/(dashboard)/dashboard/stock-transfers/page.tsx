@@ -262,7 +262,7 @@ function NewTransferModal({ onClose, onCreated }: { onClose: () => void; onCreat
           </div>
 
           {lines.length > 0 && (
-            <table className="w-full text-sm border rounded-lg">
+            <div className="overflow-x-auto"><table className="w-full text-sm border rounded-lg">
               <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                 <tr>
                   <th className="text-left px-3 py-2">Medicine</th>
@@ -315,7 +315,7 @@ function NewTransferModal({ onClose, onCreated }: { onClose: () => void; onCreat
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </table></div>
           )}
 
           <div>

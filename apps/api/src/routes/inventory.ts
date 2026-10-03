@@ -2,9 +2,12 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '@rxflow/db'
 import { authenticate } from '../middleware/auth.js'
+import { assertMedicinesUsable } from '../utils/medicine-scope.js'
 import { getPaginationParams, buildPaginationMeta } from '../utils/pagination.js'
-import { getFinancialYear, getFinancialYearBounds, formatFyNumber } from '../utils/financial-year.js'
 import { audit } from '../utils/audit.js'
+import { nextFyNumber, withUniqueRetry } from '../utils/numbering.js'
+import { httpError } from '../utils/http-error.js'
+import { assertTenantRefs } from '../utils/tenant-guard.js'
 
 const addBatchSchema = z.object({
   medicineId: z.string(),
@@ -68,6 +71,17 @@ export async function inventoryRoutes(app: FastifyInstance) {
       where.availableQuantity = { lte: prisma.inventoryItem.fields.reorderLevel }
     }
 
+    // Expiry filters are applied in the DATABASE (not in-memory after paging) so that
+    // `skip`/`take` and the `total` count both describe the same filtered set. Filtering
+    // after pagination returned short pages and a `total` for the unfiltered set.
+    const nowForFilter = new Date()
+    const ninetyDaysOut = new Date(nowForFilter.getTime() + 90 * 24 * 60 * 60 * 1000)
+    if (query.expired === 'true') {
+      where.batches = { some: { quantity: { gt: 0 }, expiryDate: { lt: nowForFilter } } }
+    } else if (query.expiringSoon === 'true') {
+      where.batches = { some: { quantity: { gt: 0 }, expiryDate: { gte: nowForFilter, lte: ninetyDaysOut } } }
+    }
+
     const [items, total] = await Promise.all([
       prisma.inventoryItem.findMany({
         where,
@@ -98,16 +112,9 @@ export async function inventoryRoutes(app: FastifyInstance) {
       ),
     }))
 
-    // Filter if needed
-    const filtered = query.expired === 'true'
-      ? enriched.filter((i) => i.hasExpiredBatches)
-      : query.expiringSoon === 'true'
-      ? enriched.filter((i) => i.hasExpiringSoonBatches)
-      : enriched
-
     return reply.send({
       success: true,
-      data: filtered,
+      data: enriched,
       meta: buildPaginationMeta(total, page, limit),
     })
   })
@@ -142,6 +149,13 @@ export async function inventoryRoutes(app: FastifyInstance) {
     if (body.isTemporary && !body.supplierId) {
       return reply.status(400).send({ success: false, error: 'A supplier is required for a temporary purchase' })
     }
+    if (!storeId) return reply.status(400).send({ success: false, error: 'storeId is required' })
+    await assertTenantRefs(tenantId, { storeIds: [storeId], supplierId: body.supplierId })
+    await assertMedicinesUsable(tenantId, [body.medicineId])
+    if (body.purchaseOrderId) {
+      const po = await prisma.order.count({ where: { id: body.purchaseOrderId, tenantId } })
+      if (!po) return reply.status(404).send({ success: false, error: 'Purchase order not found' })
+    }
 
     const result = await prisma.$transaction(async (tx) => {
       // Find or create inventory item
@@ -151,7 +165,7 @@ export async function inventoryRoutes(app: FastifyInstance) {
 
       if (!inventoryItem) {
         const medicine = await tx.medicine.findUnique({ where: { id: body.medicineId } })
-        if (!medicine) throw new Error('Medicine not found')
+        if (!medicine) throw httpError(404, 'Medicine not found')
 
         inventoryItem = await tx.inventoryItem.create({
           data: {
@@ -246,6 +260,8 @@ export async function inventoryRoutes(app: FastifyInstance) {
       items: z.array(z.object({ batchId: z.string(), purchasePrice: z.number().min(0) })).min(1),
     }).parse(request.body)
 
+    await assertTenantRefs(tenantId, { storeIds: [body.storeId], supplierId: body.supplierId })
+
     const batches = await prisma.batch.findMany({
       where: { id: { in: body.items.map((i) => i.batchId) }, isTemporary: true, inventoryItem: { tenantId } },
       include: { inventoryItem: { include: { medicine: { select: { id: true, gstRate: true } } } } },
@@ -262,36 +278,36 @@ export async function inventoryRoutes(app: FastifyInstance) {
     }
     const total = subtotal + taxAmount
 
-    const fy = getFinancialYear()
-    const { from, to } = getFinancialYearBounds()
-    const seq = await prisma.order.count({ where: { tenantId, type: 'PURCHASE', createdAt: { gte: from, lt: to } } })
-    const orderNumber = formatFyNumber('PO', fy.label, seq + 1)
+    let orderNumber = ''
 
-    const order = await prisma.$transaction(async (tx) => {
-      const o = await tx.order.create({
-        data: {
-          orderNumber, tenantId, storeId: body.storeId, type: 'PURCHASE', status: 'CONFIRMED',
-          supplierId: body.supplierId, subtotal, taxAmount, total, paymentMethod: 'CREDIT',
-          notes: 'Converted from temporary purchase', createdBy: userId,
-          items: {
-            create: batches.map((b) => {
-              const price = priceById.get(b.id) ?? b.purchasePrice
-              return {
-                medicineId: b.inventoryItem.medicine.id, quantity: b.quantity, unitPrice: price,
-                discountPercent: 0, taxRate: b.inventoryItem.medicine.gstRate,
-                taxAmount: (b.quantity * price * b.inventoryItem.medicine.gstRate) / 100,
-                total: b.quantity * price * (1 + b.inventoryItem.medicine.gstRate / 100),
-              }
-            }),
+    const order = await withUniqueRetry(async () => {
+      orderNumber = await nextFyNumber('order', tenantId, 'PO')
+      return prisma.$transaction(async (tx) => {
+        const o = await tx.order.create({
+          data: {
+            orderNumber, tenantId, storeId: body.storeId, type: 'PURCHASE', status: 'CONFIRMED',
+            supplierId: body.supplierId, subtotal, taxAmount, total, paymentMethod: 'CREDIT',
+            notes: 'Converted from temporary purchase', createdBy: userId,
+            items: {
+              create: batches.map((b) => {
+                const price = priceById.get(b.id) ?? b.purchasePrice
+                return {
+                  medicineId: b.inventoryItem.medicine.id, quantity: b.quantity, unitPrice: price,
+                  discountPercent: 0, taxRate: b.inventoryItem.medicine.gstRate,
+                  taxAmount: (b.quantity * price * b.inventoryItem.medicine.gstRate) / 100,
+                  total: b.quantity * price * (1 + b.inventoryItem.medicine.gstRate / 100),
+                }
+              }),
+            },
           },
-        },
+        })
+        // Stamp prices + clear temporary flag (stock already counted — do NOT re-add)
+        for (const b of batches) {
+          await tx.batch.update({ where: { id: b.id }, data: { purchasePrice: priceById.get(b.id) ?? b.purchasePrice, isTemporary: false, purchaseOrderId: o.id } })
+        }
+        await tx.supplier.update({ where: { id: body.supplierId }, data: { totalPurchases: { increment: total } } })
+        return o
       })
-      // Stamp prices + clear temporary flag (stock already counted — do NOT re-add)
-      for (const b of batches) {
-        await tx.batch.update({ where: { id: b.id }, data: { purchasePrice: priceById.get(b.id) ?? b.purchasePrice, isTemporary: false, purchaseOrderId: o.id } })
-      }
-      await tx.supplier.update({ where: { id: body.supplierId }, data: { totalPurchases: { increment: total } } })
-      return o
     })
 
     await audit(request, {

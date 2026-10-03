@@ -1,4 +1,4 @@
-import { api } from './api'
+import { api, authApi, setAccessToken, getAccessToken, clearLocalSession } from './api'
 
 export interface LoginCredentials { email: string; password: string }
 export interface AuthUser {
@@ -25,86 +25,87 @@ export function buildTenantHeader(tenant: AuthUser['tenant']) {
   }
 }
 
-const TOKEN_KEY = 'rxflow_access_token'
-const REFRESH_KEY = 'rxflow_refresh_token'
 const USER_KEY = 'rxflow_user'
+
+function storeUser(user: AuthUser) {
+  try { localStorage.setItem(USER_KEY, JSON.stringify(user)) } catch { /* storage unavailable */ }
+}
+
+/** Login-type responses: keep the access token in memory, the (non-secret) profile in storage. */
+function startSession(data: { accessToken: string; user: AuthUser }): AuthUser {
+  setAccessToken(data.accessToken)
+  storeUser(data.user)
+  return data.user
+}
 
 export const authService = {
   async login(credentials: LoginCredentials): Promise<AuthUser> {
-    const res = await api.post('/auth/login', credentials)
-    const { accessToken, refreshToken, user } = res.data.data
-    localStorage.setItem(TOKEN_KEY, accessToken)
-    localStorage.setItem(REFRESH_KEY, refreshToken)
-    localStorage.setItem(USER_KEY, JSON.stringify(user))
-    return user
+    const res = await authApi.post('/login', credentials)
+    return startSession(res.data.data)
   },
 
   async register(payload: {
     pharmacyName: string; tenantType?: string; name: string; email: string; password: string; phone: string
   }): Promise<AuthUser> {
-    const res = await api.post('/auth/register', payload)
-    const { accessToken, refreshToken, user } = res.data.data
-    localStorage.setItem(TOKEN_KEY, accessToken)
-    localStorage.setItem(REFRESH_KEY, refreshToken)
-    localStorage.setItem(USER_KEY, JSON.stringify(user))
-    return user
+    const res = await authApi.post('/register', payload)
+    return startSession(res.data.data)
   },
 
   async logout(): Promise<void> {
-    try { await api.post('/auth/logout') } catch {}
-    localStorage.removeItem(TOKEN_KEY)
-    localStorage.removeItem(REFRESH_KEY)
-    localStorage.removeItem(USER_KEY)
+    try { await authApi.post('/logout', {}) } catch { /* best effort — clear local session regardless */ }
+    clearLocalSession()
   },
 
   async deleteAccount(confirmName: string): Promise<void> {
     await api.delete('/tenant', { data: { confirmName } })
-    localStorage.removeItem(TOKEN_KEY)
-    localStorage.removeItem(REFRESH_KEY)
-    localStorage.removeItem(USER_KEY)
+    try { await authApi.post('/logout', {}) } catch { /* account is gone; just drop the cookie */ }
+    clearLocalSession()
   },
 
   async forgotPassword(email: string): Promise<void> {
-    await api.post('/auth/forgot-password', { email })
+    await authApi.post('/forgot-password', { email })
   },
 
   async resetPassword(email: string, otp: string, newPassword: string): Promise<void> {
-    await api.post('/auth/reset-password', { email, otp, newPassword })
+    await authApi.post('/reset-password', { email, otp, newPassword })
   },
 
   async requestLoginOtp(identifier: string): Promise<{ sent: boolean; maskedEmail: string | null }> {
-    const res = await api.post('/auth/otp/request', { identifier })
+    const res = await authApi.post('/otp/request', { identifier })
     return res.data.data
   },
 
   async loginWithOtp(identifier: string, otp: string): Promise<AuthUser> {
-    const res = await api.post('/auth/otp/verify', { identifier, otp })
-    const { accessToken, refreshToken, user } = res.data.data
-    localStorage.setItem(TOKEN_KEY, accessToken)
-    localStorage.setItem(REFRESH_KEY, refreshToken)
-    localStorage.setItem(USER_KEY, JSON.stringify(user))
-    return user
+    const res = await authApi.post('/otp/verify', { identifier, otp })
+    return startSession(res.data.data)
   },
 
   getStoredUser(): AuthUser | null {
     if (typeof window === 'undefined') return null
     const stored = localStorage.getItem(USER_KEY)
-    return stored ? JSON.parse(stored) : null
+    if (!stored) return null
+    try {
+      return JSON.parse(stored) as AuthUser
+    } catch {
+      // Corrupted entry (manual edit, partial write) — treat as signed out rather than crash.
+      localStorage.removeItem(USER_KEY)
+      return null
+    }
   },
 
   getToken(): string | null {
-    if (typeof window === 'undefined') return null
-    return localStorage.getItem(TOKEN_KEY)
+    return getAccessToken()
   },
 
-  isAuthenticated(): boolean {
-    return !!this.getToken()
+  /** A signed-in profile exists locally (the cookie decides whether the session is still valid). */
+  hasSession(): boolean {
+    return !!this.getStoredUser()
   },
 
   async fetchCurrentUser(): Promise<AuthUser> {
     const res = await api.get('/auth/me')
     const user = res.data.data
-    localStorage.setItem(USER_KEY, JSON.stringify(user))
+    storeUser(user)
     return user
   },
 }

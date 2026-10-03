@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs'
 import { prisma } from '@rxflow/db'
 import { authenticate } from '../middleware/auth.js'
 import { audit } from '../utils/audit.js'
+import { assertTenantRefs } from '../utils/tenant-guard.js'
 
 export async function tenantRoutes(app: FastifyInstance) {
   // GET /api/v1/tenant — Current tenant details
@@ -68,8 +69,9 @@ export async function tenantRoutes(app: FastifyInstance) {
       storeIds: z.array(z.string()).default([]),
     }).parse(request.body)
 
-    const existing = await prisma.user.findFirst({ where: { email: body.email } })
+    const existing = await prisma.user.findFirst({ where: { email: { equals: body.email, mode: 'insensitive' } } })
     if (existing) return reply.status(409).send({ success: false, error: 'Email already in use' })
+    await assertTenantRefs(tenantId, { storeIds: body.storeIds })
 
     const passwordHash = await bcrypt.hash(body.password, 12)
     const user = await prisma.user.create({

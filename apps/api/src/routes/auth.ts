@@ -1,8 +1,10 @@
-import type { FastifyInstance } from 'fastify'
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
+import { randomInt, randomUUID } from 'node:crypto'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@rxflow/db'
 import { authenticate } from '../middleware/auth.js'
+import { setRefreshCookie, clearRefreshCookie, readRefreshCookie, hashRefreshToken, refreshTokenMatches } from '../utils/session-cookie.js'
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -23,13 +25,48 @@ function slugify(name: string): string {
   return `${base}-${Math.random().toString(36).slice(2, 6)}`
 }
 
+// Compared against when no user matches, so a miss costs the same bcrypt time as a wrong
+// password — response timing can't reveal which emails are registered.
+const DUMMY_PASSWORD_HASH = bcrypt.hashSync('rxflow-timing-equaliser', 12)
+
+// Body token is accepted only as a one-time migration path for sessions created before the
+// refresh token moved into an httpOnly cookie; the cookie is the normal source.
 const refreshSchema = z.object({
-  refreshToken: z.string(),
-})
+  refreshToken: z.string().optional(),
+}).default({})
 
 export async function authRoutes(app: FastifyInstance) {
   // Build the full auth response (tokens + user) for a given user id.
-  async function issueSession(userId: string) {
+  // The refresh token is set as an httpOnly cookie on `reply` and never returned in the body.
+  const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000
+
+  /** Sign a refresh token for session `sid` and store its hash (rotation = call again). */
+  async function rotateSession(userId: string, sid: string, reply: FastifyReply) {
+    const token = app.jwt.sign({ userId, sid, jti: randomUUID() }, { expiresIn: '7d' })
+    await prisma.authSession.update({
+      where: { id: sid },
+      data: { tokenHash: hashRefreshToken(token), lastUsedAt: new Date(), expiresAt: new Date(Date.now() + SESSION_TTL_MS) },
+    })
+    setRefreshCookie(reply, token)
+  }
+
+  /** Start a new device session for the user (other devices stay signed in). */
+  async function startDeviceSession(userId: string, request: FastifyRequest, reply: FastifyReply) {
+    const sid = randomUUID()
+    await prisma.$transaction([
+      prisma.authSession.deleteMany({ where: { userId, expiresAt: { lt: new Date() } } }), // prune
+      prisma.authSession.create({
+        data: {
+          id: sid, userId, tokenHash: 'pending',
+          userAgent: request.headers['user-agent']?.slice(0, 255) ?? null,
+          expiresAt: new Date(Date.now() + SESSION_TTL_MS),
+        },
+      }),
+    ])
+    await rotateSession(userId, sid, reply)
+  }
+
+  async function issueSession(userId: string, request: FastifyRequest, reply: FastifyReply) {
     const user = await prisma.user.findUniqueOrThrow({
       where: { id: userId },
       include: { tenant: true, stores: { include: { store: true } } },
@@ -41,14 +78,10 @@ export async function authRoutes(app: FastifyInstance) {
       storeIds: user.stores.map((us) => us.storeId),
     }
     const accessToken = app.jwt.sign(payload, { expiresIn: '15m' })
-    const refreshToken = app.jwt.sign({ userId: user.id }, { expiresIn: '7d' })
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { refreshToken: await bcrypt.hash(refreshToken, 10), lastLoginAt: new Date() },
-    })
+    await startDeviceSession(user.id, request, reply)
+    await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } })
     return {
       accessToken,
-      refreshToken,
       expiresIn: 900,
       user: {
         id: user.id, name: user.name, email: user.email, role: user.role, tenantId: user.tenantId,
@@ -70,19 +103,12 @@ export async function authRoutes(app: FastifyInstance) {
     const { email, password } = loginSchema.parse(request.body)
 
     const user = await prisma.user.findFirst({
-      where: { email, isActive: true },
-      include: {
-        tenant: true,
-        stores: { include: { store: true } },
-      },
+      where: { email: { equals: email.trim(), mode: 'insensitive' }, isActive: true },
+      include: { tenant: { select: { isActive: true } } },
     })
 
-    if (!user) {
-      return reply.status(401).send({ success: false, error: 'Invalid credentials' })
-    }
-
-    const passwordMatch = await bcrypt.compare(password, user.passwordHash)
-    if (!passwordMatch) {
+    const passwordMatch = await bcrypt.compare(password, user?.passwordHash ?? DUMMY_PASSWORD_HASH)
+    if (!user || !passwordMatch) {
       return reply.status(401).send({ success: false, error: 'Invalid credentials' })
     }
 
@@ -90,69 +116,14 @@ export async function authRoutes(app: FastifyInstance) {
       return reply.status(403).send({ success: false, error: 'Account suspended' })
     }
 
-    const payload = {
-      userId: user.id,
-      tenantId: user.tenantId,
-      role: user.role,
-      storeIds: user.stores.map((us) => us.storeId),
-    }
-
-    const accessToken = app.jwt.sign(payload, { expiresIn: '15m' })
-    const refreshToken = app.jwt.sign({ userId: user.id }, { expiresIn: '7d' })
-
-    // Store refresh token hash
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        refreshToken: await bcrypt.hash(refreshToken, 10),
-        lastLoginAt: new Date(),
-      },
-    })
-
-    return reply.send({
-      success: true,
-      data: {
-        accessToken,
-        refreshToken,
-        expiresIn: 900,
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          tenantId: user.tenantId,
-          tenant: {
-            id: user.tenant.id,
-            name: user.tenant.name,
-            slug: user.tenant.slug,
-            type: user.tenant.type,
-            plan: user.tenant.plan,
-            gstin: user.tenant.gstin ?? null,
-            drugLicenseNumber: user.tenant.drugLicenseNumber ?? null,
-            phone: user.tenant.phone ?? null,
-            email: user.tenant.email ?? null,
-            addressLine1: user.tenant.addressLine1 ?? null,
-            city: user.tenant.city ?? null,
-            state: user.tenant.state ?? null,
-            pincode: user.tenant.pincode ?? null,
-            allowNegativeStock: user.tenant.allowNegativeStock ?? false,
-          },
-          stores: user.stores.map((us) => ({
-            id: us.store.id,
-            name: us.store.name,
-            code: us.store.code,
-            isPrimary: us.isPrimary,
-          })),
-        },
-      },
-    })
+    return reply.send({ success: true, data: await issueSession(user.id, request, reply) })
   })
 
   // POST /api/v1/auth/register
   app.post('/register', { config: { rateLimit: { max: 5, timeWindow: '1 minute' } } }, async (request, reply) => {
     const body = registerSchema.parse(request.body)
 
-    const existingUser = await prisma.user.findFirst({ where: { email: body.email } })
+    const existingUser = await prisma.user.findFirst({ where: { email: { equals: body.email.trim(), mode: 'insensitive' } } })
     if (existingUser) {
       return reply.status(409).send({ success: false, error: 'An account with this email already exists. Try signing in.' })
     }
@@ -201,34 +172,49 @@ export async function authRoutes(app: FastifyInstance) {
     })
 
     // Auto-login: return the same session payload the login endpoint does
-    const session = await issueSession(result.user.id)
+    const session = await issueSession(result.user.id, request, reply)
     return reply.status(201).send({ success: true, message: 'Welcome to RxFlow', data: session })
   })
 
-  // POST /api/v1/auth/refresh
-  app.post('/refresh', async (request, reply) => {
-    const { refreshToken } = refreshSchema.parse(request.body)
-
-    let payload: { userId: string }
+  /**
+   * Resolve a refresh token to its user + device session. Tokens minted before per-device
+   * sessions existed (no `sid`) are checked against the legacy User.refreshToken slot once and
+   * then upgraded into a session.
+   */
+  async function resolveRefreshToken(token: string | null | undefined) {
+    if (!token) return null
+    let payload: { userId?: string; sid?: string }
     try {
-      payload = app.jwt.verify<{ userId: string }>(refreshToken)
+      payload = app.jwt.verify<{ userId?: string; sid?: string }>(token)
     } catch {
-      return reply.status(401).send({ success: false, error: 'Invalid refresh token' })
+      return null
     }
-
+    if (!payload.userId) return null
     const user = await prisma.user.findFirst({
       where: { id: payload.userId, isActive: true },
-      include: { stores: true },
+      include: { stores: true, tenant: { select: { isActive: true } } },
     })
+    if (!user || !user.tenant.isActive) return null
 
-    if (!user?.refreshToken) {
+    if (payload.sid) {
+      const session = await prisma.authSession.findUnique({ where: { id: payload.sid } })
+      if (!session || session.userId !== user.id || session.expiresAt < new Date()) return null
+      if (!(await refreshTokenMatches(token, session.tokenHash))) return null
+      return { user, sid: session.id, legacy: false }
+    }
+    if (!user.refreshToken || !(await refreshTokenMatches(token, user.refreshToken))) return null
+    return { user, sid: null, legacy: true }
+  }
+
+  // POST /api/v1/auth/refresh — rotate the refresh cookie, return a fresh access token
+  app.post('/refresh', { config: { rateLimit: { max: 30, timeWindow: '1 minute' } } }, async (request, reply) => {
+    const body = refreshSchema.parse(request.body ?? {})
+    const resolved = await resolveRefreshToken(readRefreshCookie(request) ?? body.refreshToken)
+    if (!resolved) {
+      clearRefreshCookie(reply)
       return reply.status(401).send({ success: false, error: 'Invalid refresh token' })
     }
-
-    const isValid = await bcrypt.compare(refreshToken, user.refreshToken)
-    if (!isValid) {
-      return reply.status(401).send({ success: false, error: 'Invalid refresh token' })
-    }
+    const { user } = resolved
 
     const newPayload = {
       userId: user.id,
@@ -238,25 +224,30 @@ export async function authRoutes(app: FastifyInstance) {
     }
 
     const accessToken = app.jwt.sign(newPayload, { expiresIn: '15m' })
-    const newRefreshToken = app.jwt.sign({ userId: user.id }, { expiresIn: '7d' })
-
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { refreshToken: await bcrypt.hash(newRefreshToken, 10) },
-    })
+    if (resolved.sid) {
+      await rotateSession(user.id, resolved.sid, reply)
+    } else {
+      // Legacy single-slot token → upgrade to a device session and retire the old slot.
+      await startDeviceSession(user.id, request, reply)
+      await prisma.user.update({ where: { id: user.id }, data: { refreshToken: null } })
+    }
 
     return reply.send({
       success: true,
-      data: { accessToken, refreshToken: newRefreshToken, expiresIn: 900 },
+      data: { accessToken, expiresIn: 900, role: user.role },
     })
   })
 
-  // POST /api/v1/auth/logout
-  app.post('/logout', { preHandler: [authenticate] }, async (request, reply) => {
-    await prisma.user.update({
-      where: { id: request.user.userId },
-      data: { refreshToken: null },
-    })
+  // POST /api/v1/auth/logout — works even with an expired access token: the refresh cookie
+  // identifies the session, which is revoked server-side before the cookie is cleared.
+  app.post('/logout', async (request, reply) => {
+    const resolved = await resolveRefreshToken(readRefreshCookie(request))
+    if (resolved?.sid) {
+      await prisma.authSession.deleteMany({ where: { id: resolved.sid } }) // this device only
+    } else if (resolved?.legacy) {
+      await prisma.user.update({ where: { id: resolved.user.id }, data: { refreshToken: null } })
+    }
+    clearRefreshCookie(reply)
     return reply.send({ success: true, message: 'Logged out' })
   })
 
@@ -290,7 +281,7 @@ export async function authRoutes(app: FastifyInstance) {
 
   // ── OTP helpers ─────────────────────────────────────────────────────────────
   async function issueOtp(identifier: string, purpose: 'PASSWORD_RESET' | 'LOGIN') {
-    const code = String(Math.floor(100000 + Math.random() * 900000)) // 6 digits
+    const code = String(randomInt(100000, 1000000)) // 6 digits, CSPRNG (Math.random is predictable)
     const codeHash = await bcrypt.hash(code, 10)
     // Invalidate prior unconsumed OTPs for this identifier+purpose
     await prisma.otpToken.deleteMany({ where: { identifier, purpose, consumedAt: null } })
@@ -356,6 +347,8 @@ export async function authRoutes(app: FastifyInstance) {
       where: { id: user.id },
       data: { passwordHash: await bcrypt.hash(body.newPassword, 12), refreshToken: null },
     })
+    // A password reset signs the account out everywhere.
+    await prisma.authSession.deleteMany({ where: { userId: user.id } })
     return reply.send({ success: true, message: 'Password updated. You can now sign in.' })
   })
 
@@ -399,7 +392,7 @@ export async function authRoutes(app: FastifyInstance) {
     const ok = await verifyOtp(user.email.toLowerCase(), 'LOGIN', body.otp)
     if (!ok) return reply.status(401).send({ success: false, error: 'Invalid or expired code' })
 
-    const session = await issueSession(user.id)
+    const session = await issueSession(user.id, request, reply)
     return reply.send({ success: true, data: session })
   })
 }

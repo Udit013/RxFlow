@@ -5,6 +5,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Wifi, WifiOff } from 'lucide-react'
 import { useNotifications, formatEventMessage } from '@/lib/notification-store'
 import { authService } from '@/lib/auth'
+import { api, API_BASE, getAccessToken } from '@/lib/api'
 
 /**
  * LiveSync — opens an SSE connection to /api/v1/events and invalidates
@@ -22,13 +23,13 @@ export function LiveSync() {
   // On mount: replay audit entries we may have missed while offline / page closed
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const token = localStorage.getItem('rxflow_access_token')
+    const token = getAccessToken()
     if (!token) return
     let cancelled = false
     ;(async () => {
       try {
         const since = lastSeenAt ?? new Date(Date.now() - 60 * 60 * 1000).toISOString() // default: last hour
-        const apiBase = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1'
+        const apiBase = API_BASE
         const res = await fetch(`${apiBase}/audit-logs/since?ts=${encodeURIComponent(since)}`, {
           headers: { Authorization: `Bearer ${token}` },
         })
@@ -53,13 +54,13 @@ export function LiveSync() {
       }
     })()
     return () => { cancelled = true }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Runs once on mount by design: replay only what was missed before this session opened.
   }, [])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
 
-    const apiBase = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1'
+    const apiBase = API_BASE
     let cancelled = false
     let es: EventSource | null = null
     let retryTimer: ReturnType<typeof setTimeout> | null = null
@@ -67,7 +68,7 @@ export function LiveSync() {
 
     function connect() {
       if (cancelled) return
-      const token = localStorage.getItem('rxflow_access_token')
+      const token = getAccessToken()
       if (!token) {
         // Not logged in yet — try again in a bit
         retryTimer = setTimeout(connect, 2000)
@@ -112,6 +113,10 @@ export function LiveSync() {
         setStatus('offline')
         es?.close()
         if (cancelled) return
+        // The SSE token is only checked at connect time; after an idle stretch the stored access
+        // token has usually expired (15 min), so every reconnect would 401 forever. Any authed
+        // request runs the axios refresh flow and stores a fresh token before we retry.
+        void api.get('/auth/me').catch(() => {})
         retryTimer = setTimeout(connect, backoff)
         backoff = Math.min(backoff * 2, 30_000) // exponential up to 30s
       }

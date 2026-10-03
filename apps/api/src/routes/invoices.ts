@@ -3,8 +3,10 @@ import { z } from 'zod'
 import { prisma } from '@rxflow/db'
 import { authenticate } from '../middleware/auth.js'
 import { getPaginationParams, buildPaginationMeta } from '../utils/pagination.js'
-import { getFinancialYear, getFinancialYearBounds, formatFyNumber } from '../utils/financial-year.js'
 import { audit } from '../utils/audit.js'
+import { computeInvoiceAmounts } from '../utils/order-math.js'
+import { httpError } from '../utils/http-error.js'
+import { nextFyNumber, withUniqueRetry } from '../utils/numbering.js'
 
 async function generateInvoiceNumber(tenantId: string, type: string): Promise<string> {
   const prefixMap: Record<string, string> = {
@@ -15,12 +17,7 @@ async function generateInvoiceNumber(tenantId: string, type: string): Promise<st
     RETURN: 'RET',
   }
   const prefix = prefixMap[type] ?? 'INV'
-  const fy = getFinancialYear()
-  const { from, to } = getFinancialYearBounds()
-  const seq = await prisma.invoice.count({
-    where: { tenantId, type: type as any, createdAt: { gte: from, lt: to } },
-  })
-  return formatFyNumber(prefix, fy.label, seq + 1)
+  return nextFyNumber('invoice', tenantId, prefix)
 }
 
 export async function invoiceRoutes(app: FastifyInstance) {
@@ -124,6 +121,16 @@ export async function invoiceRoutes(app: FastifyInstance) {
       return reply.status(404).send({ success: false, error: 'Order not found' })
     }
 
+    // Invoicing is idempotent per order: a second request (double-click, retry, the billing
+    // screen and the order page both offering "Generate invoice") returns the existing invoice
+    // instead of issuing a duplicate tax document.
+    const invoiceType = order.type === 'SALE' ? 'SALE' : 'PURCHASE'
+    const existingInvoice = await prisma.invoice.findFirst({
+      where: { tenantId, orderId: order.id, type: invoiceType },
+      include: { items: true },
+    })
+    if (existingInvoice) return reply.send({ success: true, data: existingInvoice, existing: true })
+
     // Determine inter-state vs intra-state for GST routing
     const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } })
     const sellerState = tenant?.state?.toLowerCase()?.trim()
@@ -134,18 +141,15 @@ export async function invoiceRoutes(app: FastifyInstance) {
     // If both states known and they differ → IGST. Default (unknown buyer) → CGST+SGST.
     const isInterState = !!sellerState && !!buyerState && sellerState !== buyerState
 
-    // Calculate GST breakdown
-    const invoiceItems = order.items.map((item) => {
-      const lineTotal = item.quantity * item.unitPrice
-      const discountAmount = (lineTotal * item.discountPercent) / 100
-      const taxableAmount = lineTotal - discountAmount
-      const cgstRate = isInterState ? 0 : item.taxRate / 2
-      const sgstRate = isInterState ? 0 : item.taxRate / 2
-      const igstRate = isInterState ? item.taxRate : 0
-      const cgstAmount = (taxableAmount * cgstRate) / 100
-      const sgstAmount = (taxableAmount * sgstRate) / 100
-      const igstAmount = (taxableAmount * igstRate) / 100
+    // Carry the order's bill-level special discount and transport charge into the invoice so
+    // the tax document matches what was actually billed.
+    const special = order.specialDiscountType && order.specialDiscountValue
+      ? { type: order.specialDiscountType as 'PERCENT' | 'AMOUNT', value: order.specialDiscountValue }
+      : null
+    const amounts = computeInvoiceAmounts(order.items, isInterState, special, order.transportCharge ?? 0)
 
+    const invoiceItems = order.items.map((item, i) => {
+      const l = amounts.lines[i]!
       return {
         medicineId: item.medicineId,
         medicineName: item.medicine.name,
@@ -155,56 +159,45 @@ export async function invoiceRoutes(app: FastifyInstance) {
         quantity: item.quantity,
         unitPrice: item.unitPrice,
         discountPercent: item.discountPercent,
-        discountAmount,
-        taxableAmount,
-        cgstRate,
-        cgstAmount,
-        sgstRate,
-        sgstAmount,
-        igstRate,
-        igstAmount,
-        total: taxableAmount + cgstAmount + sgstAmount + igstAmount,
+        discountAmount: l.discountAmount,
+        taxableAmount: l.taxableAmount,
+        cgstRate: l.cgstRate,
+        cgstAmount: l.cgstAmount,
+        sgstRate: l.sgstRate,
+        sgstAmount: l.sgstAmount,
+        igstRate: l.igstRate,
+        igstAmount: l.igstAmount,
+        total: l.total,
       }
     })
 
-    const totals = invoiceItems.reduce(
-      (acc, i) => ({
-        subtotal: acc.subtotal + i.quantity * i.unitPrice,
-        discountAmount: acc.discountAmount + i.discountAmount,
-        cgst: acc.cgst + i.cgstAmount,
-        sgst: acc.sgst + i.sgstAmount,
-        igst: acc.igst + i.igstAmount,
-        total: acc.total + i.taxableAmount,
-      }),
-      { subtotal: 0, discountAmount: 0, cgst: 0, sgst: 0, igst: 0, total: 0 }
-    )
-
-    const totalTax = totals.cgst + totals.sgst + totals.igst
-    const grandTotal = totals.total + totalTax
-    const roundOff = Math.round(grandTotal) - grandTotal
-
-    const invoice = await prisma.invoice.create({
-      data: {
-        invoiceNumber: await generateInvoiceNumber(tenantId, order.type === 'SALE' ? 'SALE' : 'PURCHASE'),
-        tenantId,
-        storeId: order.storeId,
-        type: order.type === 'SALE' ? 'SALE' : 'PURCHASE',
-        orderId: order.id,
-        customerId: order.customerId,
-        supplierId: order.supplierId,
-        subtotal: totals.subtotal,
-        discountAmount: totals.discountAmount,
-        cgst: totals.cgst,
-        sgst: totals.sgst,
-        igst: totals.igst,
-        totalTax,
-        total: totals.total,
-        roundOff,
-        grandTotal: grandTotal + roundOff,
-        paymentStatus: order.paymentStatus as any,
-        items: { create: invoiceItems },
-      },
-      include: { items: true },
+    let invoiceNumber = ''
+    const invoice = await withUniqueRetry(async () => {
+      invoiceNumber = await generateInvoiceNumber(tenantId, invoiceType)
+      return prisma.invoice.create({
+        data: {
+          invoiceNumber,
+          tenantId,
+          storeId: order.storeId,
+          type: invoiceType,
+          orderId: order.id,
+          customerId: order.customerId,
+          supplierId: order.supplierId,
+          subtotal: amounts.subtotal,
+          discountAmount: amounts.discountAmount,
+          cgst: amounts.cgst,
+          sgst: amounts.sgst,
+          igst: amounts.igst,
+          totalTax: amounts.totalTax,
+          total: amounts.taxable,
+          otherCharges: amounts.otherCharges,
+          roundOff: amounts.roundOff,
+          grandTotal: amounts.grandTotal,
+          paymentStatus: order.paymentStatus as any,
+          items: { create: invoiceItems },
+        },
+        include: { items: true },
+      })
     })
 
     await audit(request, {
@@ -234,6 +227,19 @@ export async function invoiceRoutes(app: FastifyInstance) {
     }
 
     const payment = await prisma.$transaction(async (tx) => {
+      // Reject overpayments: a payment may settle at most the outstanding balance (under ₹1 of
+      // slack absorbs rupee rounding; a fully-paid invoice accepts nothing more). Checked inside the transaction alongside the insert.
+      const alreadyPaid = (await tx.payment.aggregate({ where: { invoiceId: id }, _sum: { amount: true } }))._sum.amount ?? 0
+      const outstanding = Math.max(0, invoice.grandTotal - alreadyPaid)
+      if (outstanding < 0.01 || body.amount > outstanding + 0.99) {
+        throw httpError(
+          400,
+          outstanding <= 0
+            ? 'This invoice is already fully paid'
+            : `Payment exceeds the outstanding balance of ₹${outstanding.toFixed(2)}`,
+        )
+      }
+
       const p = await tx.payment.create({
         data: {
           tenantId,
@@ -360,111 +366,114 @@ export async function invoiceRoutes(app: FastifyInstance) {
     )
     const totalTax = totals.cgst + totals.sgst + totals.igst
 
-    const cnNumber = await generateInvoiceNumber(tenantId, 'CREDIT_NOTE')
+    let cnNumber = ''
 
-    const creditNote = await prisma.$transaction(async (tx) => {
-      const cn = await tx.invoice.create({
-        data: {
-          invoiceNumber: cnNumber,
-          tenantId,
-          storeId: original.storeId,
-          type: 'CREDIT_NOTE',
-          orderId: original.orderId,
-          customerId: original.customerId,
-          originalInvoiceId: original.id,
-          subtotal: totals.subtotal,
-          discountAmount: totals.discountAmount,
-          cgst: totals.cgst,
-          sgst: totals.sgst,
-          igst: totals.igst,
-          totalTax,
-          total: totals.taxable,
-          grandTotal: totals.total,
-          paymentStatus: 'PAID', // credit notes are immediately settled against original
-          notes: body.reason,
-          items: {
-            create: lines.map((l) => ({
-              medicineId: l.orig.medicineId,
-              medicineName: l.orig.medicineName,
-              batchNumber: l.orig.batchNumber,
-              expiryDate: l.orig.expiryDate,
-              hsn: l.orig.hsn,
-              quantity: l.returnQty,
-              unitPrice: l.orig.unitPrice,
-              discountPercent: l.orig.discountPercent,
-              discountAmount: l.amounts.discountAmount,
-              taxableAmount: l.amounts.taxableAmount,
-              cgstRate: l.orig.cgstRate ?? 0,
-              cgstAmount: l.amounts.cgstAmount,
-              sgstRate: l.orig.sgstRate ?? 0,
-              sgstAmount: l.amounts.sgstAmount,
-              igstRate: l.orig.igstRate ?? 0,
-              igstAmount: l.amounts.igstAmount,
-              total: l.amounts.total,
-            })),
+    const creditNote = await withUniqueRetry(async () => {
+      cnNumber = await generateInvoiceNumber(tenantId, 'CREDIT_NOTE')
+      return prisma.$transaction(async (tx) => {
+        const cn = await tx.invoice.create({
+          data: {
+            invoiceNumber: cnNumber,
+            tenantId,
+            storeId: original.storeId,
+            type: 'CREDIT_NOTE',
+            orderId: original.orderId,
+            customerId: original.customerId,
+            originalInvoiceId: original.id,
+            subtotal: totals.subtotal,
+            discountAmount: totals.discountAmount,
+            cgst: totals.cgst,
+            sgst: totals.sgst,
+            igst: totals.igst,
+            totalTax,
+            total: totals.taxable,
+            grandTotal: totals.total,
+            paymentStatus: 'PAID', // credit notes are immediately settled against original
+            notes: body.reason,
+            items: {
+              create: lines.map((l) => ({
+                medicineId: l.orig.medicineId,
+                medicineName: l.orig.medicineName,
+                batchNumber: l.orig.batchNumber,
+                expiryDate: l.orig.expiryDate,
+                hsn: l.orig.hsn,
+                quantity: l.returnQty,
+                unitPrice: l.orig.unitPrice,
+                discountPercent: l.orig.discountPercent,
+                discountAmount: l.amounts.discountAmount,
+                taxableAmount: l.amounts.taxableAmount,
+                cgstRate: l.orig.cgstRate ?? 0,
+                cgstAmount: l.amounts.cgstAmount,
+                sgstRate: l.orig.sgstRate ?? 0,
+                sgstAmount: l.amounts.sgstAmount,
+                igstRate: l.orig.igstRate ?? 0,
+                igstAmount: l.amounts.igstAmount,
+                total: l.amounts.total,
+              })),
+            },
           },
-        },
-        include: { items: true },
-      })
-
-      // Restock — increment batch quantity + inventoryItem.availableQuantity
-      for (const l of lines) {
-        if (l.restockBatchId) {
-          const batch = await tx.batch.findUnique({
-            where: { id: l.restockBatchId },
-            include: { inventoryItem: true },
-          })
-          if (batch && batch.inventoryItem.tenantId === tenantId) {
-            await tx.batch.update({
+          include: { items: true },
+        })
+  
+        // Restock — increment batch quantity + inventoryItem.availableQuantity
+        for (const l of lines) {
+          if (l.restockBatchId) {
+            const batch = await tx.batch.findUnique({
               where: { id: l.restockBatchId },
-              data: { quantity: { increment: l.returnQty } },
+              include: { inventoryItem: true },
             })
-            await tx.inventoryItem.update({
-              where: { id: batch.inventoryItemId },
-              data: {
-                totalQuantity: { increment: l.returnQty },
-                availableQuantity: { increment: l.returnQty },
-              },
-            })
+            if (batch && batch.inventoryItem.tenantId === tenantId) {
+              await tx.batch.update({
+                where: { id: l.restockBatchId },
+                data: { quantity: { increment: l.returnQty } },
+              })
+              await tx.inventoryItem.update({
+                where: { id: batch.inventoryItemId },
+                data: {
+                  totalQuantity: { increment: l.returnQty },
+                  availableQuantity: { increment: l.returnQty },
+                },
+              })
+            }
           }
         }
-      }
-
-      // Customer ledger entry (CREDIT — reduces what customer owes us)
-      if (original.customerId) {
-        // Compute running balance: sum of DEBITs − sum of CREDITs (excl. this new one)
-        const priorEntries = await tx.ledgerEntry.findMany({
-          where: { tenantId, entityId: original.customerId, entityType: 'CUSTOMER' },
-          select: { type: true, amount: true },
-        })
-        const priorBalance = priorEntries.reduce(
-          (s, e) => s + (e.type === 'DEBIT' ? e.amount : -e.amount),
-          0
-        )
-        const newBalance = priorBalance - totals.total
-
-        await tx.ledgerEntry.create({
-          data: {
-            tenantId,
-            entityId: original.customerId,
-            entityType: 'CUSTOMER',
-            type: 'CREDIT',
-            amount: totals.total,
-            balance: newBalance,
-            reference: cnNumber,
-            description: `Credit Note ${cnNumber} against ${original.invoiceNumber}`,
-            invoiceId: cn.id,
-          },
-        })
-        await tx.customer.update({
-          where: { id: original.customerId },
-          data: { outstandingBalance: { decrement: totals.total } },
-        })
-      }
-
-      void userId // not needed in ledger schema, kept for future audit-log wiring
-
-      return cn
+  
+        // Customer ledger entry (CREDIT — reduces what customer owes us)
+        if (original.customerId) {
+          // Compute running balance: sum of DEBITs − sum of CREDITs (excl. this new one)
+          const priorEntries = await tx.ledgerEntry.findMany({
+            where: { tenantId, entityId: original.customerId, entityType: 'CUSTOMER' },
+            select: { type: true, amount: true },
+          })
+          const priorBalance = priorEntries.reduce(
+            (s, e) => s + (e.type === 'DEBIT' ? e.amount : -e.amount),
+            0
+          )
+          const newBalance = priorBalance - totals.total
+  
+          await tx.ledgerEntry.create({
+            data: {
+              tenantId,
+              entityId: original.customerId,
+              entityType: 'CUSTOMER',
+              type: 'CREDIT',
+              amount: totals.total,
+              balance: newBalance,
+              reference: cnNumber,
+              description: `Credit Note ${cnNumber} against ${original.invoiceNumber}`,
+              invoiceId: cn.id,
+            },
+          })
+          await tx.customer.update({
+            where: { id: original.customerId },
+            data: { outstandingBalance: { decrement: totals.total } },
+          })
+        }
+  
+        void userId // not needed in ledger schema, kept for future audit-log wiring
+  
+        return cn
+      })
     })
 
     await audit(request, {
@@ -575,89 +584,92 @@ export async function invoiceRoutes(app: FastifyInstance) {
       { subtotal: 0, discountAmount: 0, cgst: 0, sgst: 0, igst: 0, taxable: 0, total: 0 }
     )
     const totalTax = totals.cgst + totals.sgst + totals.igst
-    const dnNumber = await generateInvoiceNumber(tenantId, 'DEBIT_NOTE')
+    let dnNumber = ''
 
-    const debitNote = await prisma.$transaction(async (tx) => {
-      const dn = await tx.invoice.create({
-        data: {
-          invoiceNumber: dnNumber,
-          tenantId,
-          storeId: original.storeId,
-          type: 'DEBIT_NOTE',
-          orderId: original.orderId,
-          supplierId: original.supplierId,
-          originalInvoiceId: original.id,
-          subtotal: totals.subtotal,
-          discountAmount: totals.discountAmount,
-          cgst: totals.cgst,
-          sgst: totals.sgst,
-          igst: totals.igst,
-          totalTax,
-          total: totals.taxable,
-          grandTotal: totals.total,
-          paymentStatus: 'PAID',
-          notes: body.reason,
-          items: {
-            create: lines.map((l) => ({
-              medicineId: l.orig.medicineId,
-              medicineName: l.orig.medicineName,
-              batchNumber: l.orig.batchNumber,
-              expiryDate: l.orig.expiryDate,
-              hsn: l.orig.hsn,
-              quantity: l.returnQty,
-              unitPrice: l.orig.unitPrice,
-              discountPercent: l.orig.discountPercent,
-              discountAmount: l.amounts.discountAmount,
-              taxableAmount: l.amounts.taxableAmount,
-              cgstRate: l.orig.cgstRate ?? 0,
-              cgstAmount: l.amounts.cgstAmount,
-              sgstRate: l.orig.sgstRate ?? 0,
-              sgstAmount: l.amounts.sgstAmount,
-              igstRate: l.orig.igstRate ?? 0,
-              igstAmount: l.amounts.igstAmount,
-              total: l.amounts.total,
-            })),
-          },
-        },
-        include: { items: true },
-      })
-
-      // Remove returned goods from our stock
-      for (const l of lines) {
-        await tx.batch.update({ where: { id: l.batchId }, data: { quantity: { decrement: l.returnQty } } })
-        await tx.inventoryItem.update({
-          where: { id: l.inventoryItemId },
-          data: { totalQuantity: { decrement: l.returnQty }, availableQuantity: { decrement: l.returnQty } },
-        })
-      }
-
-      // Supplier ledger — reduce what we owe them
-      if (original.supplierId) {
-        const priorEntries = await tx.ledgerEntry.findMany({
-          where: { tenantId, entityId: original.supplierId, entityType: 'SUPPLIER' },
-          select: { type: true, amount: true },
-        })
-        const priorBalance = priorEntries.reduce((s, e) => s + (e.type === 'DEBIT' ? e.amount : -e.amount), 0)
-        await tx.ledgerEntry.create({
+    const debitNote = await withUniqueRetry(async () => {
+      dnNumber = await generateInvoiceNumber(tenantId, 'DEBIT_NOTE')
+      return prisma.$transaction(async (tx) => {
+        const dn = await tx.invoice.create({
           data: {
+            invoiceNumber: dnNumber,
             tenantId,
-            entityId: original.supplierId,
-            entityType: 'SUPPLIER',
-            type: 'CREDIT',
-            amount: totals.total,
-            balance: priorBalance - totals.total,
-            reference: dnNumber,
-            description: `Purchase Return ${dnNumber} against ${original.invoiceNumber}`,
-            invoiceId: dn.id,
+            storeId: original.storeId,
+            type: 'DEBIT_NOTE',
+            orderId: original.orderId,
+            supplierId: original.supplierId,
+            originalInvoiceId: original.id,
+            subtotal: totals.subtotal,
+            discountAmount: totals.discountAmount,
+            cgst: totals.cgst,
+            sgst: totals.sgst,
+            igst: totals.igst,
+            totalTax,
+            total: totals.taxable,
+            grandTotal: totals.total,
+            paymentStatus: 'PAID',
+            notes: body.reason,
+            items: {
+              create: lines.map((l) => ({
+                medicineId: l.orig.medicineId,
+                medicineName: l.orig.medicineName,
+                batchNumber: l.orig.batchNumber,
+                expiryDate: l.orig.expiryDate,
+                hsn: l.orig.hsn,
+                quantity: l.returnQty,
+                unitPrice: l.orig.unitPrice,
+                discountPercent: l.orig.discountPercent,
+                discountAmount: l.amounts.discountAmount,
+                taxableAmount: l.amounts.taxableAmount,
+                cgstRate: l.orig.cgstRate ?? 0,
+                cgstAmount: l.amounts.cgstAmount,
+                sgstRate: l.orig.sgstRate ?? 0,
+                sgstAmount: l.amounts.sgstAmount,
+                igstRate: l.orig.igstRate ?? 0,
+                igstAmount: l.amounts.igstAmount,
+                total: l.amounts.total,
+              })),
+            },
           },
+          include: { items: true },
         })
-        await tx.supplier.update({
-          where: { id: original.supplierId },
-          data: { outstandingBalance: { decrement: totals.total }, totalPurchases: { decrement: totals.total } },
-        })
-      }
-
-      return dn
+  
+        // Remove returned goods from our stock
+        for (const l of lines) {
+          await tx.batch.update({ where: { id: l.batchId }, data: { quantity: { decrement: l.returnQty } } })
+          await tx.inventoryItem.update({
+            where: { id: l.inventoryItemId },
+            data: { totalQuantity: { decrement: l.returnQty }, availableQuantity: { decrement: l.returnQty } },
+          })
+        }
+  
+        // Supplier ledger — reduce what we owe them
+        if (original.supplierId) {
+          const priorEntries = await tx.ledgerEntry.findMany({
+            where: { tenantId, entityId: original.supplierId, entityType: 'SUPPLIER' },
+            select: { type: true, amount: true },
+          })
+          const priorBalance = priorEntries.reduce((s, e) => s + (e.type === 'DEBIT' ? e.amount : -e.amount), 0)
+          await tx.ledgerEntry.create({
+            data: {
+              tenantId,
+              entityId: original.supplierId,
+              entityType: 'SUPPLIER',
+              type: 'CREDIT',
+              amount: totals.total,
+              balance: priorBalance - totals.total,
+              reference: dnNumber,
+              description: `Purchase Return ${dnNumber} against ${original.invoiceNumber}`,
+              invoiceId: dn.id,
+            },
+          })
+          await tx.supplier.update({
+            where: { id: original.supplierId },
+            data: { outstandingBalance: { decrement: totals.total }, totalPurchases: { decrement: totals.total } },
+          })
+        }
+  
+        return dn
+      })
     })
 
     await audit(request, {

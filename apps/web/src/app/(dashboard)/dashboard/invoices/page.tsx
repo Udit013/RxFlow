@@ -50,7 +50,7 @@ export default function InvoicesPage() {
       const user = authService.getStoredUser()
       if (!user) { toast.error('Not authenticated'); return }
       const tenantHeader = buildTenantHeader(user.tenant)
-      downloadInvoicePdf({
+      await downloadInvoicePdf({
         ...full,
         items: (full.items ?? []).map((it: any) => ({
           medicineName: it.medicineName,

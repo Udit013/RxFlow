@@ -3,8 +3,9 @@ import { z } from 'zod'
 import { prisma } from '@rxflow/db'
 import { authenticate } from '../middleware/auth.js'
 import { getPaginationParams, buildPaginationMeta } from '../utils/pagination.js'
-import { getFinancialYear, getFinancialYearBounds, formatFyNumber } from '../utils/financial-year.js'
 import { audit } from '../utils/audit.js'
+import { nextFyNumber, withUniqueRetry } from '../utils/numbering.js'
+import { assertTenantRefs } from '../utils/tenant-guard.js'
 
 export async function stockTakeRoutes(app: FastifyInstance) {
   // GET /api/v1/stock-takes
@@ -95,14 +96,10 @@ export async function stockTakeRoutes(app: FastifyInstance) {
 
     const storeId = body.storeId ?? storeIds[0]
     if (!storeId) return reply.status(400).send({ success: false, error: 'No store available' })
+    await assertTenantRefs(tenantId, { storeIds: [storeId] })
 
     // Generate FY code: ST/2025-26/00001
-    const fy = getFinancialYear()
-    const { from, to } = getFinancialYearBounds()
-    const seq = await prisma.stockTake.count({
-      where: { tenantId, createdAt: { gte: from, lt: to } },
-    })
-    const code = formatFyNumber('ST', fy.label, seq + 1)
+    let code = ''
 
     // Build line snapshots — one row per batch (most precise)
     const inventoryItems = await prisma.inventoryItem.findMany({
@@ -134,17 +131,20 @@ export async function stockTakeRoutes(app: FastifyInstance) {
       return reply.status(400).send({ success: false, error: 'No inventory items match the selected scope' })
     }
 
-    const take = await prisma.stockTake.create({
-      data: {
-        tenantId,
-        storeId,
-        code,
-        status: 'IN_PROGRESS',
-        notes: body.notes,
-        createdBy: userId,
-        lines: { create: lineData },
-      },
-      include: { lines: { select: { id: true } } },
+    const take = await withUniqueRetry(async () => {
+      code = await nextFyNumber('stockTake', tenantId, 'ST')
+      return prisma.stockTake.create({
+        data: {
+          tenantId,
+          storeId,
+          code,
+          status: 'IN_PROGRESS',
+          notes: body.notes,
+          createdBy: userId,
+          lines: { create: lineData },
+        },
+        include: { lines: { select: { id: true } } },
+      })
     })
 
     await audit(request, {

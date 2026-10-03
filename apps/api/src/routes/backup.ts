@@ -3,6 +3,8 @@ import { z } from 'zod'
 import { prisma } from '@rxflow/db'
 import { authenticate } from '../middleware/auth.js'
 import { audit } from '../utils/audit.js'
+import { createMedicineSchema } from './medicines.js'
+import { catalogWhere } from '../utils/medicine-scope.js'
 
 /**
  * Tenant-scoped JSON backup/restore.
@@ -36,7 +38,7 @@ export async function backupRoutes(app: FastifyInstance) {
       prisma.supplier.findMany({ where: { tenantId } }),
       prisma.salesRep.findMany({ where: { tenantId } }),
       // Medicines are global, but we still dump the IDs referenced by this tenant's inventory
-      prisma.medicine.findMany({ take: 5000 }),
+      prisma.medicine.findMany({ where: catalogWhere(tenantId), take: 5000 }), // never other tenants' private rows
       prisma.inventoryItem.findMany({ where: { tenantId } }),
       prisma.batch.findMany({ where: { inventoryItem: { tenantId } } }),
       prisma.order.findMany({ where: { tenantId } }),
@@ -95,7 +97,8 @@ export async function backupRoutes(app: FastifyInstance) {
   })
 
   // POST /api/v1/backup/import — Restore (merge) from a backup JSON
-  app.post('/import', { preHandler: [authenticate] }, async (request, reply) => {
+  // Backups routinely exceed Fastify's 1 MB default body limit.
+  app.post('/import', { preHandler: [authenticate], bodyLimit: 25 * 1024 * 1024 }, async (request, reply) => {
     const { tenantId, role } = request.user
     if (role !== 'TENANT_ADMIN' && role !== 'SUPER_ADMIN') {
       return reply.status(403).send({ success: false, error: 'Admin only' })
@@ -112,33 +115,45 @@ export async function backupRoutes(app: FastifyInstance) {
     }
 
     const stats = {
-      medicinesInserted: 0, medicinesUpdated: 0,
+      medicinesInserted: 0, medicinesUpdated: 0, medicinesSkipped: 0,
       customersUpserted: 0, suppliersUpserted: 0, salesRepsUpserted: 0,
     }
 
-    // Medicines are global → safe to upsert without rewriting IDs
+    // Medicines live in ONE catalog shared by every tenant. A restore must never overwrite
+    // existing catalog rows (that would let any workspace admin rewrite other tenants'
+    // names/MRP/GST via an uploaded file) — it only re-inserts medicines that are missing,
+    // and only through the same validated field whitelist as POST /medicines.
     if (Array.isArray(dump.medicines)) {
       for (const m of dump.medicines) {
-        const existing = await prisma.medicine.findUnique({ where: { id: m.id } })
+        if (typeof m?.id !== 'string') continue
+        const existing = await prisma.medicine.findUnique({ where: { id: m.id }, select: { id: true } })
         if (existing) {
-          await prisma.medicine.update({
-            where: { id: m.id },
+          stats.medicinesSkipped++
+          continue
+        }
+        const parsed = createMedicineSchema.safeParse(m)
+        if (!parsed.success) {
+          request.log.warn({ medicineId: m.id }, 'medicine restore skipped: invalid row')
+          continue
+        }
+        const v = parsed.data
+        try {
+          await prisma.medicine.create({
             data: {
-              name: m.name, genericName: m.genericName, brandName: m.brandName,
-              manufacturerName: m.manufacturerName, dosageForm: m.dosageForm,
-              strength: m.strength, packSize: m.packSize, mrp: m.mrp, hsn: m.hsn,
-              gstRate: m.gstRate, schedule: m.schedule, requiresPrescription: m.requiresPrescription,
-              isActive: m.isActive,
+              ...v,
+              id: m.id,
+              ownerTenantId: tenantId,
+              genericName: v.genericName || v.name,
+              brandName: v.brandName || v.name,
+              strength: v.strength || 'NA',
+              packSize: v.packSize || v.packing || '1',
+              mrp: v.mrp ?? 0,
+              isVerified: false,
             },
           })
-          stats.medicinesUpdated++
-        } else {
-          try {
-            await prisma.medicine.create({ data: m })
-            stats.medicinesInserted++
-          } catch (e) {
-            request.log.warn({ err: e, medicineId: m.id }, 'medicine restore skipped')
-          }
+          stats.medicinesInserted++
+        } catch (e) {
+          request.log.warn({ err: e, medicineId: m.id }, 'medicine restore skipped')
         }
       }
     }

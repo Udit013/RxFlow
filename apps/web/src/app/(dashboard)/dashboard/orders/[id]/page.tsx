@@ -107,7 +107,7 @@ export default function OrderDetailPage() {
 
       <div className="card overflow-hidden">
         <div className="card-header"><h3 className="font-semibold text-slate-900">Line items</h3></div>
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto"><table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-50 text-xs uppercase text-slate-500">
               <th className="text-left px-4 py-2">Medicine</th>
@@ -139,7 +139,7 @@ export default function OrderDetailPage() {
             <tr><td colSpan={5} className="px-4 py-2 text-right text-slate-600">Tax</td><td className="px-4 py-2 text-right font-medium">{formatCurrency(o.taxAmount)}</td></tr>
             <tr className="border-t border-slate-200"><td colSpan={5} className="px-4 py-2 text-right font-semibold text-slate-900">Total</td><td className="px-4 py-2 text-right font-bold text-slate-900">{formatCurrency(o.total)}</td></tr>
           </tfoot>
-        </table>
+        </table></div>
       </div>
 
       {hasInvoice && (
@@ -187,7 +187,7 @@ function InvoiceRow({ invoice, order }: { invoice: any; order: any }) {
         })),
         totalTax: full.totalTax ?? 0,
       }
-      downloadInvoicePdf(data, tenantHeader)
+      await downloadInvoicePdf(data, tenantHeader)
     } catch (e: any) {
       toast.error('Failed to generate PDF')
     }

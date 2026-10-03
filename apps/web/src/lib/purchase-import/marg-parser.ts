@@ -41,7 +41,7 @@ export interface MargParserConfig {
 
 const num = (v: string | undefined): number | undefined => {
   if (v === undefined) return undefined
-  const n = parseFloat(String(v).replace(/[^0-9.\-]/g, ''))
+  const n = parseFloat(String(v).replace(/[^0-9.-]/g, ''))
   return Number.isFinite(n) ? n : undefined
 }
 

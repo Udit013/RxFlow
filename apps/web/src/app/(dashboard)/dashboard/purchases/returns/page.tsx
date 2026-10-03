@@ -33,7 +33,7 @@ export default function PurchaseReturnsPage() {
 
       <AnimatedSection>
         <SectionCard flush>
-          <table className="data-table">
+          <div className="overflow-x-auto"><table className="data-table">
             <thead>
               <tr>
                 <th>Debit Note</th>
@@ -67,7 +67,7 @@ export default function PurchaseReturnsPage() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         </SectionCard>
       </AnimatedSection>
 
@@ -196,7 +196,7 @@ function NewReturnFlow({ onClose, onCreated }: { onClose: () => void; onCreated:
                 <input className="input" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Damaged, near expiry, wrong item, excess…" />
               </div>
               {detailRes.isLoading ? <p className="text-sm text-surface-400 py-6 text-center">Loading items…</p> : (
-                <table className="w-full text-sm border border-surface-200 rounded-lg overflow-hidden">
+                <div className="overflow-x-auto"><table className="w-full text-sm border border-surface-200 rounded-lg overflow-hidden">
                   <thead className="bg-surface-50 text-2xs uppercase text-surface-500">
                     <tr><th className="text-left px-3 py-2">Item</th><th className="text-right px-3 py-2">Bought</th><th className="text-center px-3 py-2">Return</th><th className="text-right px-3 py-2">Value</th></tr>
                   </thead>
@@ -230,7 +230,7 @@ function NewReturnFlow({ onClose, onCreated }: { onClose: () => void; onCreated:
                   <tfoot className="bg-surface-50">
                     <tr><td colSpan={3} className="px-3 py-2 text-right font-semibold">Total return</td><td className="px-3 py-2 text-right font-bold text-amber-700">{formatCurrency(totalReturn)}</td></tr>
                   </tfoot>
-                </table>
+                </table></div>
               )}
               <p className="text-2xs text-surface-500">Returned units leave your stock (must be physically present). Supplier payable + total purchases reduce by the return value.</p>
               <div className="flex justify-end gap-2 pt-2 border-t border-surface-200">

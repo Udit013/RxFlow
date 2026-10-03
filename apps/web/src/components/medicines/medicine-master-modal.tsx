@@ -102,9 +102,13 @@ export function MedicineMasterModal({ medicine, onClose }: { medicine?: any; onC
       }
       return isEdit ? api.put(`/medicines/${medicine.id}`, payload) : api.post('/medicines', payload)
     },
-    onSuccess: () => {
-      toast.success(isEdit ? 'Medicine updated' : 'Medicine created')
+    onSuccess: (res) => {
+      // Editing a shared-catalog medicine saves a private copy for this pharmacy (and moves its
+      // stock onto it); the shared entry other pharmacies use is left unchanged.
+      if (res?.data?.forked) toast.success('Saved as your pharmacy\'s own copy — the shared catalog entry is unchanged')
+      else toast.success(isEdit ? 'Medicine updated' : 'Medicine created')
       queryClient.invalidateQueries({ queryKey: ['medicines'] })
+      queryClient.invalidateQueries({ queryKey: ['inventory'] })
       onClose()
     },
     onError: (e: any) => {
@@ -125,13 +129,18 @@ export function MedicineMasterModal({ medicine, onClose }: { medicine?: any; onC
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-elevated w-full max-w-3xl max-h-[92vh] flex flex-col">
+      <div role="dialog" aria-modal="true" aria-label={isEdit ? 'Edit medicine' : 'New medicine'} className="bg-white rounded-xl shadow-elevated w-full max-w-3xl max-h-[92vh] flex flex-col">
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-surface-200">
           <div>
             <h2 className="font-semibold text-surface-900">{isEdit ? 'Edit Medicine' : 'New Medicine'}</h2>
             <p className="text-2xs text-surface-500">Only Product Name, Manufacturer & HSN are required · Tab through fields, auto-advances tabs</p>
+            {isEdit && medicine?.isShared && (
+              <p className="mt-1 text-2xs text-brand-700">
+                Shared catalog entry — your changes are saved as your pharmacy&apos;s own copy.
+              </p>
+            )}
           </div>
-          <button onClick={onClose}><X className="w-4 h-4 text-surface-400" /></button>
+          <button type="button" onClick={onClose} aria-label="Close"><X className="w-4 h-4 text-surface-400" /></button>
         </div>
 
         {/* Tabs */}

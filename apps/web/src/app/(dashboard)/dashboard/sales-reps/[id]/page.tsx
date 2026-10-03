@@ -177,7 +177,7 @@ export default function SalesRepDetailPage() {
         ) : orders.length === 0 ? (
           <p className="text-slate-400 text-sm py-12 text-center">No commission-bearing orders in this period</p>
         ) : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto"><table className="w-full text-sm">
             <thead>
               <tr className="bg-slate-50 text-xs uppercase text-slate-500">
                 <th className="px-2 py-2">
@@ -224,7 +224,7 @@ export default function SalesRepDetailPage() {
                 )
               })}
             </tbody>
-          </table>
+          </table></div>
         )}
       </div>
     </div>

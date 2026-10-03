@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '@rxflow/db'
 import { authenticate } from '../middleware/auth.js'
+import { catalogWhere } from '../utils/medicine-scope.js'
 
 export async function searchRoutes(app: FastifyInstance) {
   // GET /api/v1/search?q=...&limit=5
@@ -19,6 +20,7 @@ export async function searchRoutes(app: FastifyInstance) {
       prisma.medicine.findMany({
         where: {
           isActive: true,
+          AND: [catalogWhere(tenantId)],
           OR: [
             { name: { contains: term, mode: 'insensitive' } },
             { genericName: { contains: term, mode: 'insensitive' } },

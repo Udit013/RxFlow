@@ -1,5 +1,8 @@
 import Papa from 'papaparse'
-import * as XLSX from 'xlsx'
+
+// SheetJS is ~400 kB — load it only when someone actually exports to Excel, instead of
+// shipping it in every page that renders an <ExportButton>.
+const loadXlsx = () => import('xlsx')
 
 /** Download an array of row objects as a CSV file. */
 export function exportCsv(filename: string, rows: any[]) {
@@ -9,7 +12,8 @@ export function exportCsv(filename: string, rows: any[]) {
 }
 
 /** Download an array of row objects as a real .xlsx file. */
-export function exportXlsx(filename: string, rows: any[], sheetName = 'Sheet1') {
+export async function exportXlsx(filename: string, rows: any[], sheetName = 'Sheet1') {
+  const XLSX = await loadXlsx()
   const ws = XLSX.utils.json_to_sheet(rows)
   // Auto column widths based on content
   if (rows.length > 0) {
@@ -28,7 +32,8 @@ export function exportXlsx(filename: string, rows: any[], sheetName = 'Sheet1') 
 }
 
 /** Export multiple named sheets into a single workbook. */
-export function exportXlsxMultiSheet(filename: string, sheets: { name: string; rows: any[] }[]) {
+export async function exportXlsxMultiSheet(filename: string, sheets: { name: string; rows: any[] }[]) {
+  const XLSX = await loadXlsx()
   const wb = XLSX.utils.book_new()
   for (const s of sheets) {
     const ws = XLSX.utils.json_to_sheet(s.rows)
@@ -43,12 +48,13 @@ function triggerDownload(blob: Blob, filename: string) {
   a.href = url
   a.download = filename
   a.click()
-  URL.revokeObjectURL(url)
+  // Revoking synchronously can cancel the download in some browsers (Firefox, Safari).
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
 /** Small dropdown-free helper: a button group that exports either format. */
 export type ExportFormat = 'csv' | 'xlsx'
-export function exportRows(format: ExportFormat, filename: string, rows: any[], sheetName?: string) {
-  if (format === 'xlsx') exportXlsx(filename, rows, sheetName)
+export async function exportRows(format: ExportFormat, filename: string, rows: any[], sheetName?: string) {
+  if (format === 'xlsx') await exportXlsx(filename, rows, sheetName)
   else exportCsv(filename, rows)
 }

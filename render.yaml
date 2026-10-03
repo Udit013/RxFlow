@@ -24,12 +24,14 @@ services:
     #
     # db push and seed are made NON-FATAL: on a fresh DB they create + populate the
     # schema, but on an already-provisioned DB `db push` errors with "type already
-    # exists" — which is benign, so we let the build continue. The seed is idempotent
+    # exists" — which is benign, so we let the build continue. Idempotent manual SQL for
+    # columns added since then runs next and IS fatal: a failed build keeps the previous
+    # release live instead of shipping code against a schema that lacks its columns. The seed is idempotent
     # (medicines find-then-create, everything else upserts) and populates the catalog.
     buildCommand: |
       npm install -g pnpm@9.1.0
       pnpm install --prod=false --frozen-lockfile=false
-      cd packages/db && pnpm exec prisma generate && (pnpm exec prisma db push --accept-data-loss || echo "schema already applied, continuing") && (pnpm exec tsx prisma/seed.ts || echo "seed skipped (non-fatal)")
+      cd packages/db && pnpm exec prisma generate && (pnpm exec prisma db push --accept-data-loss || echo "schema already applied, continuing") && pnpm exec prisma db execute --schema prisma/schema.prisma --file prisma/manual-migrations/2026-10-03-ownership-invoice-charges-sessions.sql && (pnpm exec tsx prisma/seed.ts || echo "seed skipped (non-fatal)")
     startCommand: pnpm --filter @rxflow/api start
     healthCheckPath: /health
     envVars:

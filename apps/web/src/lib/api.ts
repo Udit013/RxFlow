@@ -1,84 +1,126 @@
-import axios from 'axios'
+import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios'
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1'
+export const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001/api/v1'
 
+/**
+ * Session model
+ * - Access token (15 min): held in memory only — never written to storage.
+ * - Refresh token (7 days, rotating): an httpOnly cookie set by the API. Auth calls go through
+ *   this app's own origin (`/api/v1/auth/*`, proxied by next.config rewrites) so the cookie is
+ *   first-party and invisible to JavaScript.
+ * - On a full page load the access token is gone; `ensureSession()` mints a new one from the cookie.
+ */
+let accessToken: string | null = null
+
+export function getAccessToken(): string | null {
+  return accessToken
+}
+export function setAccessToken(token: string | null) {
+  accessToken = token
+}
+
+const LEGACY_ACCESS_KEY = 'rxflow_access_token'
+const LEGACY_REFRESH_KEY = 'rxflow_refresh_token'
+const USER_KEY = 'rxflow_user'
+
+/** Same-origin client for the cookie-bearing auth endpoints. */
+export const authApi = axios.create({
+  baseURL: '/api/v1/auth',
+  headers: { 'Content-Type': 'application/json' },
+  withCredentials: true,
+  timeout: 60000, // generous: the free-tier API can take ~50s to wake from idle
+})
+
+/** Everything else talks to the API directly with a Bearer token. */
 export const api = axios.create({
   baseURL: API_BASE,
   headers: { 'Content-Type': 'application/json' },
   timeout: 15000,
 })
 
-// ── Auth token injection ───────────────────────────────────────────────────────
-
 api.interceptors.request.use((config) => {
-  if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('rxflow_access_token')
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
-    }
-  }
+  if (accessToken) config.headers.Authorization = `Bearer ${accessToken}`
   return config
 })
 
-// ── Token refresh interceptor ─────────────────────────────────────────────────
+// ── Refresh (single-flight, cross-tab safe) ─────────────────────────────────────
 
-let isRefreshing = false
-let failedQueue: Array<{ resolve: (val: unknown) => void; reject: (err: unknown) => void }> = []
+let inflight: Promise<string> | null = null
 
-function processQueue(error: unknown, token: string | null = null) {
-  failedQueue.forEach(({ resolve, reject }) => {
-    if (error) reject(error)
-    else resolve(token)
-  })
-  failedQueue = []
+async function doRefresh(): Promise<string> {
+  // One-time migration: sessions created before the cookie switch still hold their refresh
+  // token in localStorage. Exchange it once (the API answers with the cookie), then delete it.
+  let legacy: string | null = null
+  try {
+    legacy = localStorage.getItem(LEGACY_REFRESH_KEY)
+    localStorage.removeItem(LEGACY_REFRESH_KEY)
+    localStorage.removeItem(LEGACY_ACCESS_KEY)
+  } catch { /* storage unavailable */ }
+
+  const res = await authApi.post('/refresh', legacy ? { refreshToken: legacy } : {})
+  const token: string = res.data.data.accessToken
+  setAccessToken(token)
+  return token
 }
+
+/**
+ * Get a fresh access token from the refresh cookie. Concurrent callers share one request, and
+ * tabs are serialised with the Web Locks API — refresh tokens rotate, so two tabs refreshing
+ * with the same cookie at once would make the second one fail and sign the user out.
+ */
+export function refreshAccessToken(): Promise<string> {
+  if (!inflight) {
+    const locks = typeof navigator !== 'undefined' ? (navigator as Navigator & { locks?: LockManager }).locks : undefined
+    const run: Promise<string> = locks
+      ? (locks.request('rxflow-session-refresh', () => doRefresh()) as unknown as Promise<string>) // lib typing nests the promise; it resolves to the token
+      : doRefresh()
+    inflight = run.finally(() => {
+      inflight = null
+    })
+  }
+  return inflight
+}
+
+/** Make sure we hold an access token (after a page load). Resolves false when signed out. */
+export async function ensureSession(): Promise<boolean> {
+  if (accessToken) return true
+  try {
+    await refreshAccessToken()
+    return true
+  } catch {
+    return false
+  }
+}
+
+export function clearLocalSession() {
+  setAccessToken(null)
+  try {
+    localStorage.removeItem(USER_KEY)
+    localStorage.removeItem(LEGACY_ACCESS_KEY)
+    localStorage.removeItem(LEGACY_REFRESH_KEY)
+  } catch { /* storage unavailable */ }
+}
+
+// ── 401 → refresh once → retry ──────────────────────────────────────────────────
 
 api.interceptors.response.use(
   (response) => response,
-  async (error) => {
-    const originalRequest = error.config
+  async (error: AxiosError) => {
+    const original = error.config as (InternalAxiosRequestConfig & { _retry?: boolean }) | undefined
+    if (error.response?.status !== 401 || !original || original._retry) return Promise.reject(error)
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      if (isRefreshing) {
-        return new Promise((resolve, reject) => {
-          failedQueue.push({ resolve, reject })
-        })
-          .then((token) => {
-            originalRequest.headers.Authorization = `Bearer ${token}`
-            return api(originalRequest)
-          })
-          .catch((err) => Promise.reject(err))
-      }
-
-      originalRequest._retry = true
-      isRefreshing = true
-
-      try {
-        const refreshToken = localStorage.getItem('rxflow_refresh_token')
-        if (!refreshToken) throw new Error('No refresh token')
-
-        const response = await axios.post(`${API_BASE}/auth/refresh`, { refreshToken })
-        const { accessToken, refreshToken: newRefreshToken } = response.data.data
-
-        localStorage.setItem('rxflow_access_token', accessToken)
-        localStorage.setItem('rxflow_refresh_token', newRefreshToken)
-
-        api.defaults.headers.Authorization = `Bearer ${accessToken}`
-        processQueue(null, accessToken)
-
-        return api(originalRequest)
-      } catch (refreshError) {
-        processQueue(refreshError, null)
-        localStorage.removeItem('rxflow_access_token')
-        localStorage.removeItem('rxflow_refresh_token')
+    original._retry = true
+    try {
+      const token = await refreshAccessToken()
+      original.headers.Authorization = `Bearer ${token}`
+      return api(original)
+    } catch (refreshError) {
+      clearLocalSession()
+      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
         window.location.href = '/login'
-        return Promise.reject(refreshError)
-      } finally {
-        isRefreshing = false
       }
+      return Promise.reject(refreshError)
     }
-
-    return Promise.reject(error)
   }
 )
 

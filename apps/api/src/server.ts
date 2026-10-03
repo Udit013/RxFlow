@@ -32,7 +32,21 @@ import { errorHandler } from './middleware/error-handler.js'
 import { env } from './utils/env.js'
 
 const app = Fastify({
+  // Behind Render's load balancer (and the web app's auth proxy): derive the client IP from
+  // X-Forwarded-For so rate limits apply per client rather than to one shared proxy address.
+  trustProxy: true,
   logger: {
+    // The SSE endpoint takes its JWT as `?token=` (EventSource can't send headers).
+    // Redact it so live access tokens never land in request logs.
+    serializers: {
+      req(req) {
+        return {
+          method: req.method,
+          url: req.url.replace(/([?&]token=)[^&]*/i, '$1[REDACTED]'),
+          remoteAddress: req.ip,
+        }
+      },
+    },
     transport:
       process.env.NODE_ENV === 'development'
         ? { target: 'pino-pretty', options: { colorize: true } }
@@ -92,6 +106,12 @@ await app.register(swaggerUi, {
   uiConfig: { docExpansion: 'list', deepLinking: false },
 })
 
+// ── Error Handler ─────────────────────────────────────────────────────────────
+// Must be set BEFORE the route plugins are registered: each plugin captures the error handler
+// of its parent at registration time, so setting it afterwards left every route on Fastify's
+// default handler (Zod errors → 500, business errors → bare "Bad Request").
+app.setErrorHandler(errorHandler)
+
 // ── Routes ────────────────────────────────────────────────────────────────────
 
 const API_PREFIX = '/api/v1'
@@ -127,9 +147,6 @@ app.get('/health', async () => ({
   timestamp: new Date().toISOString(),
 }))
 
-// ── Error Handler ─────────────────────────────────────────────────────────────
-
-app.setErrorHandler(errorHandler)
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 

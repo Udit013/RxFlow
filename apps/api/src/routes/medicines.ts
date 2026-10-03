@@ -2,10 +2,11 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '@rxflow/db'
 import { authenticate } from '../middleware/auth.js'
+import { catalogWhere, usableWhere, updateMedicineForTenant } from '../utils/medicine-scope.js'
 import { getPaginationParams, buildPaginationMeta } from '../utils/pagination.js'
 
 const optStr = (v: unknown) => (v === '' ? undefined : v)
-const createMedicineSchema = z.object({
+export const createMedicineSchema = z.object({
   // Required essentials
   name: z.string().min(1),
   manufacturerName: z.string().min(1),
@@ -23,7 +24,7 @@ const createMedicineSchema = z.object({
   packSizeNumeric: z.number().int().optional(),
   packUnit: z.string().default('tablets'),
   mrp: z.number().min(0).optional(),
-  gstRate: z.number().default(12),
+  gstRate: z.number().min(0).max(100).default(12),
   schedule: z.enum(['OTC','SCHEDULE_H','SCHEDULE_H1','SCHEDULE_X','SCHEDULE_G']).default('OTC'),
   requiresPrescription: z.boolean().default(false),
   aliases: z.array(z.string()).default([]),
@@ -60,6 +61,7 @@ const createMedicineSchema = z.object({
 export async function medicineRoutes(app: FastifyInstance) {
   // GET /api/v1/medicines
   app.get('/', { preHandler: [authenticate] }, async (request, reply) => {
+    const { tenantId } = request.user
     const query = request.query as {
       page?: string; limit?: string; search?: string;
       dosageForm?: string; schedule?: string; requiresPrescription?: string; category?: string;
@@ -70,7 +72,7 @@ export async function medicineRoutes(app: FastifyInstance) {
       limit: Number(query.limit),
     })
 
-    const where: Record<string, unknown> = { isActive: true }
+    const where: Record<string, unknown> = { isActive: true, AND: [catalogWhere(tenantId)] }
 
     if (query.search) {
       where.OR = [
@@ -102,7 +104,7 @@ export async function medicineRoutes(app: FastifyInstance) {
 
     return reply.send({
       success: true,
-      data: medicines,
+      data: medicines.map((m) => ({ ...m, isShared: m.ownerTenantId === null })),
       meta: buildPaginationMeta(total, page, limit),
     })
   })
@@ -110,9 +112,10 @@ export async function medicineRoutes(app: FastifyInstance) {
   // GET /api/v1/medicines/:id
   app.get('/:id', { preHandler: [authenticate] }, async (request, reply) => {
     const { id } = request.params as { id: string }
+    const { tenantId } = request.user
 
-    const medicine = await prisma.medicine.findUnique({
-      where: { id },
+    const medicine = await prisma.medicine.findFirst({
+      where: { id, ...usableWhere(tenantId) },
       include: {
         compositions: true,
         substitutes: { include: { substitute: true } },
@@ -124,7 +127,7 @@ export async function medicineRoutes(app: FastifyInstance) {
       return reply.status(404).send({ success: false, error: 'Medicine not found' })
     }
 
-    return reply.send({ success: true, data: medicine })
+    return reply.send({ success: true, data: { ...medicine, isShared: medicine.ownerTenantId === null } })
   })
 
   // POST /api/v1/medicines
@@ -134,6 +137,7 @@ export async function medicineRoutes(app: FastifyInstance) {
     const medicine = await prisma.medicine.create({
       data: {
         ...body,
+        ownerTenantId: request.user.tenantId, // private to the creating tenant
         // Fill DB-required columns the form may leave blank, derived from essentials.
         genericName: body.genericName || body.name,
         brandName: body.brandName || body.name,
@@ -151,13 +155,13 @@ export async function medicineRoutes(app: FastifyInstance) {
   app.put('/:id', { preHandler: [authenticate] }, async (request, reply) => {
     const { id } = request.params as { id: string }
     const body = createMedicineSchema.partial().parse(request.body)
+    const { tenantId, role } = request.user
 
-    const medicine = await prisma.medicine.update({
-      where: { id },
-      data: body,
-    })
+    // Shared catalog rows are never edited in place by a tenant — the edit lands on that
+    // tenant's private copy (created on first edit) so other pharmacies are unaffected.
+    const { medicine, forked } = await updateMedicineForTenant(tenantId, role, id, body)
 
-    return reply.send({ success: true, data: medicine })
+    return reply.send({ success: true, data: { ...medicine, isShared: medicine.ownerTenantId === null }, forked })
   })
 
   // GET /api/v1/medicines/:id/substitutes
@@ -177,7 +181,7 @@ export async function medicineRoutes(app: FastifyInstance) {
   })
 
   // POST /api/v1/medicines/bulk-import — Bulk import medicines from JSON array
-  app.post('/bulk-import', { preHandler: [authenticate] }, async (request, reply) => {
+  app.post('/bulk-import', { preHandler: [authenticate], bodyLimit: 5 * 1024 * 1024 }, async (request, reply) => {
     const bulkSchema = z.object({
       medicines: z.array(createMedicineSchema.partial({
         gstRate: true, schedule: true, requiresPrescription: true, aliases: true, barcodes: true, searchTokens: true,
@@ -194,6 +198,7 @@ export async function medicineRoutes(app: FastifyInstance) {
       try {
         const existing = await prisma.medicine.findFirst({
           where: {
+            ...catalogWhere(request.user.tenantId),
             name: { equals: m.name, mode: 'insensitive' },
             strength: m.strength,
             manufacturerName: { equals: m.manufacturerName, mode: 'insensitive' },
@@ -221,6 +226,7 @@ export async function medicineRoutes(app: FastifyInstance) {
             barcodes: m.barcodes ?? [],
             searchTokens: m.searchTokens ?? [],
             isVerified: false,
+            ownerTenantId: request.user.tenantId,
           },
         })
         created++
@@ -332,7 +338,7 @@ export async function medicineRoutes(app: FastifyInstance) {
     const { barcode } = request.params as { barcode: string }
 
     const medicine = await prisma.medicine.findFirst({
-      where: { barcodes: { has: barcode }, isActive: true },
+      where: { barcodes: { has: barcode }, isActive: true, ...catalogWhere(request.user.tenantId) },
       include: { compositions: true },
     })
 

@@ -68,7 +68,7 @@ export default function StockTransferDetailPage() {
         <div className="card-header">
           <h3 className="font-semibold">Items transferred</h3>
         </div>
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto"><table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-50 text-xs uppercase text-slate-500">
               <th className="text-left px-4 py-2">Medicine</th>
@@ -95,7 +95,7 @@ export default function StockTransferDetailPage() {
               </tr>
             ))}
           </tbody>
-        </table>
+        </table></div>
       </div>
     </div>
   )

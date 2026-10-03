@@ -335,7 +335,7 @@ async function main() {
   ]
 
   for (const med of medicines) {
-    const existing = await prisma.medicine.findFirst({ where: { name: med.name } })
+    const existing = await prisma.medicine.findFirst({ where: { name: med.name, ownerTenantId: null } })
     if (!existing) {
       await prisma.medicine.create({
         data: {

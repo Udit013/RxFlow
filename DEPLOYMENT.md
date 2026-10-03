@@ -59,11 +59,11 @@ The schema is created automatically on first API deploy (see step 2). No manual 
 
 1. Render → **New + → Blueprint** → connect your GitHub repo. Render reads [`render.yaml`](render.yaml).
 2. When prompted, set the secret env vars:
-   - `DATABASE_URL` (pooled, runtime) → `postgresql://neondb_owner:npg_xyjke6shf3TQ@ep-winter-recipe-ai80mjpq-pooler.c-4.us-east-1.aws.neon.tech/neondb?sslmode=require`
-   - `DIRECT_URL` (direct, for db push — same string minus `-pooler`) → `postgresql://neondb_owner:npg_xyjke6shf3TQ@ep-winter-recipe-ai80mjpq.c-4.us-east-1.aws.neon.tech/neondb?sslmode=require`
+   - `DATABASE_URL` (pooled, runtime) → copy the **pooled** connection string from Neon → Dashboard → Connection Details (its host contains `-pooler`)
+   - `DIRECT_URL` (direct, for `db push`) → the same string **without** `-pooler` in the host
    - `CORS_ORIGIN` → leave as `https://your-app.vercel.app` for now; update after step 3
-   > ⚠️ I dropped `&channel_binding=require` from both — it commonly breaks Prisma's `db push`. `sslmode=require` alone is secure.
-   > 🔒 **Security:** this file is committed to your repo with a real DB password. After deploy, rotate the Neon password (Neon → Settings → Reset password) and keep secrets only in the Render/Vercel dashboards, not in the repo.
+   > ⚠️ Drop `&channel_binding=require` from both — it commonly breaks Prisma's `db push`. `sslmode=require` alone is secure.
+   > 🔒 **Never paste real connection strings into this file or `.env.example`** — both are committed to the repo. Secrets belong only in the Render/Vercel dashboards and your local, gitignored `.env`.
    - `STORAGE_BASE_URL` → `https://rxflow-api.onrender.com` (Render shows your real URL after first deploy — come back and fix it)
    - `JWT_SECRET` / `JWT_REFRESH_SECRET` → Render auto-generates these (`generateValue: true`)
 3. Deploy. The build runs `prisma db push` and creates every table on Neon.
@@ -86,6 +86,7 @@ The schema is created automatically on first API deploy (see step 2). No manual 
 4. **Environment Variable:**
    - `NEXT_PUBLIC_API_URL` = `https://YOUR-API.onrender.com/api/v1`  (your Render URL + `/api/v1`)
 5. Deploy. Vercel gives you `https://your-app.vercel.app`.
+   > Sign-in calls (`/api/v1/auth/*`) are proxied through the Vercel app itself (see `apps/web/next.config.js`) so the httpOnly session cookie is first-party. The proxy target comes from `NEXT_PUBLIC_API_URL` at build time — no extra variable needed, but **redeploy the frontend whenever that URL changes**.
 6. **Go back to Render** → update `CORS_ORIGIN` to exactly `https://your-app.vercel.app` → redeploy the API (or it'll reject the browser's requests).
 
 Done — open the Vercel URL, log in with the demo credentials, and it's live for anyone.
