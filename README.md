@@ -29,7 +29,7 @@ A cloud-native, multi-tenant pharmacy management system. Each signup creates an 
 - **Returns** — customer credit notes *and* dedicated supplier purchase-returns (debit notes), both adjust stock + ledgers
 
 ### Catalog
-- Medicine master catalog with composition, substitutes, schedules, HSN, GST
+- Medicine master catalog with composition, substitutes, schedules, HSN, GST — a shared catalog with **per-pharmacy copy-on-write**: editing a shared medicine saves your pharmacy's own copy and never changes anyone else's
 - **Category management** and fuzzy medicine search / normalization (Pharmarack-style)
 
 ### Stakeholders
@@ -40,20 +40,22 @@ A cloud-native, multi-tenant pharmacy management system. Each signup creates an 
 - **Stores** — multi-branch CRUD
 
 ### Finance & compliance
-- **GST invoicing** — CGST/SGST/IGST, inter-state IGST routing, round-off
+- **GST invoicing** — CGST/SGST/IGST, inter-state IGST routing, bill-level special discounts and transport charges carried onto the invoice, round-off; one invoice per order (idempotent) and overpayment protection
 - **GST reports** — GSTR-1 (B2B/B2C + CDNR/CDNUR), GSTR-3B, sales/purchase registers
 - **Accounts** — expense/income tracking, **Profit & Loss**, cash-flow statement
 - **Compliance** — Schedule H/H1/X register, drug-license expiry alerts
 - **Reports** — stock valuation, PDF + **Excel (.xlsx)** + CSV export
 
 ### Platform
-- **Auth** — email/password (bcrypt) + JWT access/refresh, role-based access (Admin, Store Manager, Pharmacist, Sales Rep, Accountant, etc.), self-serve signup
+- **Auth** — email/password (bcrypt) or email OTP; short-lived access token in memory + rotating refresh token in an **httpOnly cookie**, with per-device sessions (sign out one device or all); self-serve signup
+- **Role-based access** — one permission matrix (Admin, Store Manager, Pharmacist, Sales Rep, Accountant, Delivery Staff, Viewer) enforced by the API and reflected in the navigation
 - **Live multi-device sync** — SSE push so the counter PC, a tablet, and a phone stay in sync in real time
 - **Notification center** + persistent unread state
 - **Cmd+K global search** across every entity
 - **Audit log** — who did what, when, from which device
-- **Backup & import** — full JSON export (optionally AES-256 encrypted), restore, and CSV import from other apps
+- **Backup & import** — full JSON export (optionally AES-256-GCM encrypted in the browser), restore, and CSV import from other apps
 - **LAN mode** — run on one machine, access from devices on the same network
+- **Responsive & accessible UI** — mobile drawer navigation, horizontally scrollable tables, keyboard and screen-reader support, branded loading screen
 
 ---
 
@@ -81,10 +83,10 @@ rxflow/                         ← Monorepo (pnpm workspaces + Turborepo)
 | Frontend | Next.js 14 (App Router) + Tailwind + GSAP |
 | Database | PostgreSQL + Prisma |
 | State | React Query + Zustand |
-| Auth | JWT (access + refresh), bcrypt |
+| Auth | JWT access token (memory) + rotating refresh token (httpOnly cookie, per-device sessions), bcrypt |
 | Search | Fuse.js (in-memory) with optional Meilisearch |
 | Exports | jsPDF (invoices), SheetJS (Excel), papaparse (CSV) |
-| Testing | Vitest — unit tests for financial-year, GST/commission math, and distributor CSV parsers (pinned to real invoice rows) |
+| Testing | Vitest — money math, invoice GST, document numbering, auth middleware + role matrix, catalog copy-on-write, session hashing, and distributor CSV parsers (pinned to real invoice rows) |
 | CI | GitHub Actions — typecheck + tests + production build on every push/PR |
 | Build | Turborepo + pnpm |
 
@@ -144,17 +146,17 @@ pnpm test          # run the unit suite (Vitest)
 pnpm test:watch    # watch mode
 ```
 
-Covers the money-critical pure logic: Indian financial-year boundaries (order numbering), GST/discount/commission arithmetic, and the multi-distributor CSV parsers — the parser tests are pinned to verbatim rows from real supplier invoices, so a config regression can't silently break an import format.
+63 tests covering the money- and security-critical logic: Indian financial-year boundaries and collision-safe document numbering, GST/discount/commission and invoice arithmetic, the auth middleware and role matrix, medicine copy-on-write, refresh-token hashing, and the multi-distributor CSV parsers — the parser tests are pinned to verbatim rows from real supplier invoices, so a config regression can't silently break an import format.
 
 ---
 
 ## API overview
 
-All routes are prefixed with `/api/v1`. Interactive docs at `/docs`.
+All routes are prefixed with `/api/v1`. Interactive docs at `/docs`. Every protected route checks the caller's role against the shared permission matrix (`packages/types` → `canAccess`). The web app reaches `/api/v1/auth/*` through its own origin (a Next.js rewrite), so the session cookie is first-party.
 
 | Area | Sample endpoints |
 |------|------------------|
-| Auth | `POST /auth/login` · `POST /auth/register` · `POST /auth/refresh` · `GET /auth/me` |
+| Auth | `POST /auth/login` · `POST /auth/register` · `POST /auth/refresh` · `POST /auth/logout` · `GET /auth/me` |
 | Dashboard | `GET /dashboard` |
 | Medicines | `GET /medicines` · `POST /medicines` · `GET /medicine-intelligence/search` |
 | Categories | `GET/POST/PATCH/DELETE /categories` |
@@ -184,6 +186,17 @@ Uses in-memory Fuse.js by default; plugs into Meilisearch for typo-tolerant full
 
 ---
 
+## Security model
+
+- **Tenant isolation** — every query is scoped to the caller's pharmacy, and IDs sent in requests (stores, customers, suppliers, batches, medicines) are verified to belong to it.
+- **Sessions** — the 15-minute access token lives only in memory; the 7-day refresh token is an httpOnly, `SameSite=Strict` cookie, rotated on every use and stored only as a SHA-256 hash. Each device has its own session.
+- **Authorization** — one role matrix decides who can read or change what; viewers are read-only, and unlisted write endpoints are restricted to managers by default.
+- **Abuse protection** — per-route rate limits on auth endpoints, constant-time login responses, single-use 6-digit OTPs with a 5-attempt cap.
+
+See [PROJECT_DOCUMENTATION.md](PROJECT_DOCUMENTATION.md) (Section 5) for the full design.
+
+---
+
 ## India-specific compliance
 
 - **GST** — CGST/SGST/IGST on every invoice, inter-state IGST routing, GSTR-1/3B
@@ -202,13 +215,16 @@ pnpm --filter @rxflow/web exec tsc --noEmit   # type-check web
 pnpm --filter @rxflow/api deploy:seed             # reseed demo data
 ```
 
-The schema source of truth is `packages/db/prisma/schema.prisma`. After editing it, run `prisma generate` + `prisma db push`.
+The schema source of truth is `packages/db/prisma/schema.prisma`. After editing it, run `prisma generate` + `prisma db push`, and add an idempotent SQL file to `packages/db/prisma/manual-migrations/` for production (the Render build runs the latest one).
+
+For the complete technical handbook — architecture, data model, auth, business logic, and deployment — see [PROJECT_DOCUMENTATION.md](PROJECT_DOCUMENTATION.md).
 
 ---
 
 ## Roadmap
 
-- Email OTP / password reset (Resend)
+- Verified email sending domain (OTP / password reset currently use the Resend sandbox)
+- Per-store permissions on top of the role matrix
 - Loyalty points
 - Wholesale tier pricing
 - Mobile apps (Expo) + desktop (Tauri)

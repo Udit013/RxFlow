@@ -191,23 +191,25 @@ RxFlow/
 │   │   └── src/
 │   │       ├── server.ts         # App bootstrap: plugins, route registration, /health
 │   │       ├── routes/           # 22 files, one per business domain (see Section 6)
-│   │       ├── middleware/       # auth.ts (JWT verification), error-handler.ts
-│   │       └── utils/            # Pure helpers: audit.ts, events.ts (SSE), order-math.ts,
-│   │                             # financial-year.ts, pagination.ts, email.ts, env.ts
+│   │       ├── middleware/       # auth.ts (JWT check + role matrix), error-handler.ts
+│   │       └── utils/            # Helpers: audit.ts, events.ts (SSE), order-math.ts,
+│   │                             # financial-year.ts, numbering.ts, pagination.ts, email.ts,
+│   │                             # env.ts, http-error.ts, tenant-guard.ts, medicine-scope.ts,
+│   │                             # session-cookie.ts
 │   └── web/                      # Next.js 14 frontend — the "dining room" the user sees
 │       └── src/
 │           ├── app/               # App Router: every folder here is a URL route
 │           ├── components/        # Reusable UI, grouped by concern (ui/, layout/, purchases/, medicines/)
-│           ├── lib/                # api.ts (HTTP client), auth.ts, utils.ts, purchase-import/
+│           ├── lib/                # api.ts (HTTP client + session), auth.ts, ui-store.ts, utils.ts, purchase-import/
 │           ├── hooks/              # (present but effectively empty — see note below)
 │           ├── data/               # Static seed data (sample medicines for demo/onboarding)
 │           └── types/              # Frontend-only type augmentations
 ├── packages/
 │   ├── db/                       # Prisma schema + generated client — the single source of truth
 │   │   ├── prisma/schema.prisma  # Every table, every relationship (see Section 4)
-│   │   ├── prisma/manual-migrations/  # 20 hand-written SQL files tracing schema evolution
+│   │   ├── prisma/manual-migrations/  # 21 idempotent SQL files tracing schema evolution
 │   │   └── src/index.ts          # Prisma client singleton, re-exports all generated types
-│   ├── types/                    # Hand-maintained shared DTOs (JwtPayload, domain interfaces)
+│   ├── types/                    # Shared DTOs (JwtPayload, domain interfaces) + the role matrix (canAccess)
 │   ├── medicine-intelligence/    # Standalone fuzzy-matching + normalization engine
 │   └── ui/                       # (present; minimal — most UI actually lives in apps/web)
 ├── scripts/                       # One-off operational scripts (not part of the request lifecycle)
@@ -296,18 +298,24 @@ Most Prisma projects use `prisma migrate dev` to generate a versioned history of
 | `Store` | A physical location belonging to a tenant (chain pharmacies have several) | `isHeadOffice`, unique per `(tenantId, code)` |
 | `User` | A login account | `role` (8-value enum from SUPER_ADMIN down to VIEWER), unique per `(tenantId, email)` — **the same email can register at two different tenants**, since uniqueness is scoped to the tenant, not global |
 | `UserStore` | Join table: which stores a user can access | `isPrimary` marks their default store |
+| `AuthSession` | One row per signed-in **device** | `id` is the session id carried inside the refresh token (`sid`); `tokenHash` is a SHA-256 of the *current* refresh token (rotated on every refresh); `expiresAt`, `lastUsedAt`, `userAgent`. Deleted on logout (that device only) or password reset (all devices); cascades when the user is deleted |
 
 #### Medicine Catalog: `Medicine`, `MedicineComposition`, `MedicineSubstitute`, `Manufacturer`, `MedicineCategory`, `MedicineAlias`, `MedicineSyncLog`
 
-The medicine catalog is **global, not tenant-scoped** — every pharmacy shares the same master list of "Paracetamol 650mg" rather than each maintaining a private copy. This is a deliberate design choice: medicine identity (name, composition, HSN code, schedule classification) is a fact about the world, not about any one pharmacy's business — only *inventory of* that medicine is tenant-specific.
+The medicine catalog is **one shared table with per-tenant copy-on-write ownership**. Medicine identity (name, composition, HSN code, schedule) is mostly a fact about the world, so pharmacies share one master list rather than each re-typing "Paracetamol 650mg" — but a shared, writable table also means one pharmacy's edit would silently change every other pharmacy's data. Two columns resolve that:
+
+- **`ownerTenantId`** — `NULL` means a **shared** catalog row (seeded / pre-existing): readable by everyone, editable by no tenant (only `SUPER_ADMIN`). A non-null value means the row is **private** to that tenant — every medicine a pharmacy creates (form, bulk import, backup restore) is private to it.
+- **`forkedFromId`** — when a tenant *edits* a shared row, the API never changes it. Instead it creates that tenant's private **copy** (compositions included) pointing back at the original, moves the tenant's live stock (`InventoryItem.medicineId`) onto the copy, and from then on hides the original from that tenant's catalog views. Other tenants keep seeing the untouched original. Later edits update the same copy. Historical order/invoice lines intentionally keep pointing at the original.
+
+All of this lives in `apps/api/src/utils/medicine-scope.ts`: `catalogWhere(tenantId)` (own rows + shared rows this tenant hasn't replaced) scopes every listing/search; `usableWhere`/`assertMedicinesUsable` guard writes that reference a medicine id; `updateMedicineForTenant` implements the fork.
 
 | Table | Purpose |
 |---|---|
-| `Medicine` | The master record — name, generic name, brand, manufacturer, dosage form, MRP, HSN code, GST rate, drug schedule, plus an extensive set of MARG-ERP-style fields added later (`rateA/B/C` tiered pricing, `division`, `packing`, `taxType`, `cess`, min/max stock defaults) |
+| `Medicine` | The master record — name, generic name, brand, manufacturer, dosage form, MRP, HSN code, GST rate, drug schedule, plus an extensive set of MARG-ERP-style fields added later (`rateA/B/C` tiered pricing, `division`, `packing`, `taxType`, `cess`, min/max stock defaults), and the ownership columns `ownerTenantId` / `forkedFromId` described above |
 | `MedicineComposition` | The active ingredients making up a medicine (a combination drug can have several) |
 | `MedicineSubstitute` | Which medicines can substitute for which, with a `confidence` score |
 | `Manufacturer` | Normalized manufacturer names + aliases |
-| `MedicineCategory` | **Tenant-scoped** — each pharmacy can define its own category labels (e.g. "Antibiotics"), linked to medicines by matching the category **name as a string**, not a foreign key (a deliberate simplicity trade-off explained in Section 6) |
+| `MedicineCategory` | **Tenant-scoped** — each pharmacy can define its own category labels (e.g. "Antibiotics"), linked to medicines by matching the category **name as a string**, not a foreign key. Renaming or deleting a category only rewrites the tenant's **own** medicines; assigning a category to a shared medicine is an edit, so it creates the tenant's copy |
 | `MedicineAlias` / `MedicineSyncLog` | Support tables for the fuzzy-matching engine — see [Section 10](#10-the-medicine-intelligence-engine) |
 
 #### Inventory: `InventoryItem`, `Batch`
@@ -322,8 +330,8 @@ This is the heart of the "what do we actually have on the shelf" problem.
 #### Orders, Invoices, and Money: `Order`, `OrderItem`, `Invoice`, `InvoiceItem`, `Payment`, `LedgerEntry`
 
 - **`Order`** is the transaction record for *either* a sale or a purchase (`type: SALE | PURCHASE`) — the same table serves both directions of the business, distinguished by which of `customerId`/`supplierId` is set. Carries the full computed money breakdown (`subtotal`, `discountAmount`, `taxAmount`, `total`), the commission fields (`salesRepId`, `commissionPercent`, `commissionAmount`, `commissionStatus`), purchase-only fields (`transportCharge`, `purchaseDiscountPercent`), the bill-level special discount (`specialDiscountType`/`specialDiscountValue`), and parked-sale support (`parkedAt`/`parkedLabel` for a cart saved mid-transaction without deducting stock yet).
-- **`Invoice`** is the **GST-compliant tax document** generated *from* an order — a deliberate separation: an `Order` is the business transaction, an `Invoice` is the formal tax paperwork with the CGST/SGST/IGST breakdown, and `type` extends beyond SALE/PURCHASE to include `CREDIT_NOTE` and `DEBIT_NOTE` (returns), which reference the `originalInvoiceId` they adjust.
-- **`Payment`** records money actually received/paid against an invoice — an invoice can have partial payments over time, and `Invoice.paymentStatus` (PENDING/PARTIAL/PAID) is recalculated from the sum of its payments.
+- **`Invoice`** is the **GST-compliant tax document** generated *from* an order — a deliberate separation: an `Order` is the business transaction, an `Invoice` is the formal tax paperwork with the CGST/SGST/IGST breakdown, and `type` extends beyond SALE/PURCHASE to include `CREDIT_NOTE` and `DEBIT_NOTE` (returns), which reference the `originalInvoiceId` they adjust. `otherCharges` holds non-taxable charges carried over from the order (a purchase's transport charge), included in `grandTotal`.
+- **`Payment`** records money actually received/paid against an invoice — an invoice can have partial payments over time, and `Invoice.paymentStatus` (PENDING/PARTIAL/PAID) is recalculated from the sum of its payments. A payment larger than the outstanding balance (beyond under ₹1 of rounding slack), or any payment on a fully-paid invoice, is rejected.
 - **`LedgerEntry`** is a running debit/credit ledger against a customer or supplier — it uses a **polymorphic pattern**: `entityType: 'CUSTOMER' | 'SUPPLIER'` plus `entityId` rather than two separate foreign keys, so the same table serves both relationships (Prisma models this with two differently-named relations, `ledger_customer` and `ledger_supplier`, both resolving through `entityId`).
 
 #### Stakeholders: `Supplier`, `Customer`, `SalesRep`
@@ -355,8 +363,9 @@ A single flexible table for both money going out (`direction: OUT` — rent, sal
 ### 4.6 Entity-Relationship Overview (textual)
 
 ```text
-Tenant ──┬── Store ──── UserStore ──── User
-         ├── Medicine (global, NOT owned by Tenant)
+Tenant ──┬── Store ──── UserStore ──── User ──── AuthSession (one per device)
+         ├── Medicine (shared rows: ownerTenantId = NULL;
+         │             private rows/copies: ownerTenantId = this tenant, forkedFromId → original)
          ├── InventoryItem ──── Batch
          ├── Supplier ──┬── Order (type=PURCHASE) ──── OrderItem
          │              ├── Invoice (type=PURCHASE/DEBIT_NOTE)
@@ -383,7 +392,7 @@ Invoice ──(self-relation "InvoiceAdjustments")── Invoice   (credit/debit
 - *Why is Postgres (relational) used here instead of a NoSQL database?* Because the data is deeply interconnected — a single sale needs to update inventory, a ledger, and financial totals together, and relational databases with transactions are built for exactly that kind of coordinated, all-or-nothing update.
 
 **Intermediate**
-- *Why is `Medicine` NOT tenant-scoped, when almost everything else is?* A medicine's identity (its name, composition, legal schedule) is a fact about the world shared by every pharmacy; only *how much of it a given pharmacy has in stock* (`InventoryItem`) is tenant-specific. Making the catalog global also means one pharmacy's data-entry effort (adding a new medicine correctly) benefits every other tenant, rather than 500 pharmacies each re-typing the same 10,000 common medicines.
+- *Why is `Medicine` shared across tenants with copy-on-write, instead of fully tenant-scoped or fully global?* Fully tenant-scoped would make 500 pharmacies each re-type the same 10,000 common medicines; fully global (the original design) let any tenant's edit silently rewrite every other tenant's catalog — names, MRP, GST rate. Copy-on-write keeps the shared baseline while making every change local: reads see shared rows plus the tenant's own, and an edit to a shared row lands on a private copy that replaces the original *for that tenant only*.
 - *Explain the polymorphic `LedgerEntry` design (`entityType` + `entityId`) — what's the trade-off vs. two separate tables?* One shared table means ledger-querying/reporting code doesn't have to special-case customers vs. suppliers, but it sacrifices a hard database-level foreign-key constraint on `entityId` (the database can't enforce "this entityId actually exists in Customer OR Supplier" the way it could with two real FK columns) — that referential check has to be done in application code instead.
 
 **Advanced**
@@ -399,69 +408,81 @@ Invoice ──(self-relation "InvoiceAdjustments")── Invoice   (credit/debit
 > **Analogy — a wristband at a members-only club:**
 > When you check in at the front desk (log in), you get a wristband (a JWT — JSON Web Token) that proves who you are and which membership tier you have, without the bouncer at every door needing to call the front desk to double-check. The wristband has an expiry printed on it; once it expires, you need a fresh one, which you get by showing a longer-lived membership card (the refresh token) rather than checking in from scratch every time.
 
-RxFlow's auth is **stateless JWT-based authentication** with a short-lived access token and a longer-lived refresh token, plus a passwordless OTP (One-Time Password) login option and an OTP-based password reset flow.
+RxFlow's auth is **JWT-based authentication** with a short-lived access token held only in browser memory, a longer-lived **rotating refresh token in an httpOnly cookie** backed by a per-device session row, a passwordless OTP (One-Time Password) login option, and an OTP-based password reset flow. Authorization is a single **role matrix** shared by the API and the UI.
 
 > **Definition — JWT (JSON Web Token):**
 > **Simple:** A signed, tamper-proof note that says "this is user #42, and they're an admin at pharmacy #7" — anyone can read it, but only the server (which holds the secret key) could have written a valid one, so nobody can forge or edit it undetected.
-> **Technical:** A compact, URL-safe token consisting of a header, a payload (arbitrary claims, here `{userId, tenantId, role, storeIds}`), and a signature computed over both using a secret key (HMAC in this project, via `@fastify/jwt`). The server verifies the signature on every request instead of looking up a session in a database — that's what makes it "stateless."
-> **In RxFlow:** access tokens are signed with `JWT_SECRET`, expire in 15 minutes, and carry the full `JwtPayload`; refresh tokens are signed with a **separate** effective process (same underlying `@fastify/jwt` instance but semantically distinct — they carry only `{userId}`), expire in 7 days, and are additionally stored **bcrypt-hashed** in the `User.refreshToken` column so a stolen database dump alone can't be used to forge a working refresh token.
+> **Technical:** A compact, URL-safe token consisting of a header, a payload (arbitrary claims, here `{userId, tenantId, role, storeIds}`), and a signature computed over both using a secret key (HMAC in this project, via `@fastify/jwt`). The server verifies the signature on every request instead of looking up a session in a database — that's what makes the access token "stateless."
+> **In RxFlow:** access tokens are signed with `JWT_SECRET`, expire in 15 minutes, and carry the full `JwtPayload`. Refresh tokens carry only `{userId, sid, jti}` (`sid` = the device's `AuthSession` id, `jti` = a random id so every rotation produces a distinct token), expire in 7 days, and are only valid while their **SHA-256 hash** matches the `AuthSession.tokenHash` on file.
+
+> **Why SHA-256 and not bcrypt for refresh tokens?** bcrypt only reads the first **72 bytes** of its input, and every JWT for the same user shares that prefix (identical header and `userId`). A bcrypt hash therefore "matched" *any* refresh token the user had ever been issued, so rotation and logout never actually revoked old tokens. Refresh tokens are long, high-entropy secrets, so a fast cryptographic digest (compared with `timingSafeEqual`) is the right tool; bcrypt's deliberate slowness only matters for low-entropy human passwords. Existing bcrypt hashes are accepted exactly once and replaced on that refresh.
 
 ### 5.2 The login flow, end to end
 
 ```text
 User submits email+password
         ↓
-POST /api/v1/auth/login   (rate-limited: 10/min — brute-force protection)
+POST /api/v1/auth/login   — sent to the WEB app's own origin; next.config.js rewrites
+        ↓                   /api/v1/auth/* to the API, so the cookie below is first-party
+routes/auth.ts (rate-limited: 10/min per client IP — trustProxy reads X-Forwarded-For)
         ↓
-routes/auth.ts: loginSchema.parse(body)   (zod validation — malformed body → 422)
+loginSchema.parse(body)   (zod validation — malformed body → 422)
         ↓
-prisma.user.findFirst({ where: { email, isActive: true } })
+prisma.user.findFirst({ where: { email: <case-insensitive>, isActive: true } })
         ↓
-   user not found? ──────────────→ 401 "Invalid credentials"
-        ↓ found
-bcrypt.compare(password, user.passwordHash)
+bcrypt.compare(password, user?.passwordHash ?? DUMMY_HASH)
+   — runs even when no user matched, so response timing can't reveal registered emails
         ↓
-   wrong password? ──────────────→ 401 "Invalid credentials"   (same message as "not found" —
-        ↓ correct                                                 deliberately, to avoid leaking
-                                                                    which emails are registered)
+   no user OR wrong password? ───→ 401 "Invalid credentials"   (one message for both —
+        ↓ correct                                                deliberately, no enumeration)
 user.tenant.isActive?
         ↓
    suspended? ────────────────────→ 403 "Account suspended"
         ↓ active
-sign accessToken  (15m, payload {userId, tenantId, role, storeIds})
-sign refreshToken (7d, payload {userId})
-bcrypt.hash(refreshToken) → store in User.refreshToken; update lastLoginAt
+create AuthSession row (new sid) — other devices' sessions are untouched
+sign accessToken  (15m, {userId, tenantId, role, storeIds})
+sign refreshToken (7d,  {userId, sid, jti}) → store SHA-256 in AuthSession.tokenHash
+Set-Cookie: rxflow_rt=<refreshToken>; HttpOnly; SameSite=Strict; Secure; Path=/api/v1/auth
         ↓
-return { accessToken, refreshToken, expiresIn: 900, user: {...full profile...} }
+return { accessToken, expiresIn: 900, user: {...full profile...} }   ← no refresh token in the body
         ↓
-Frontend: authService.login() stores both tokens + user JSON in localStorage
+Frontend: access token → a module variable in lib/api.ts (memory only)
+          user profile (non-secret) → localStorage, for the sidebar/top bar
         ↓
-Every subsequent axios request attaches: Authorization: Bearer <accessToken>
+Every subsequent axios request to the API attaches: Authorization: Bearer <accessToken>
 ```
 
-**Why the identical "Invalid credentials" message for both a wrong email and a wrong password?** This is a deliberate security choice, not an oversight. If the server said "no account with that email" versus "wrong password" as two different messages, an attacker could use the login form itself to enumerate which email addresses have accounts on the system — a privacy leak with no legitimate user benefit.
+**Why the identical "Invalid credentials" message for both a wrong email and a wrong password?** If the server said "no account with that email" versus "wrong password" as two different messages, an attacker could use the login form itself to enumerate which email addresses have accounts. The dummy bcrypt comparison closes the same leak through *timing*: without it, an unknown email answered noticeably faster than a known one with a wrong password.
 
-### 5.3 Refreshing an expired access token (frontend + backend together)
+**Why proxy the auth calls through the web app?** The UI (Vercel) and API (Render) live on different sites. A cookie set by the API's domain is a *third-party* cookie from the UI's point of view, and Safari (and increasingly every browser) drops those. Routing only `/api/v1/auth/*` through the Next.js app makes the cookie first-party, scoped to the auth path so it is never sent with ordinary API calls; everything else still goes straight to the API with a Bearer header.
 
-Access tokens expire in 15 minutes — deliberately short, so that if one is ever stolen (e.g. leaked in a log, or a browser XSS), the window of usable damage is small. But logging the user out every 15 minutes would be unusable, so the frontend automatically and invisibly refreshes:
+### 5.3 Keeping a session alive (frontend + backend together)
+
+Access tokens expire in 15 minutes — deliberately short, so that a leaked one has a small damage window — and live only in memory, so a full page load starts without one. Both cases go through the same refresh path:
 
 ```ts
-// apps/web/src/lib/api.ts — axios response interceptor (simplified shape)
+// apps/web/src/lib/api.ts (shape)
+refreshAccessToken():
+  single-flight — concurrent callers in this tab share ONE in-flight request
+  navigator.locks.request('rxflow-session-refresh', ...) — tabs take turns
+  POST /api/v1/auth/refresh   (cookie sent automatically; body {} )
+  store the new access token in memory
+
 axios response interceptor:
-  on 401 AND request not already retried:
-    queue this request (in case multiple requests 401 at the same instant)
-    POST /auth/refresh  with the stored refreshToken
-    if refresh succeeds:
-        store new accessToken + refreshToken
-        retry every queued request with the new token
-    if refresh fails:
-        clear both tokens
-        hard-redirect to /login
+  on 401 (not already retried): token = await refreshAccessToken(); retry once
+  if refresh fails: clear the local session, redirect to /login
+
+ensureSession():   // dashboard layout, on every page load
+  if no in-memory token: refreshAccessToken()
 ```
 
-**Why queue concurrent requests instead of letting each one refresh independently?** If the dashboard fires five API calls at once and the access token happens to be expired, without queuing, all five would independently detect the 401 and all five would call `/auth/refresh` simultaneously — wasteful, and (worse) each successful refresh invalidates the *previous* refresh token server-side (since a new one is generated and stored on every refresh), so a race between five concurrent refresh calls could leave four of them working with an already-superseded token. Queuing means only the *first* 401 triggers an actual refresh call; the other four wait for that one result and then retry with the single new token.
+**Why serialise refreshes, inside a tab and across tabs?** Every refresh *rotates* the token: the old one stops working the moment a new one is issued. Five simultaneous 401s in one tab must share one refresh call, and two tabs refreshing with the same cookie at the same instant would make the loser present an already-rotated token and get signed out. The Web Locks API makes the second tab wait; by the time it runs, the browser's cookie jar already holds the rotated token.
 
-**Backend refresh logic** (`POST /auth/refresh`): verifies the refresh JWT signature, loads the user, `bcrypt.compare`s the presented token against the stored hash (so even a syntactically-valid, correctly-signed refresh token is rejected if it doesn't match what's on file — e.g. after a logout, which nulls the stored hash), and if all checks pass, issues a **new** access+refresh pair and re-persists the new hash. This means refresh tokens are effectively single-use in practice — each refresh invalidates the previous one.
+**Backend refresh logic** (`POST /auth/refresh`): reads the token from the cookie, verifies the signature, loads the user (must be active, tenant must be active), loads the `AuthSession` named by `sid` (must exist, belong to that user, and not be expired), and compares the SHA-256 of the presented token with `tokenHash`. On success it issues a new access token and **rotates** the refresh token — new `jti`, new hash, extended expiry — in a fresh cookie. Any failure clears the cookie and returns 401.
+
+**Per-device sessions** — signing in on the tablet no longer logs out the counter PC: each login creates its own `AuthSession`. `POST /auth/logout` works even with an expired access token (the cookie identifies the session) and deletes only that device's session; a password reset deletes all of them.
+
+**Migrating older sessions:** sessions created before this design kept the refresh token in `localStorage`. On the first refresh after the upgrade, the client sends that token once in the request body; the API validates it against the legacy `User.refreshToken` slot, opens a proper cookie session, and clears the slot. The client deletes the `localStorage` copy before sending it, so the exchange happens exactly once.
 
 ### 5.4 Passwordless login (OTP) and password reset — shared machinery
 
@@ -469,7 +490,7 @@ Both features are built on the same two internal helpers in `routes/auth.ts`:
 
 ```ts
 async function issueOtp(identifier: string, purpose: 'PASSWORD_RESET' | 'LOGIN') {
-  const code = String(Math.floor(100000 + Math.random() * 900000))  // 6 random digits
+  const code = String(randomInt(100000, 1000000))   // 6 digits from node:crypto (CSPRNG)
   const codeHash = await bcrypt.hash(code, 10)
   await prisma.otpToken.deleteMany({ where: { identifier, purpose, consumedAt: null } }) // invalidate any prior unused code
   await prisma.otpToken.create({ data: { identifier, codeHash, purpose, expiresAt: +10min } })
@@ -486,38 +507,69 @@ async function verifyOtp(identifier, purpose, code): Promise<boolean> {
 }
 ```
 
-**Why bcrypt-hash a 6-digit OTP code at all, given a 6-digit code only has one million possible values?** Because the *database row itself* could leak (a backup, a misconfigured admin tool, a compromised read replica) — hashing means even someone with direct DB read access can't read out valid codes to use themselves, only compare a guess against the hash. The 5-attempt cap is the actual defense against brute-forcing the 1-in-a-million code space in real time; the hash defends against a completely different threat (data-at-rest exposure).
+**Why `randomInt` from `node:crypto` rather than `Math.random()`?** `Math.random()` is a fast but predictable generator — given enough outputs its internal state can be reconstructed, which would let someone predict future codes. A login code is a credential, so it comes from the cryptographically secure generator.
 
-- **`POST /auth/forgot-password`** issues a `PASSWORD_RESET` OTP and emails it, then **always returns `200`** regardless of whether the account exists — the classic anti-enumeration pattern applied at the endpoint level, same reasoning as the login error-message merging above.
-- **`POST /auth/reset-password`** verifies the OTP and, if valid, updates `passwordHash` and — importantly — **nulls `refreshToken`**, forcing every other device currently logged in as that user to be logged out on their next token refresh. This is a deliberate security decision: if you just reset your password (perhaps because it was compromised), any session an attacker already had open should not silently continue working.
+**Why bcrypt-hash a 6-digit OTP code at all, given a 6-digit code only has one million possible values?** Because the *database row itself* could leak (a backup, a misconfigured admin tool, a compromised read replica) — hashing means even someone with direct DB read access can't read out valid codes to use themselves. The 5-attempt cap is the actual defense against brute-forcing the code space in real time; the hash defends against data-at-rest exposure. (Unlike refresh tokens, an OTP is short, so bcrypt's 72-byte limit is irrelevant here.)
+
+- **`POST /auth/forgot-password`** issues a `PASSWORD_RESET` OTP and emails it, then **always returns `200`** regardless of whether the account exists — the classic anti-enumeration pattern.
+- **`POST /auth/reset-password`** verifies the OTP and, if valid, updates `passwordHash` and **deletes every `AuthSession` for that user**, signing out every device. If the reset was a response to a compromise, a session an attacker already had open must not keep working.
 - **`POST /auth/otp/request`** / **`POST /auth/otp/verify`** are the passwordless-login equivalent, keyed by `LOGIN` purpose, accepting either an email or a phone number as the `identifier`.
 
-**A real production bug this project hit and fixed, worth knowing:** email delivery can fail silently if not configured correctly (the free-tier email provider's sandbox mode only delivers to the developer's own verified address). Rather than let a user's reset request vanish with no trace, the failure path logs the OTP code itself at `warn` level as an "operator rescue" — an admin can read server logs and manually relay the code to a locked-out user. This is a pragmatic trade-off for a free-tier-hosted solo project, not a pattern to defend as ideal in a compliance-regulated production system.
+**A real production trade-off worth knowing:** email delivery can fail silently if not configured correctly (the free-tier email provider's sandbox mode only delivers to the developer's own verified address). Rather than let a user's reset request vanish with no trace, the failure path logs the OTP code at `warn` level as an "operator rescue" so an admin can relay it. That is a pragmatic choice for a solo free-tier deployment, and it should be removed once a verified sending domain is configured.
 
-### 5.5 Authorization: roles and tenant scoping
+### 5.5 Authorization: tenant isolation and the role matrix
 
 ```ts
 // apps/api/src/middleware/auth.ts
 export async function authenticate(request, reply) {
   try { await request.jwtVerify() }
-  catch { reply.status(401).send({ success: false, error: 'Unauthorized' }) }
+  catch { return reply.status(401).send(...) }
+
+  // A refresh token is signed with the same key but carries only {userId, sid, jti}.
+  // Without this check it could be replayed as an access token, leaving tenantId undefined —
+  // and Prisma silently DROPS `where: { tenantId: undefined }`, returning every tenant's rows.
+  const { userId, tenantId, role } = request.user
+  if (!userId || !tenantId || !role) return reply.status(401).send(...)
+
+  // One role matrix (packages/types → canAccess) governs every protected route.
+  if (!canAccess(role, request.method, request.routeOptions.url))
+    return reply.status(403).send({ error: 'Your role does not have permission for this action' })
 }
 ```
 
-Every protected route registers `{ preHandler: [authenticate] }`, which runs `request.jwtVerify()` — this decodes and signature-checks the `Authorization: Bearer <token>` header and populates `request.user` with the `JwtPayload`. From that point on, **every tenant-scoped query in every route handler manually includes `tenantId: request.user.tenantId`** in its `where` clause.
+Every protected route registers `{ preHandler: [authenticate] }`. From that point on, **every tenant-scoped query includes `tenantId: request.user.tenantId`**, and every ID that arrives in a request body and is written into a relation (store, customer, supplier, prescription, sales rep, batch, medicine) is first checked against the caller's tenant by `utils/tenant-guard.ts` → `assertTenantRefs()`. A foreign key only proves a referenced row *exists*, not that it belongs to you — without this guard, a sale could name another pharmacy's batch id and decrement *their* stock.
 
-**The honest, verified truth about how isolation is enforced (important — this is a place many candidates over-claim):** there is no Prisma middleware, no `$extends` query wrapper, and no PostgreSQL row-level security policy centrally enforcing the tenant filter. `requireRole()` and `requireTenant()` helper functions **do exist** in `middleware/auth.ts` but are **not actually used by any route** — every route instead does its own inline tenant/role checks (e.g. `tenant.ts` inlines `if (user.role !== 'TENANT_ADMIN' && user.role !== 'SUPER_ADMIN') return reply.status(403)...` directly, rather than composing a shared `requireRole('TENANT_ADMIN')` preHandler). This is **shared-schema multi-tenancy with application-layer enforcement**, not database-enforced isolation — see [Section 18](#18-interview-preparation) for how to talk about this honestly and what the real fix would be if pressed.
+**The role matrix** lives in `packages/types/src/index.ts` (`canAccess(role, method, path)`), so the API enforces it and the sidebar uses the very same table to hide pages a role can't use. Rules are matched against route templates (`orders/:id/status`) in order; the first match wins:
+
+| Area | Read | Write |
+|---|---|---|
+| Orders, billing, parked sales | all roles | Admin, Manager, Pharmacist, Sales rep — Delivery staff may only change order status |
+| Invoices from orders, payments | all roles | billing roles + Accountant |
+| Credit notes, purchase returns | all roles | Admin, Manager, Pharmacist, Accountant |
+| Inventory, stock takes, transfers, purchases, medicines, categories | all roles | Admin, Manager, Pharmacist (deleting a category: Manager+) |
+| Customers, suppliers | all roles | billing / stock roles + Accountant (delete: Manager+) |
+| Accounts, reports | Admin, Manager, Accountant — Pharmacists may also read the Schedule H1 register and licence-expiry report | Admin, Manager, Accountant |
+| HR & payroll | Admin, Manager, Accountant | employees & attendance: Manager+; payroll: Admin, Manager, Accountant |
+| Sales reps | all roles (commission report: finance roles) | Manager+ (settlement: finance roles) |
+| Audit log | Manager+ (the live-sync replay endpoint is open to all) | — |
+| Workspace — users, stores, settings, backup, deletion | all roles (user list: finance roles) | Admin only |
+
+Two defaults keep the matrix safe as the API grows: an **unlisted read** is open to every role, and an **unlisted write fails closed** (Manager and above). `VIEWER` is therefore read-only everywhere; `SUPER_ADMIN` bypasses the table.
+
+**The honest picture of isolation:** tenant scoping is still **application-layer** — there is no Prisma extension or PostgreSQL row-level-security policy injecting the filter structurally. What changed is that the two places a mistake was most likely to hide are now centralised: the role decision is one table instead of scattered `if (role !== ...)` checks, and cross-tenant references are one guard function. See [Section 18](#18-interview-preparation) for the remaining gap and its fix.
 
 ### 5.6 Protected routes on the frontend
 
 ```ts
-// apps/web/src/app/(dashboard)/layout.tsx
+// apps/web/src/app/(dashboard)/layout.tsx (shape)
 useEffect(() => {
-  if (!authService.isAuthenticated()) router.push('/login')
+  if (!authService.hasSession()) return router.replace('/login')   // no stored profile → login
+  ensureSession().then(ok => ok ? setAuthed(true) : router.replace('/login'))
 }, [router])
+if (!authed) return <AppLoader />   // same branded look as the first-load splash
 ```
 
-This is a **client-side** redirect guard, not true server-side route protection — the dashboard layout's JavaScript checks for a token in `localStorage` after the page has already started rendering, and redirects if absent. The *real* security boundary is the backend: even if someone bypassed this client-side check entirely, every API call still requires a valid JWT, so no protected data is actually reachable without one. The frontend check exists purely for user experience (bounce an unauthenticated visitor to the login page immediately, rather than showing them a dashboard shell that then fails every data fetch with 401s).
+The shell renders **nothing but a loader** until a valid access token is in hand. Rendering pages first used to fire every page's queries unauthenticated (a burst of 401s) and flash the dashboard before redirecting. The wait matters on a cold start: the free-tier API can take up to ~50 seconds to wake, and the loader tells the user something is happening. The *real* security boundary is still the backend — every API call requires a valid JWT and passes the role matrix.
 
 #### 💬 Interview Questions — Section 5
 
@@ -526,12 +578,14 @@ This is a **client-side** redirect guard, not true server-side route protection 
 - *Why does the access token expire so quickly (15 minutes) if that means the app has to refresh it constantly?* Short-lived tokens limit the damage window if one is ever stolen; the refresh mechanism makes that trade-off invisible to the user.
 
 **Intermediate**
-- *Walk through exactly what happens when a user's access token expires mid-session.* The next API call gets a 401; the axios response interceptor catches it, queues the failed request, calls `/auth/refresh` with the stored refresh token, receives a new access+refresh pair, updates `localStorage`, and retries the original (and any other queued) request — invisibly to the user, with no visible loading flash or forced re-login.
-- *Why store the refresh token bcrypt-hashed in the database instead of storing it plaintext?* If the database were ever read by an unauthorized party (a backup leak, an internal misconfiguration), plaintext refresh tokens would let them impersonate any user indefinitely until expiry; a hash only allows verifying a *presented* token against it, not extracting a usable token from it.
+- *Walk through exactly what happens when a user's access token expires mid-session.* The next API call gets a 401; the axios interceptor calls the shared `refreshAccessToken()` (one in-flight request per tab, one tab at a time via the Web Locks API), the browser sends the httpOnly refresh cookie to `/api/v1/auth/refresh` through the same-origin proxy, the API rotates the token and returns a new access token, and the original request is retried — invisibly to the user.
+- *Why keep the refresh token in an httpOnly cookie instead of `localStorage`?* Any script running on the page — including an injected one — can read `localStorage` and send a 7-day token anywhere. An httpOnly cookie is invisible to JavaScript; the browser attaches it only to the auth path. An attacker with script access can still act *while the page is open*, but can no longer steal a long-lived credential to use later.
+- *Why is only a hash of the refresh token stored, and why SHA-256 rather than bcrypt?* A leaked database dump then contains nothing usable as a token. SHA-256 rather than bcrypt because bcrypt truncates input at 72 bytes and every JWT for one user shares that prefix — a bcrypt hash would accept any of the user's tokens, defeating rotation and logout.
 
 **Advanced**
-- *Is RxFlow's multi-tenancy enforcement structural (database-level) or conventional (application-level)? What's the actual risk, and how would you harden it?* It's application-level — every tenant-scoped query manually filters by `tenantId` read off the JWT, with no database-level backstop. The real risk is a route handler that simply forgets the filter, which would leak cross-tenant data with no error, no warning, and no automatic detection. The honest hardening path: a Prisma Client extension that automatically injects the tenant filter into every query for tenant-scoped models (so a forgotten filter becomes structurally impossible rather than a code-review catch), or PostgreSQL Row-Level Security policies as a database-level backstop that would reject an errant cross-tenant read even if the application code got it wrong. Neither was built here because this is a solo project without a compliance mandate forcing that extra layer — but knowing exactly where the gap is, and exactly what you'd add, is a stronger answer than pretending the gap doesn't exist.
-- *Why does resetting a password null out the stored refresh token?* Because a password reset is often a response to a suspected compromise; if a session was already open on a device you don't control, silently letting that session continue (since its access token is still valid for up to 15 more minutes, and would otherwise keep refreshing indefinitely) would defeat the point of resetting the password at all. Nulling the refresh token means the next refresh attempt from that other session fails, forcing it to log in again — with the new password only the legitimate owner now knows.
+- *Is RxFlow's multi-tenancy enforcement structural (database-level) or conventional (application-level)? What's the actual risk, and how would you harden it?* Still application-level: queries filter by `tenantId` from the JWT, and body-supplied ids pass through `assertTenantRefs()`. Two concrete failure modes were found and closed — a refresh token replayed as an access token left `tenantId` undefined (which Prisma silently drops from a `where`), and body ids were written into relations without an ownership check. The remaining risk is a future route that forgets its filter. The structural fix is a Prisma Client extension that injects the tenant filter for every tenant-scoped model, or PostgreSQL row-level-security policies as a database backstop.
+- *Why does resetting a password delete every session, while logging out deletes only one?* Logout is a user saying "I'm done on *this* device" — the tablet at the counter shouldn't be affected. A password reset is often a response to a suspected compromise, so every existing session, including one an attacker may hold, must stop working at its next refresh.
+- *How does the role matrix stay safe as new routes are added?* Rules are matched against route templates, first match wins, and the defaults are asymmetric: an unlisted read is allowed, an unlisted write is restricted to managers. A new write endpoint is therefore locked down until someone deliberately opens it, rather than accidentally open to viewers.
 
 ---
 
@@ -542,6 +596,9 @@ This is a **client-side** redirect guard, not true server-side route protection 
 Every request passes through these Fastify plugins, registered in this exact order, before reaching any route handler:
 
 ```text
+0. trustProxy     → the client IP comes from X-Forwarded-For (Render's load balancer and the
+                     web app's auth proxy sit in front), so rate limits apply per client,
+                     not to one shared proxy address; the logger redacts ?token= from URLs
 1. helmet         → sets protective HTTP security headers (CSP disabled explicitly, since
                      this is a pure JSON API with no HTML templates to protect)
 2. cors           → only allows requests from origins listed in CORS_ORIGIN (supports a
@@ -555,7 +612,9 @@ Every request passes through these Fastify plugins, registered in this exact ord
 6. swaggerUi      → serves interactive API docs at /docs
 ```
 
-Then all 22 route files are registered under the shared prefix `/api/v1`, plus one unauthenticated `GET /health` endpoint (used by Render's health checks and by the free-tier "is the server awake yet" pattern), and a single global `app.setErrorHandler(errorHandler)` (see [Section 6.3](#63-the-central-error-handler)).
+Next comes the global `app.setErrorHandler(errorHandler)` (see [Section 6.3](#63-the-central-error-handler)), and only **then** all 22 route files under the shared prefix `/api/v1`, plus one unauthenticated `GET /health` endpoint (used by Render's health checks and by the free-tier "is the server awake yet" pattern).
+
+> **Why the order matters:** Fastify plugins capture their parent's error handler *at registration time*. The handler used to be set after the routes were registered, so it never applied to them — validation errors reached the UI as generic 500s and business errors as a bare "Bad Request". Registering it first fixed every route at once.
 
 ### 6.2 Route inventory
 
@@ -564,7 +623,7 @@ Every route file lives in `apps/api/src/routes/`, one file per business domain, 
 | Route file | Prefix | Tenant-scoped? | What it owns |
 |---|---|---|---|
 | `auth.ts` | `/auth` | No (pre-login) | Login, register, refresh, logout, OTP, password reset |
-| `medicines.ts` | `/medicines` | **No — global catalog** | Medicine master CRUD, bulk import, barcode lookup, purchase history |
+| `medicines.ts` | `/medicines` | **Shared + private rows** (copy-on-write, Section 4.5) | Medicine master CRUD, bulk import, barcode lookup, purchase history |
 | `inventory.ts` | `/inventory` | Yes | Stock levels, batches, temporary purchases, write-offs, low-stock/expiry alerts, insights |
 | `orders.ts` | `/orders` | Yes | Sale & purchase order creation, status, parked sales |
 | `invoices.ts` | `/invoices` | Yes | GST invoice generation, payments, credit/debit notes |
@@ -579,8 +638,8 @@ Every route file lives in `apps/api/src/routes/`, one file per business domain, 
 | `stock-transfers.ts` | `/stock-transfers` | Yes | Inter-store stock movement |
 | `categories.ts` | `/categories` | Yes | Medicine category labels |
 | `dashboard.ts` | `/dashboard` | Yes | The main dashboard aggregate + sales analytics |
-| `search.ts` | `/search` | Yes (except medicines) | Global command-palette search |
-| `medicine-intelligence.ts` | `/medicine-intelligence` | No | Fuzzy matching, normalization, prescription text extraction |
+| `search.ts` | `/search` | Yes (medicines via `catalogWhere`) | Global command-palette search |
+| `medicine-intelligence.ts` | `/medicine-intelligence` | Shared catalog only | Fuzzy matching, normalization, prescription text extraction |
 | `tenant.ts` | `/tenant` | Yes | Tenant profile, user management, store CRUD, account deletion |
 | `events.ts` | `/events` | Yes | Server-Sent Events (real-time push) |
 | `audit-logs.ts` | `/audit-logs` | Yes | Read-only audit trail |
@@ -599,10 +658,13 @@ Prisma P2025 (record not found)        → 404  { error: 'Record not found' }
 Prisma P2003 (foreign key violation)   → 400  { error: 'Related record not found or still in use' }
 Prisma P2011 (required field missing) → 400  { error: '...' }
 Prisma P2022 / P2021 (schema drift)    → 500  { error: 'The database schema is out of date...' }
+httpError(status, message)             → that status with the real message (utils/http-error.ts)
 anything else                          → error.statusCode ?? 500 (stack trace only in dev)
 ```
 
-**Why centralize this instead of each route try/catching its own errors?** Every one of the 22 route files can simply `throw new Error(...)` or let a Prisma call reject, and trust that the client always gets a consistent, well-shaped JSON error — no route author has to remember to format a Zod error correctly, or to translate a cryptic `P2002` Prisma error code into something a frontend developer can build a helpful toast message from. This is the single place that decision is made, once.
+**Business-rule failures use `httpError()`.** Throwing a plain `Error('Insufficient stock…')` inside a transaction has no status code, so it surfaced as a 500 with the message hidden. `httpError(400, 'Insufficient stock for … (have 3, need 5)')` carries its status, and the handler passes the message through to the toast the user sees.
+
+**Why centralize this instead of each route try/catching its own errors?** Every one of the 22 route files can simply throw or let a Prisma call reject, and trust that the client always gets a consistent, well-shaped JSON error — no route author has to remember to format a Zod error correctly, or to translate a cryptic `P2002` Prisma error code into something a frontend developer can build a helpful toast message from. This is the single place that decision is made, once.
 
 ### 6.4 Deep dive: creating an order (the most complex write path in the system)
 
@@ -613,6 +675,10 @@ Request: { type: 'SALE'|'PURCHASE', storeId, customerId?/supplierId?, items:[...
            salesRepId?, commissionPercent?, transportCharge?, specialDiscount? }
         ↓
 zod validates createOrderSchema — malformed body → 422 automatically (no manual check needed)
+        ↓
+assertTenantRefs: storeId, customerId, supplierId, prescriptionId, every batchId must belong
+   to THIS tenant → 404 otherwise; assertMedicinesUsable: every medicineId must be a shared
+   medicine or this tenant's own
         ↓
 calculateOrderTotals(items)
    for each line: lineTotal = qty × unitPrice
@@ -637,29 +703,29 @@ IF salesRepId given:
    (deliberately EXCLUDES tax and transport from the commission base — a salesperson
     shouldn't earn commission on money that just passes through to the government or a courier)
         ↓
-generateOrderNumber(tenantId, type)  →  e.g. "INV/2025-26/00042" or "PO/2025-26/00007"
-   (counts existing orders of this type within the current Indian fiscal year, +1)
-        ↓
+withUniqueRetry(async () => {          ← up to 3 attempts, only on a P2002 collision
+   generateOrderNumber(tenantId, type)  →  e.g. "INV/2025-26/00042" or "PO/2025-26/00007"
+      next = max(highest existing sequence this FY, count this FY) + 1   (utils/numbering.ts)
 prisma.$transaction:                                    ← ALL-OR-NOTHING from here
    create Order + nested OrderItems
    IF type === 'SALE':
       for each line item:
          find the InventoryItem for (tenantId, storeId, medicineId)
          IF missing AND tenant.allowNegativeStock: auto-create one
-         IF missing AND NOT allowed: throw "Insufficient stock for medicine <id>"
-         IF availableQuantity < quantity AND NOT allowed: throw with exact have/need counts
-         decrement InventoryItem.availableQuantity and totalQuantity
+         IF missing AND NOT allowed: throw httpError(400, "Insufficient stock for medicine <id>")
+         IF availableQuantity < quantity AND NOT allowed: httpError(400) with exact have/need counts
+         decrement with a CONDITIONAL update:
+            updateMany({ where: { id, availableQuantity: { gte: quantity } }, data: { decrement } })
+            0 rows updated → another checkout took the stock first → httpError(409, "please retry")
          IF a specific batchId was chosen: decrement that Batch's quantity too
       IF a customer is attached: bump their totalPurchases/totalOrders
    IF type === 'PURCHASE': bump the supplier's totalPurchases
+})
         ↓
-   ⚠ RACE CONDITION GUARD: order numbering is "count existing, then create" — two
-     simultaneous checkouts (the exact multi-device scenario this app's real-time sync
-     is built for) could both count the same number and both try to create with it,
-     tripping the database's UNIQUE(tenantId, orderNumber) constraint on the loser.
-     Rather than fail the second checkout with a confusing error, the whole create step
-     is wrapped in a retry loop (up to 3 attempts): on a Prisma P2002 error specifically,
-     generate a FRESH order number and try again.
+   ⚠ NUMBERING GUARD: two simultaneous checkouts (the exact multi-device scenario this
+     app's real-time sync is built for) can pick the same number; the database's
+     UNIQUE(tenantId, orderNumber) rejects the loser with P2002, and withUniqueRetry
+     re-runs the whole attempt with a freshly generated number.
         ↓
 audit() — writes an AuditLog row AND pushes a live SSE event to every other device
           currently viewing this tenant's data, with invalidate: ['orders','inventory',
@@ -670,21 +736,31 @@ Response: 201 Created, the full Order object with its items
 
 **Why is this whole block one Prisma `$transaction`?** A sale touches at minimum three different tables (`Order`, `OrderItem`, `InventoryItem`, sometimes `Batch`, sometimes `Customer`). If the process crashed or threw halfway through — say, right after creating the order rows but before decrementing stock — you'd have an order that says a sale happened while the inventory still shows the medicine as available, a direct contradiction that no report or dashboard could ever reconcile correctly. Wrapping it all in one transaction means Postgres guarantees **atomicity**: either every one of those writes lands, or none of them do (see [ACID](#171-acid-and-database-transactions)).
 
-**An important, honest limitation to know cold:** the stock-sufficiency check above (`availableQuantity < quantity` → throw) is a **check-then-act** pattern at Postgres's default READ COMMITTED isolation level, with **no row lock (`SELECT ... FOR UPDATE`)**, no optimistic-concurrency version column, and no database `CHECK` constraint preventing negative stock. That means, in principle, two truly simultaneous sales for the last unit of a medicine could both pass the check before either decrements — a real, narrow race window that exists in this code today. The transaction guarantees *atomicity* (all-or-nothing per request), but atomicity and *race-safety between two concurrent requests* are different properties, and only the first one is fully solved here. The honest fix would be adding `SELECT ... FOR UPDATE` on the inventory row before the check, or a `CHECK (availableQuantity >= 0)` constraint as a hard database-level backstop.
+**Two concurrency details worth knowing cold.**
+
+*Overselling.* A plain check-then-decrement at Postgres's default READ COMMITTED isolation lets two truly simultaneous sales for the last unit both pass the check. The decrement is therefore conditional — `UPDATE … WHERE availableQuantity >= quantity` — so the floor is re-asserted *in the same statement* that changes the row. Postgres serialises the two updates on the row lock; the second one matches zero rows and its transaction is rolled back with a clear 409. (When the tenant allows negative stock, the condition is omitted on purpose.)
+
+*Numbering.* Numbers used to be `count(this FY) + 1`. Besides racing, that broke permanently whenever a row was deleted — discarding a parked sale lowered the count, so the next number reused one that still existed and **every** later sale failed on the unique constraint. Taking the maximum of the highest existing sequence and the count fixes deletions; the retry absorbs the race. The same helper numbers invoices, credit/debit notes, purchases, stock takes and transfers.
 
 ### 6.5 Deep dive: generating a GST invoice from an order
 
-`POST /invoices/from-order/:orderId` is where India-specific tax law becomes code:
+`POST /invoices/from-order/:orderId` is where India-specific tax law becomes code. The arithmetic is a pure function, `computeInvoiceAmounts()` in `utils/order-math.ts`, so it is unit-tested alongside the order math it must agree with:
 
 ```text
 Load the Order + its items + the customer's/supplier's state and the tenant's own state
+        ↓
+An invoice already exists for this order? → return it (200, existing: true)
+   — idempotent: a double-click, a retry, or both the billing screen and the order page
+     offering "Generate invoice" can never produce two tax documents for one sale
         ↓
 Compare states (case-insensitive string match):
    states differ AND both known?  → inter-state sale → apply IGST (Integrated GST) only
    otherwise                      → intra-state sale → split the rate evenly into
                                                          CGST (Central) + SGST (State)
         ↓
-For each line, using the medicine's stored gstRate:
+Spread the order's bill-level special discount across lines in proportion to their
+taxable value (the same scale factor applySpecialDiscount used when the order was billed),
+then for each line, using its stored tax rate:
    inter-state:  igstAmount = taxableAmount × gstRate / 100,   cgst = sgst = 0
    intra-state:  cgstAmount = taxableAmount × (gstRate/2) / 100
                  sgstAmount = taxableAmount × (gstRate/2) / 100,   igst = 0
@@ -694,10 +770,13 @@ roundOff = round(grandTotal) − grandTotal        (India commonly rounds invoic
                                                     exactly how much rounding adjustment
                                                     was applied, for audit transparency)
         ↓
-grandTotal = totals.total + totalTax + roundOff
+grandTotal = taxable + totalTax + otherCharges (the order's transport charge, not taxed),
+             rounded to the rupee; roundOff records the adjustment
         ↓
 Create the Invoice + InvoiceItems; audit + SSE-invalidate ['invoices','invoice','order','dashboard']
 ```
+
+**Why must the invoice re-apply the special discount?** The invoice is computed from the order's *lines*; the special discount lives at bill level. Before this was carried over, a sale billed at ₹1,800 after a 10% special discount produced a ₹2,000 tax invoice — the formal GST document disagreed with the money actually charged. Spreading the discount over lines (rather than subtracting it from the total) keeps GST charged on each line's reduced value, exactly as at billing time.
 
 **Why determine inter-state vs. intra-state from the *customer's* state, not the tenant's alone?** Because GST law taxes the *transaction*, not just the seller — a Maharashtra pharmacy selling to a Maharashtra customer owes CGST+SGST to the state and center respectively; the exact same pharmacy selling to a Gujarat customer owes IGST instead, collected once and settled between the two states by the government. The invoice math has to look at both parties' locations, every time.
 
@@ -738,10 +817,10 @@ prisma.$transaction:
 
 **Beginner**
 - *What HTTP status code does a validation failure return, and why not 400?* `422 Unprocessable Entity` — the request was syntactically valid JSON (so not a 400 "bad request" in the strict sense) but failed business-rule validation (a required field missing, a number out of range).
-- *What does "idempotent" mean, and is `POST /orders` idempotent?* An idempotent operation produces the same result no matter how many times it's repeated. `POST /orders` is **not** idempotent — calling it twice creates two separate orders and deducts stock twice, which is exactly why the retry-on-collision logic regenerates a fresh order number rather than blindly resubmitting the same one.
+- *What does "idempotent" mean, and is `POST /orders` idempotent?* An idempotent operation produces the same result no matter how many times it's repeated. `POST /orders` is **not** idempotent — calling it twice creates two orders and deducts stock twice. `POST /invoices/from-order/:id` **is**: a repeat returns the invoice that already exists, because a duplicate tax document is worse than a duplicate request.
 
 **Intermediate**
-- *Why is `Medicine` the one resource NOT filtered by `tenantId` while nearly everything else is?* The medicine catalog is shared across every tenant by design (see Section 4.5) — filtering it by tenant would mean every pharmacy has to rebuild the same catalog of common medicines from scratch.
+- *How is `Medicine` filtered, given it is shared across tenants?* Not by a plain `tenantId` column: reads use `catalogWhere(tenantId)` — the tenant's own rows plus shared rows it hasn't replaced with a copy — and writes that reference a medicine use `assertMedicinesUsable` (shared or own). See Section 4.5.
 - *Explain why the special discount recalculates tax proportionally instead of just subtracting a flat amount from the final total.* Subtracting the discount from an already-tax-included total would either overcharge GST (still taxing money the customer no longer owes) or require a completely separate "discount excludes tax" business rule to be invented and applied inconsistently elsewhere; recomputing tax on the reduced taxable base keeps the same GST formula used everywhere else in the system, so there's exactly one way tax is ever calculated, not two.
 
 **Advanced**
@@ -757,23 +836,32 @@ prisma.$transaction:
 ```text
 Browser requests rxflow.app/
         ↓
-apps/web/src/app/page.tsx  →  immediately redirect('/dashboard')
+Server-rendered HTML arrives with the SPLASH already in it (components/splash-screen.tsx,
+plain CSS in globals.css) — the first thing painted, before any JavaScript downloads
         ↓
-(dashboard) route group's layout.tsx runs FIRST (it wraps every page under /dashboard/*)
+apps/web/src/app/page.tsx  →  redirect('/dashboard')
         ↓
-'use client' component — runs in the browser, checks: authService.isAuthenticated()?
+React hydrates → the splash cross-fades out on the next frame (no artificial minimum)
         ↓
-   NOT authenticated → router.push('/login')     (client-side redirect)
+(dashboard) layout.tsx runs (it wraps every page under /dashboard/*)
         ↓
-   authenticated → render:
-        <Sidebar/>          — the left navigation rail
-        <TopBar/>           — search bar, notifications, user menu
-        <main>{children}</main>   — the actual requested page
+'use client' — no stored profile? → router.replace('/login')
+               stored profile → ensureSession(): trade the httpOnly refresh cookie for an
+               in-memory access token, showing <AppLoader/> (same look as the splash) meanwhile
+        ↓
+   session invalid → router.replace('/login')
+        ↓
+   session valid → render:
+        <Sidebar/>          — floating rail on desktop; an off-canvas drawer below 1024px
+        <TopBar/>           — drawer toggle, search, notifications, user menu
+        <main id="main-content">{children}</main>   — the requested page (skip link targets it)
         <CommandPalette/>   — globally mounted, invisible until ⌘K is pressed
         <LiveSync/>         — globally mounted, invisible, opens the SSE connection
 ```
 
-Because the root `layout.tsx` wraps `<Providers>` (which sets up React Query) around every single page in the app, **every page below it can immediately call `useQuery()`** without any additional setup — the query client, its cache, and its default options (`staleTime: 60_000`, `retry: 1`) are already in scope.
+**The splash's fail-safes:** it is hidden for print and on the receipt print route, removed outright when JavaScript is disabled (`<noscript>` style), respects `prefers-reduced-motion`, is announced as a status to screen readers, and has a CSS-only 12-second timeout so a hydration failure can never trap the user behind it. A short timer backs up `requestAnimationFrame`, which browsers pause in background tabs.
+
+Because the root `layout.tsx` wraps `<Providers>` (which sets up React Query) around every single page in the app, **every page below it can immediately call `useQuery()`** without any additional setup — the query client, its cache, and its default options (`staleTime: 60_000`; retry once for network/5xx errors, never for 4xx, since a 403 or 422 won't change on retry) are already in scope.
 
 > **Definition — Client Component vs. Server Component (Next.js App Router):**
 > **Simple:** A Server Component is like a chef preparing a dish in the kitchen before it ever reaches your table — by the time you see it, it's already finished and can't be changed by you. A Client Component is like a build-your-own-taco bar — the raw pieces are sent to your table, and you (your browser) assembles and can rearrange them live.
@@ -828,8 +916,8 @@ components/
 │   ├── export-button.tsx  # CSV/XLSX export split-button
 │   └── animated-section.tsx  # GSAP fade+rise entrance wrapper (respects reduced-motion)
 ├── layout/          # The persistent chrome around every dashboard page
-│   ├── sidebar.tsx        # Navigation rail
-│   └── topbar.tsx         # Search trigger, notifications, user menu
+│   ├── sidebar.tsx        # Navigation rail / mobile drawer; hides pages the role can't use
+│   └── topbar.tsx         # Drawer toggle, search trigger, notifications, user menu
 ├── medicines/       # Domain-specific to the medicine catalog
 │   └── medicine-master-modal.tsx   # Tabbed create/edit form
 ├── purchases/       # Domain-specific to purchase entry
@@ -839,6 +927,7 @@ components/
     ├── command-palette.tsx   # Global ⌘K search
     ├── notification-bell.tsx
     ├── live-sync.tsx          # The SSE connection + cache invalidation
+    ├── splash-screen.tsx      # First-load splash + <AppLoader/> for session restore
     └── providers.tsx          # React Query setup
 ```
 
@@ -866,7 +955,8 @@ This single generic component does client-side search, column sorting, paginatio
 |---|---|---|
 | **Server data** (anything that lives in the database) | **TanStack React Query** | Every page, via `useQuery`/`useMutation` |
 | **Real-time invalidation signal** | **Server-Sent Events** (`EventSource`) | `components/live-sync.tsx` |
-| **Client-only shared state** (notifications) | **Zustand** | `lib/notification-store.ts` |
+| **Client-only shared state** (notifications, mobile-drawer open/closed) | **Zustand** | `lib/notification-store.ts`, `lib/ui-store.ts` |
+| **Session** | Access token in a module variable (memory only); refresh token in an httpOnly cookie the JS never sees; non-secret profile in `localStorage` | `lib/api.ts`, `lib/auth.ts` |
 | **Form state** | **react-hook-form** | Every create/edit form |
 | **Everything else** (is a modal open? which tab is active?) | Plain `useState` | Local to each component |
 
@@ -881,7 +971,13 @@ This single generic component does client-side search, column sorting, paginatio
 
 **Why Zustand specifically for notifications, and not just React Context?** The notification bell needs to be updated from a component (`LiveSync`) that isn't a parent of the component displaying it (`NotificationBell`, in the top bar) — Context would require wrapping a Provider around both and threading a value down, which for one small, frequently-updated piece of shared state is more ceremony than Zustand's `create()` store, which any component can import and read/write directly with no wrapper needed at all.
 
-### 7.6 Custom hooks — an honest gap
+### 7.6 Responsiveness, accessibility and bundle size
+
+- **Mobile layout.** Below the `lg` breakpoint the sidebar becomes an off-canvas drawer (scrim, Escape to close, closes on navigation); the top bar's search field is fluid; the shell uses `h-dvh` so mobile browser toolbars don't hide content. Every data table sits in a horizontal-scroll container — with `overflow-x: hidden` on `body`, wide tables used to cut off their right-hand columns on phones with no way to reach them. Tables already inside a scroll box were left alone so sticky headers keep working.
+- **Accessibility.** A skip-to-content link, `aria-current` on the active nav item, labelled icon-only buttons, `aria-expanded`/`aria-haspopup` on the menu and drawer toggles, Escape-to-close menus, visible focus rings, and higher-contrast inactive nav text.
+- **Lazy-loaded heavy libraries.** SheetJS (~400 kB) and jsPDF + autotable (~350 kB) are loaded with dynamic `import()` the first time someone exports to Excel or downloads a PDF, instead of shipping with every page that renders an export button — the staff and supplier pages dropped from ~315 kB to ~225 kB of first-load JavaScript.
+
+### 7.7 Custom hooks — an honest gap
 
 A repository-wide search for `use*.ts`/`use*.tsx` files found **no dedicated custom hooks** anywhere in `apps/web/src/hooks/` or elsewhere — every hook-like pattern (debounced search, the SSE connection lifecycle, GSAP animation setup) is written inline, independently, in each component that needs it. This is worth naming honestly rather than glossing over: the debounce-plus-search-state pattern, for instance, is duplicated across the command palette, the medicine search page, and several list pages, and would be a natural candidate to extract into a shared `useDebouncedSearch()` hook if this codebase kept growing. See [Section 18](#18-interview-preparation) for how to talk about this as a real, low-risk refactor opportunity rather than a hidden flaw.
 
@@ -1014,7 +1110,11 @@ RxFlow also chose SSE over simple polling (each browser asking "anything new?" e
 
 ### 9.2 Why a passed-in `?token=` query parameter instead of an `Authorization` header
 
-Every other authenticated endpoint in this API reads the JWT from a standard `Authorization: Bearer <token>` header. The SSE endpoint can't do that — the browser's native `EventSource` API has **no way to attach custom headers** to the connection it opens. The pragmatic, standard workaround (used by SSE implementations broadly, not unique to this project) is to pass the token as a query string parameter instead, and verify it manually inside the route (`app.jwt.verify(token)`) rather than via the usual `authenticate` preHandler.
+Every other authenticated endpoint in this API reads the JWT from a standard `Authorization: Bearer <token>` header. The SSE endpoint can't do that — the browser's native `EventSource` API has **no way to attach custom headers** to the connection it opens. The pragmatic, standard workaround (used by SSE implementations broadly, not unique to this project) is to pass the token as a query string parameter instead, and verify it manually inside the route (`app.jwt.verify(token)`) rather than via the usual `authenticate` preHandler. Request logs redact `token=` from URLs so live access tokens never land in log storage.
+
+**Two production bugs on this path, both fixed:**
+- **The stream never carried CORS headers.** The handler writes headers with Node's raw `writeHead`, which bypasses the headers `@fastify/cors` had queued on the Fastify reply. Without `Access-Control-Allow-Origin`, browsers block a cross-origin `EventSource` — and the UI (Vercel) and API (Render) are different origins — so live sync could not connect in production. The queued reply headers are now copied into `writeHead`.
+- **Reconnects after idle used an expired token.** The token is checked only when the stream opens, and the access token expires after 15 minutes. After a dropped connection, `LiveSync` first makes one authenticated call, which runs the normal refresh flow, and then reconnects with the fresh token.
 
 ### 9.3 The publish/subscribe mechanism
 
@@ -1136,6 +1236,8 @@ Results deduped by medicine ID, sorted by score descending, sliced to `limit`.
 **Why this specific cascade, rather than always running every strategy and combining scores?** Running an exact match check first is essentially free (a hash-map lookup) and, when it hits, is unambiguously correct — there's no reason to also run the much more expensive fuzzy-matching machinery (Fuse.js scans, token-set comparisons) if the input already matched something exactly. Each stage is progressively more expensive and progressively less certain, so the cascade only pays the cost of a later, fuzzier stage when the earlier, cheaper, more-confident stages didn't already produce enough results.
 
 `searchWithStrengthFilter()` layers one more refinement on top: after getting ranked results, it re-checks whether each candidate's own parsed strength matches the strength extracted from the *query* — if "Dolo 650" is searched and a candidate medicine is genuinely 650mg, its score gets a +0.1 boost (capped at 1.0), nudging the correct strength variant above a same-brand-different-strength false positive.
+
+**Tenant safety of the index:** the matcher is one process-wide, in-memory index shared by every tenant, so it is built from **shared catalog rows only** (`ownerTenantId IS NULL`) — never from any pharmacy's private medicines. Tenant-aware search (the catalog list, the command palette, CSV medicine matching) goes through the database with `catalogWhere(tenantId)` and does include the tenant's own medicines.
 
 ### 10.4 Where Meilisearch fits (and why it's optional)
 
@@ -1296,10 +1398,10 @@ Defines the design-token layer (the "Dispensary Ledger" system — see Section 7
 |---|---|---|
 | `DATABASE_URL` | API (Prisma) | Pooled Postgres connection — used for all runtime queries |
 | `DIRECT_URL` | API (Prisma) | Unpooled Postgres connection — used only for schema changes (`db push`) |
-| `JWT_SECRET` / `JWT_REFRESH_SECRET` | API | Signing keys for access/refresh tokens (required, min 32 chars — validated at startup) |
+| `JWT_SECRET` / `JWT_REFRESH_SECRET` | API | Signing keys (required, min 32 chars — validated at startup). Both token types are currently signed with `JWT_SECRET`; refresh tokens are told apart by their claims and are only valid with a matching `AuthSession` |
 | `CORS_ORIGIN` | API | Comma-separated allow-list of origins permitted to call the API (supports `*` for open/LAN use) |
 | `RESEND_API_KEY` / `EMAIL_FROM` | API | Transactional email delivery for password reset/OTP; if unset, emails log to console instead of sending |
-| `NEXT_PUBLIC_API_URL` | Frontend (build-time, baked into the client bundle) | The base URL the frontend's axios client and SSE `EventSource` point at |
+| `NEXT_PUBLIC_API_URL` | Frontend (build-time, baked into the client bundle) | The base URL the frontend's axios client and SSE `EventSource` point at — and the target of the `/api/v1/auth/*` proxy rewrite in `next.config.js`, so the frontend must be rebuilt whenever it changes |
 | `PORT` | API | Which port the Fastify server listens on |
 | `STORAGE_PROVIDER` / `STORAGE_BASE_URL` | API | File storage strategy (currently `local` on the free tier — not durable across Render redeploys, a documented limitation) |
 
@@ -1311,11 +1413,18 @@ Defines the design-token layer (the "Dispensary Ledger" system — see Section 7
 
 ### 14.1 What's actually tested, and why these specific things
 
-The test suite (Vitest, 32 tests across 3 files) deliberately targets the **pure, side-effect-free business logic** — code with no database, no HTTP request, and no browser required to execute — because that's exactly the code where a subtle arithmetic or logic bug is both easy to introduce and hard to notice just by looking at it:
+The test suite (Vitest, 63 tests across 9 files) targets the code where a subtle bug is both easy to introduce and hard to notice by reading it — mostly pure business logic, plus the security-critical middleware exercised through Fastify's `inject()` with no database:
 
 - **`order-math.test.ts`** — every GST/discount/commission calculation path described in Section 8: single-line and multi-line totals, the special-discount tax-scaling behavior (percent, flat amount, capping, stacking with line discounts), and commission math (net-of-tax base, fractional percentages, flat bonuses).
 - **`financial-year.test.ts`** — the Indian fiscal-year boundary logic (Apr 1–Mar 31), specifically pinning the exact Mar 31 → Apr 1 UTC boundary flip and the FY-number formatting/padding rules.
 - **`marg-parser.test.ts`** — the distributor CSV auto-detection and parsing logic (Section 11), using **literal rows copied from real distributor invoices**, not synthetic fixtures — so a regression in column-mapping or date-parsing logic would be caught against the actual data shape it needs to handle in production.
+- **`invoice-amounts.test.ts`** — CGST/SGST vs IGST splits, the special discount carried onto the invoice (the invoice total must equal the order total), the amount-discount cap, and other charges plus rupee rounding.
+- **`numbering.test.ts`** — the next-sequence rule after deletions and past the 5-digit pad, and `withUniqueRetry` (retries only on P2002, gives up after the limit).
+- **`auth.test.ts` / `rbac.test.ts`** — a refresh-shaped token is rejected as an access token; a viewer gets 403 creating an order through the real middleware; the role matrix's key rules (finance-only payroll, delivery staff limited to status changes, admin-only workspace settings, unlisted writes failing closed).
+- **`medicine-scope.test.ts`** — copy-on-write: own rows update in place, a shared row forks and moves only this tenant's stock, a second edit reuses the copy, another tenant's private row is a 404 (Prisma mocked).
+- **`session-cookie.test.ts`** — two tokens sharing a 72-byte prefix are told apart by the SHA-256 scheme (and demonstrably *not* by bcrypt); legacy bcrypt hashes are still accepted.
+
+Before the session/RBAC/catalog changes shipped they were also exercised end to end against a throwaway local Postgres: a scripted run of 39 API checks (cookie rotation and reuse rejection, multiple devices and single-device logout, legacy-session upgrade, viewer 403s, catalog forks invisible to other tenants, idempotent invoicing, overpayment rejection, numbering after a deleted parked sale, cross-tenant references) plus a browser pass through login → reload → live sync → sign-out. That run caught an API crash on boot (the shared types package couldn't export runtime values under ESM) that type-checking and unit tests had not.
 
 ### 14.2 A real bug this test suite caught
 
@@ -1387,10 +1496,12 @@ buildCommand: |
   pnpm install --prod=false --frozen-lockfile=false
   cd packages/db && pnpm exec prisma generate
   (pnpm exec prisma db push --accept-data-loss || echo "schema already applied, continuing")
+  pnpm exec prisma db execute --schema prisma/schema.prisma \
+       --file prisma/manual-migrations/2026-10-03-ownership-invoice-charges-sessions.sql
   (pnpm exec tsx prisma/seed.ts || echo "seed skipped (non-fatal)")
 ```
 
-On a **redeploy** where the schema hasn't changed, `db push` would otherwise fail with errors like "type X already exists" (re-attempting to create enum types that are already present) and — without the `|| echo ...` fallback — that failure would **block the entire deployment**, even though the actual application code changes have nothing to do with the database schema. Making it non-fatal means a redeploy that only changed application logic (a bug fix, a new UI feature) isn't blocked by a schema-sync step that has nothing new to do. The trade-off, and a real failure mode this project hit in practice: if a schema change genuinely *does* need to reach production and `db push` fails for an unrelated reason, that failure is now silent — the deploy "succeeds" while the database is actually out of sync with the code that expects the new columns to exist. The mitigating practice this project follows: every schema change ships as its own idempotent, hand-written SQL file in `manual-migrations/`, runnable directly and safely (via `IF NOT EXISTS` guards) in the Neon SQL console as a manual verification step alongside the automated (but silently-failable) `db push`.
+On a **redeploy** where the schema hasn't changed, `db push` would otherwise fail with errors like "type X already exists" (re-attempting to create enum types that are already present) and — without the `|| echo ...` fallback — that failure would **block the entire deployment**, even though the actual application code changes have nothing to do with the database schema. Making it non-fatal means a redeploy that only changed application logic (a bug fix, a new UI feature) isn't blocked by a schema-sync step that has nothing new to do. The trade-off, and a real failure mode this project hit in practice: if a schema change genuinely *does* need to reach production and `db push` fails for an unrelated reason, that failure is now silent — the deploy "succeeds" while the database is actually out of sync with the code that expects the new columns to exist. The mitigating practice this project follows: every schema change ships as its own idempotent, hand-written SQL file in `manual-migrations/` (`IF NOT EXISTS` guards, constraints added in `DO … EXCEPTION WHEN duplicate_object` blocks). The latest one — medicine ownership columns and backfill, `Invoice.otherCharges`, and the `AuthSession` table — runs **automatically and fatally** in the build: if it fails, the build fails and Render keeps the previous release live, instead of shipping code that expects columns the database doesn't have. It was verified by running it twice in a row against a fresh database.
 
 #### 💬 Interview Questions — Section 15
 
@@ -1416,25 +1527,28 @@ apps/web/src/app/(auth)/login/page.tsx: react-hook-form's onSubmit fires
         ↓
 authService.login({email, password})   [apps/web/src/lib/auth.ts]
         ↓
-api.post('/auth/login', {...})          [axios instance, apps/web/src/lib/api.ts]
+authApi.post('/login')  → same-origin /api/v1/auth/login → next.config.js rewrite → API
         ↓ ── network ──▶
-routes/auth.ts POST /auth/login (rate-limited 10/min)
+routes/auth.ts POST /auth/login (rate-limited 10/min per client IP)
         ↓
-loginSchema.parse(body) → prisma.user.findFirst → bcrypt.compare → check tenant.isActive
+loginSchema.parse(body) → case-insensitive user lookup → bcrypt.compare (dummy hash if no user)
+   → check tenant.isActive
         ↓
-sign accessToken (15m) + refreshToken (7d); bcrypt-hash + store refreshToken; update lastLoginAt
-        ↓ ── response ──▶
-authService.login(): localStorage.setItem for accessToken, refreshToken, and the full user JSON
+create AuthSession; sign accessToken (15m) + refreshToken (7d, {userId, sid, jti});
+store SHA-256(refreshToken); Set-Cookie rxflow_rt (HttpOnly, SameSite=Strict, Path=/api/v1/auth)
+        ↓ ── response (cookie stored by the browser on the WEB app's domain) ──▶
+authService.login(): access token → memory; user profile → localStorage
         ↓
 router.push('/dashboard')
         ↓
-(dashboard) layout.tsx: authService.isAuthenticated() now true → renders Sidebar/TopBar/page
+(dashboard) layout.tsx: profile present, access token already in memory → renders the shell
         ↓
-dashboard/page.tsx mounts → useQuery(['dashboard']) fires → GET /dashboard
-        ↓
-routes/dashboard.ts runs its large Promise.all of aggregates
+dashboard/page.tsx mounts → useQuery(['dashboard']) → GET /dashboard (Bearer) → role matrix → handler
         ↓ ── response ──▶
 React Query caches the result → MetricCard components render today's numbers
+
+(Next morning, full page load: no token in memory → ensureSession() → POST /api/v1/auth/refresh
+ with the cookie → rotated cookie + new access token → shell renders.)
 ```
 
 ### 16.2 Trace: A pharmacist bills a customer (POS sale)
@@ -1576,7 +1690,7 @@ Covered in full in [Section 7.1](#71-what-happens-when-a-user-opens-the-applicat
 
 **Simple:** An elevator call button is idempotent — pressing it five times doesn't call five elevators. A "delete this order" click that isn't idempotent might delete it, then error confusingly on a second accidental click because it's already gone.
 **Technical:** An operation is idempotent if performing it multiple times has the same effect as performing it once.
-**In RxFlow:** `POST /orders` is explicitly **not** idempotent (a real design fact, not an oversight) — resubmitting it creates a second order and deducts stock twice, which is exactly why the retry-on-collision logic in Section 6.4 regenerates a fresh order number on retry rather than blindly resubmitting the identical request.
+**In RxFlow:** `POST /orders` is explicitly **not** idempotent — resubmitting it creates a second order and deducts stock twice, which is why the retry-on-collision logic in Section 6.4 regenerates a fresh order number on each attempt. `POST /invoices/from-order/:id` **is** idempotent: if the order already has an invoice, that invoice is returned, so a double-click can never produce two GST documents for one sale.
 
 ---
 
@@ -1599,19 +1713,20 @@ The dashboard endpoint (`GET /dashboard`) already runs its dozen-plus aggregate 
 Answered in full in [Section 2.3](#23-why-this-architecture-and-what-it-costs) — the short version: every choice was made to fit inside a genuinely free hosting budget while still supporting real-time multi-device sync, which specifically ruled out an all-serverless frontend+backend architecture.
 
 **"What would you do differently if you rebuilt this today?"**
-Two honest answers, matching the gaps already named throughout this document rather than inventing new ones for the sake of having an answer: (1) harden multi-tenancy from application-layer-only to a structural guarantee from day one (a Prisma extension auto-injecting the tenant filter), rather than retrofitting it later; (2) add the row-level lock (`SELECT ... FOR UPDATE`) on the inventory-deduction path from the start, rather than discovering the race condition risk in a design review after the fact.
+Two honest answers, matching the gaps already named throughout this document rather than inventing new ones: (1) harden multi-tenancy from application-layer checks to a structural guarantee from day one (a Prisma extension auto-injecting the tenant filter, or row-level security), rather than adding guards like `assertTenantRefs` after an audit found the holes; (2) design the shared medicine catalog's ownership model (copy-on-write per tenant) up front, rather than retrofitting it once it became clear a global, writable table let one pharmacy edit another's data.
 
 ### 18.2 The honest gaps in this codebase, and how to talk about them
 
 An interviewer who's read the code (or asks pointed follow-ups) may probe for exactly these — the right posture is to name them proactively and precisely, the same way this project's own developer would when auditing it:
 
-1. **Multi-tenancy is application-enforced, not database-enforced** (Section 5.5) — every tenant-scoped query manually filters by `tenantId`; there's no middleware, Prisma extension, or RLS policy backstopping a forgotten filter.
-2. **The inventory-deduction race condition** (Section 6.4) — check-then-decrement inside a transaction, but with no row lock, version column, or DB constraint preventing two simultaneous sales of the last unit.
-3. **`requireRole`/`requireTenant` helper functions exist but are unused** — every route inlines its own role/tenant checks instead of composing these shared helpers, a small consistency gap.
-4. **No custom hooks in the frontend** (Section 7.6) — several patterns (debounced search, in particular) are duplicated rather than extracted.
+1. **Multi-tenancy is application-enforced, not database-enforced** (Section 5.5) — queries filter by `tenantId`, and body ids pass through `assertTenantRefs`, but no Prisma extension or RLS policy backstops a future route that forgets.
+2. **The role matrix is enforced, but coarse** (Section 5.5) — it decides by role, method and route; it doesn't yet express per-store limits (a pharmacist assigned to one branch can still act on another branch of the same tenant).
+3. **Batch-level quantities can still go negative** — the inventory total is floor-guarded atomically (Section 6.4), but the per-batch decrement isn't yet conditional.
+4. **No custom hooks in the frontend** (Section 7.7) — several patterns (debounced search, in particular) are duplicated rather than extracted.
 5. **The SSE pub/sub is per-process, in-memory** (Section 9.3) — won't fan out correctly across multiple API instances without a Redis swap.
 6. **Local file storage on Render is not durable** across redeploys — fine for the current free-tier deployment, would need S3/R2/Cloudinary before any real file-upload feature depended on persistence.
-7. **`MedicineCategory` links to `Medicine.category` by matching a string name, not a foreign key** — simple, but means renaming a category requires an explicit bulk-update of every medicine referencing the old name (which `categories.ts` does handle correctly — see Section 6.2's route table — but it's worth knowing this is a string-match relationship, not a real FK, if asked to critique the schema).
+7. **`MedicineCategory` links to `Medicine.category` by matching a string name, not a foreign key** — simple, but a rename has to bulk-update the tenant's medicines by name.
+8. **Smaller items:** `/auth/otp/request` reveals whether an account exists; OTP codes are logged when email delivery fails (an operator fallback while on the email sandbox); most modals lack focus trapping; Swagger UI is public; with `trustProxy`, a client calling the API directly can spoof `X-Forwarded-For` to dodge per-IP rate limits; the fuzzy matcher only indexes shared medicines.
 
 Naming these clearly and precisely — with the *specific* mechanism of the gap and the *specific* fix you'd reach for — reads as far stronger technical judgment than either hiding them or being caught off guard by a follow-up question that assumes they don't exist.
 
@@ -1621,7 +1736,7 @@ Naming these clearly and precisely — with the *specific* mechanism of the gap 
 
 This final section narrates, start to finish, everything that happens across a single representative day using RxFlow — tying every layer covered above into one continuous story.
 
-**6:00 PM, Tuesday.** A distributor's van drops off a box of medicines at "Sunrise Pharmacy." The pharmacist, Priya, opens RxFlow on the counter tablet. Because she was logged in yesterday, `localStorage` still holds a valid (if expired) access token — the very first API call the dashboard makes gets a 401, silently triggers a refresh (Section 5.3), and she never notices any of it happened. The `(dashboard)` layout renders the sidebar and top bar, `GET /dashboard` fires, and within a second she's looking at today's numbers.
+**6:00 PM, Tuesday.** A distributor's van drops off a box of medicines at "Sunrise Pharmacy." The pharmacist, Priya, opens RxFlow on the counter tablet. Because she signed in on this tablet yesterday, the browser still holds her httpOnly session cookie — while the branded loader shows, the dashboard trades it for a fresh access token (Section 5.3), and she never notices it happened. The owner signed in on his phone last night; that is a separate device session, so neither login pushed the other out. The `(dashboard)` layout renders the sidebar and top bar, `GET /dashboard` fires, and within a second she's looking at today's numbers.
 
 She clicks **New Purchase**, uploads the distributor's CSV file. `autoDetect()` (Section 11.3) scores all five registered distributor parsers against the file's actual data shape and picks "Blue Star Pharmaceuticals" format with high confidence — she doesn't have to tell the system which distributor this is; it figured it out from the numbers themselves. Each line's product name gets fuzzy-matched (Section 10.3) against the medicine catalog; two lines are ambiguous and she manually confirms which real medicine they refer to. She submits — `POST /purchases/bulk-import` runs one database transaction that creates the `PURCHASE` order, creates a `Batch` row per line with its expiry date and cost, and increments stock, all atomically (Section 17.1). The invoice's ₹100 delivery charge gets recorded as `transportCharge`, and since a distributor's salesman brought this order in, she records his 2% commission — computed by the exact same `computeCommission()` function that also handles sales-side commission (Section 8.3).
 
