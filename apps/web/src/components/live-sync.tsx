@@ -6,6 +6,7 @@ import { Wifi, WifiOff } from 'lucide-react'
 import { useNotifications, formatEventMessage } from '@/lib/notification-store'
 import { authService } from '@/lib/auth'
 import { api, API_BASE, getAccessToken } from '@/lib/api'
+import { useT } from '@/lib/i18n'
 
 /**
  * LiveSync — opens an SSE connection to /api/v1/events and invalidates
@@ -152,6 +153,7 @@ function LiveSyncBadge({ status, lastEventAt }: { status: 'connecting' | 'live' 
     return () => clearInterval(t)
   }, [lastEventAt])
 
+  const t = useT()
   let label = 'Connecting…'
   let color = 'text-surface-400'
   let Icon = WifiOff
@@ -166,7 +168,7 @@ function LiveSyncBadge({ status, lastEventAt }: { status: 'connecting' | 'live' 
   return (
     <div className="fixed bottom-3 right-3 z-50 flex items-center gap-1.5 bg-white border border-slate-200 rounded-full px-2.5 py-1 shadow-sm text-xs">
       <Icon className={`w-3 h-3 ${color}`} />
-      <span className={color}>{label}</span>
+      <span className={color}>{t(label)}</span>
       {sinceLast != null && status === 'live' && (
         <>
           <span className="text-slate-300">·</span>

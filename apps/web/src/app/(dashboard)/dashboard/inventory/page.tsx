@@ -8,7 +8,7 @@ import Papa from 'papaparse'
 import { AnimatedSection, PageHeader, SectionCard, EmptyState, SkeletonRow } from '@/components/ui'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
-import { formatCurrency, formatDate, getDaysUntilExpiry, getExpiryStatus, getStockStatus, cn, optionalNumber } from '@/lib/utils'
+import { formatCurrency, formatDate, getDaysUntilExpiry, getExpiryStatus, getStockStatus, cn, optionalNumber, moneySymbol } from '@/lib/utils'
 
 interface InventoryItem {
   id: string
@@ -368,7 +368,7 @@ function ManageItemModal({ item, onClose, onSaved }: { item: any; onClose: () =>
         </div>
         <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="p-5 space-y-3">
           <div className="grid grid-cols-2 gap-3">
-            <div><label className="label">Selling Price (₹)</label><input type="number" step="0.01" className="input" {...register('sellingPrice', optionalNumber)} /></div>
+            <div><label className="label">Selling Price ({moneySymbol()})</label><input type="number" step="0.01" className="input" {...register('sellingPrice', optionalNumber)} /></div>
             <div><label className="label">Reorder Level</label><input type="number" className="input" {...register('reorderLevel', optionalNumber)} /></div>
           </div>
           <div className="pt-2 border-t border-surface-100">

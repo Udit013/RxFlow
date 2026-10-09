@@ -10,8 +10,10 @@ import {
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RTooltip } from 'recharts'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
-import { cn, formatCurrency, formatDate } from '@/lib/utils'
+import { cn, formatCurrency, formatDate, moneySymbol } from '@/lib/utils'
 import { AnimatedSection, PageHeader, MetricCard, SectionCard, EmptyState, SkeletonRow } from '@/components/ui'
+import { useRegion } from '@/lib/region'
+import { paymentMethodLabel } from '@rxflow/regional'
 
 function thisMonth() {
   const d = new Date()
@@ -254,6 +256,7 @@ interface ExpenseForm {
 }
 
 function AddExpenseModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+  const region = useRegion()
   const { data: catData } = useQuery({ queryKey: ['account-categories'], queryFn: () => api.get('/accounts/categories').then((r) => r.data) })
   const { register, handleSubmit, watch, formState: { errors } } = useForm<ExpenseForm>({
     defaultValues: { direction: 'OUT', paymentMethod: 'CASH', incurredAt: new Date().toISOString().slice(0, 10) },
@@ -293,7 +296,7 @@ function AddExpenseModal({ onClose, onSaved }: { onClose: () => void; onSaved: (
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="label">Amount (₹) *</label>
+              <label className="label">Amount ({moneySymbol()}) *</label>
               <input type="number" step="0.01" className="input" {...register('amount', { required: true, valueAsNumber: true, min: 0.01 })} />
             </div>
             <div>
@@ -305,7 +308,7 @@ function AddExpenseModal({ onClose, onSaved }: { onClose: () => void; onSaved: (
             <div>
               <label className="label">Payment Method</label>
               <select className="input" {...register('paymentMethod')}>
-                {['CASH', 'UPI', 'NEFT', 'RTGS', 'CHEQUE', 'CARD'].map((m) => <option key={m} value={m}>{m}</option>)}
+                {region.paymentMethods.filter((m) => m !== 'CREDIT').map((m) => <option key={m} value={m}>{paymentMethodLabel(region, m)}</option>)}
               </select>
             </div>
             <div>

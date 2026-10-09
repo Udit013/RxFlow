@@ -141,11 +141,13 @@ await app.register(categoryRoutes, { prefix: `${API_PREFIX}/categories` })
 
 // ── Health Check ──────────────────────────────────────────────────────────────
 
-app.get('/health', async () => ({
-  status: 'ok',
-  version: '1.0.0',
-  timestamp: new Date().toISOString(),
-}))
+app.get('/health', async (_request, reply) => {
+  // The web app pings this cross-origin on every page load to wake a sleeping instance.
+  // Helmet's default `Cross-Origin-Resource-Policy: same-origin` made browsers log a blocked-
+  // response error for that ping; it is public and harmless, so allow cross-origin reads here.
+  reply.header('Cross-Origin-Resource-Policy', 'cross-origin')
+  return { status: 'ok', version: '1.0.0', timestamp: new Date().toISOString() }
+})
 
 
 // ── Start ─────────────────────────────────────────────────────────────────────

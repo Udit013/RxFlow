@@ -6,11 +6,14 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from '@/lib/api'
 import { authService } from '@/lib/auth'
 import { formatCurrency, formatDate } from '@/lib/utils'
+import { useRegion } from '@/lib/region'
+import { invoiceTaxRows } from '@/lib/invoice-tax'
 import './print.css'
 
 export default function PrintInvoicePage() {
   const params = useParams<{ id: string }>()
   const id = params.id
+  const region = useRegion()
 
   const { data, isLoading } = useQuery({
     queryKey: ['print-invoice', id],
@@ -44,8 +47,8 @@ export default function PrintInvoicePage() {
         <div className="r-center r-sm">{[tenant.city, tenant.state, tenant.pincode].filter(Boolean).join(', ')}</div>
       )}
       {tenant?.phone && <div className="r-center r-sm">Tel: {tenant.phone}</div>}
-      {tenant?.gstin && <div className="r-center r-sm">GSTIN: {tenant.gstin}</div>}
-      {tenant?.drugLicenseNumber && <div className="r-center r-sm">DL: {tenant.drugLicenseNumber}</div>}
+      {tenant?.gstin && <div className="r-center r-sm">{region.fields.taxId.label}: {tenant.gstin}</div>}
+      {tenant?.drugLicenseNumber && <div className="r-center r-sm">{region.fields.license.label}: {tenant.drugLicenseNumber}</div>}
 
       <div className="r-divider" />
 
@@ -63,7 +66,7 @@ export default function PrintInvoicePage() {
           <div className="r-divider r-dashed" />
           <div className="r-sm">To: {inv.customer.name}</div>
           {inv.customer.phone && <div className="r-sm">Ph: {inv.customer.phone}</div>}
-          {inv.customer.gstin && <div className="r-sm">GSTIN: {inv.customer.gstin}</div>}
+          {inv.customer.gstin && <div className="r-sm">{region.fields.taxId.label}: {inv.customer.gstin}</div>}
         </>
       )}
 
@@ -112,24 +115,12 @@ export default function PrintInvoicePage() {
           <span>-{formatCurrency(inv.discountAmount)}</span>
         </div>
       )}
-      {inv.cgst > 0 && (
-        <div className="r-row r-sm">
-          <span>CGST</span>
-          <span>{formatCurrency(inv.cgst)}</span>
+      {invoiceTaxRows(inv).filter((r) => r.amount > 0).map((r) => (
+        <div key={r.label} className="r-row r-sm">
+          <span>{r.label}</span>
+          <span>{formatCurrency(r.amount)}</span>
         </div>
-      )}
-      {inv.sgst > 0 && (
-        <div className="r-row r-sm">
-          <span>SGST</span>
-          <span>{formatCurrency(inv.sgst)}</span>
-        </div>
-      )}
-      {inv.igst > 0 && (
-        <div className="r-row r-sm">
-          <span>IGST</span>
-          <span>{formatCurrency(inv.igst)}</span>
-        </div>
-      )}
+      ))}
       {inv.otherCharges > 0 && (
         <div className="r-row r-sm">
           <span>Transport / Other</span>

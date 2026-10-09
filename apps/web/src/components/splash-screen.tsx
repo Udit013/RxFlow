@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
+import { useT } from '@/lib/i18n'
 
 /**
  * First-load splash.
@@ -80,6 +81,7 @@ function SplashContent() {
  * session on a page load, which can take a while when the free-tier API is waking up.
  */
 export function AppLoader() {
+  const t = useT()
   // A cold start on the free hosting plan can take up to a minute. After a few seconds, say
   // so — a silent spinner that long reads as "broken".
   const [slow, setSlow] = useState(false)
@@ -91,7 +93,7 @@ export function AppLoader() {
     <div className="rx-splash" role="status" aria-live="polite" aria-busy="true" style={{ animation: 'none' }}>
       <SplashContent />
       <p className={slow ? 'rx-splash__note rx-splash__note--shown' : 'rx-splash__note'} aria-hidden={!slow}>
-        Waking up the server — the first visit after a quiet spell can take up to a minute.
+        {t('Waking up the server — the first visit after a quiet spell can take up to a minute.')}
       </p>
     </div>
   )

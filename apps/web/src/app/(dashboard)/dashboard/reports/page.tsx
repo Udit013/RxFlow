@@ -8,6 +8,54 @@ import { formatCurrency, formatDate } from '@/lib/utils'
 import { toast } from 'sonner'
 import { exportCsv, exportXlsxMultiSheet } from '@/lib/export'
 import { AnimatedSection, PageHeader, ExportButton } from '@/components/ui'
+import { useRegion } from '@/lib/region'
+import { zonedMonthRange } from '@rxflow/regional'
+
+type ReportKey = 'gstr1' | 'gstr3b' | 'tax' | 'sales' | 'purchase' | 'stock'
+
+function TaxSummaryView({ data, isLoading }: any) {
+  if (isLoading) return <div className="card p-12 text-center text-slate-400">Loading...</div>
+  if (!data) return null
+  const label = data.taxLabel
+  const Section = ({ title, block, sign = 1 }: { title: string; block: any; sign?: 1 | -1 }) => (
+    <div className="card p-5">
+      <h3 className="font-semibold text-slate-900 mb-3">{title}</h3>
+      <div className="overflow-x-auto"><table className="w-full text-sm">
+        <thead><tr className="text-xs uppercase text-slate-500 text-left">
+          <th className="py-2">Rate</th><th className="py-2 text-right">Taxable value</th><th className="py-2 text-right">{label}</th>
+        </tr></thead>
+        <tbody className="divide-y divide-slate-100">
+          {block.byRate.length === 0 && <tr><td colSpan={3} className="py-3 text-slate-400">Nothing this period</td></tr>}
+          {block.byRate.map((r: any) => (
+            <tr key={r.rate}><td className="py-2">{r.rate}%</td><td className="py-2 text-right">{formatCurrency(sign * r.taxable)}</td><td className="py-2 text-right">{formatCurrency(sign * r.tax)}</td></tr>
+          ))}
+          <tr className="border-t-2"><td className="py-2 font-semibold">Total</td><td className="py-2 text-right font-semibold">{formatCurrency(sign * block.taxable)}</td><td className="py-2 text-right font-bold">{formatCurrency(sign * block.tax)}</td></tr>
+        </tbody>
+      </table></div>
+      {block.components.length > 1 && (
+        <p className="text-xs text-slate-500 mt-2">
+          {block.components.map((c: any) => `${c.label} ${c.rate}%: ${formatCurrency(sign * c.amount)}`).join(' · ')}
+        </p>
+      )}
+    </div>
+  )
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="metric-card"><p className="text-xs uppercase text-slate-500">Output {label}</p><p className="text-lg font-bold">{formatCurrency(data.outputTax)}</p></div>
+        <div className="metric-card"><p className="text-xs uppercase text-slate-500">Input {label}</p><p className="text-lg font-bold">{formatCurrency(data.inputTax)}</p></div>
+        <div className="metric-card"><p className="text-xs uppercase text-slate-500">Net {data.netPayable >= 0 ? 'payable' : 'refundable'}</p><p className="text-lg font-bold">{formatCurrency(Math.abs(data.netPayable))}</p></div>
+      </div>
+      <Section title="Sales (output tax)" block={data.sales} />
+      {data.creditNotes.byRate.length > 0 && <Section title="Credit notes issued (−)" block={data.creditNotes} sign={-1} />}
+      <Section title="Purchases (input tax)" block={data.purchases} />
+      {data.debitNotes.byRate.length > 0 && <Section title="Purchase returns (−)" block={data.debitNotes} sign={-1} />}
+      <p className="text-xs text-slate-500">
+        A summary to prepare your {label} return from — check your country&apos;s filing rules for what is reclaimable.
+      </p>
+    </div>
+  )
+}
 
 function thisMonth(): string {
   const now = new Date()
@@ -17,27 +65,40 @@ function thisMonth(): string {
 const downloadCsv = (filename: string, rows: any[]) => exportCsv(filename, rows)
 
 export default function ReportsPage() {
+  const region = useRegion()
+  // India files GSTR-1/3B; every country gets the generic tax summary (VAT, sales tax, GST …).
+  const hasGstr = region.tax.returns.includes('GSTR1')
   const [period, setPeriod] = useState(thisMonth())
-  const [activeReport, setActiveReport] = useState<'gstr1' | 'gstr3b' | 'sales' | 'purchase' | 'stock'>('gstr1')
+  const [activeReport, setActiveReport] = useState<ReportKey>(hasGstr ? 'gstr1' : 'tax')
+  // Months are the pharmacy's LOCAL calendar months, not UTC ones.
+  const localMonth = () => {
+    const [y, m] = period.split('-').map(Number)
+    const { from, to } = zonedMonthRange(y!, m!, region.timezone)
+    return { from: from.toISOString(), to: new Date(to.getTime() - 1).toISOString() }
+  }
+
+  const taxSummary = useQuery({
+    queryKey: ['tax-summary', period],
+    queryFn: () => api.get('/reports/tax-summary', { params: { period } }).then((r) => r.data),
+    enabled: activeReport === 'tax',
+  })
 
   const gstr1 = useQuery({
     queryKey: ['gstr1', period],
     queryFn: () => api.get('/reports/gstr1', { params: { period } }).then((r) => r.data),
-    enabled: activeReport === 'gstr1',
+    enabled: hasGstr && activeReport === 'gstr1',
   })
 
   const gstr3b = useQuery({
     queryKey: ['gstr3b', period],
     queryFn: () => api.get('/reports/gstr3b', { params: { period } }).then((r) => r.data),
-    enabled: activeReport === 'gstr3b',
+    enabled: hasGstr && activeReport === 'gstr3b',
   })
 
   const salesReg = useQuery({
     queryKey: ['sales-register', period],
     queryFn: () => {
-      const [y, m] = period.split('-').map(Number)
-      const from = new Date(Date.UTC(y, m - 1, 1)).toISOString()
-      const to = new Date(Date.UTC(y, m, 0, 23, 59, 59)).toISOString()
+      const { from, to } = localMonth()
       return api.get('/reports/sales-register', { params: { from, to } }).then((r) => r.data)
     },
     enabled: activeReport === 'sales',
@@ -46,9 +107,7 @@ export default function ReportsPage() {
   const purchaseReg = useQuery({
     queryKey: ['purchase-register', period],
     queryFn: () => {
-      const [y, m] = period.split('-').map(Number)
-      const from = new Date(Date.UTC(y, m - 1, 1)).toISOString()
-      const to = new Date(Date.UTC(y, m, 0, 23, 59, 59)).toISOString()
+      const { from, to } = localMonth()
       return api.get('/reports/purchase-register', { params: { from, to } }).then((r) => r.data)
     },
     enabled: activeReport === 'purchase',
@@ -67,7 +126,7 @@ export default function ReportsPage() {
           icon={FileSpreadsheet}
           eyebrow="Admin"
           title="Reports"
-          description="GST returns, sales/purchase registers, stock valuation"
+          description={`${hasGstr ? 'GST returns, ' : ''}${region.tax.label} summary, sales/purchase registers, stock valuation`}
           actions={
             <div className="flex items-center gap-2 bg-white border border-surface-200 rounded-lg px-3 py-1.5 shadow-xs">
               <Calendar className="w-4 h-4 text-surface-400" />
@@ -85,12 +144,12 @@ export default function ReportsPage() {
       <AnimatedSection>
         <div className="flex items-center gap-1 bg-white border border-surface-200/70 rounded-xl p-1 w-fit shadow-xs overflow-x-auto max-w-full">
           {([
-            ['gstr1', 'GSTR-1 (Sales)'],
-            ['gstr3b', 'GSTR-3B (Summary)'],
+            ...(hasGstr ? [['gstr1', 'GSTR-1 (Sales)'], ['gstr3b', 'GSTR-3B (Summary)']] : []),
+            ['tax', `${region.tax.label} summary`],
             ['sales', 'Sales Register'],
             ['purchase', 'Purchase Register'],
             ['stock', 'Stock Valuation'],
-          ] as const).map(([key, label]) => (
+          ] as [ReportKey, string][]).map(([key, label]) => (
             <button
               key={key}
               onClick={() => setActiveReport(key)}
@@ -110,6 +169,9 @@ export default function ReportsPage() {
         )}
         {activeReport === 'gstr3b' && (
           <Gstr3bView data={gstr3b.data?.data} isLoading={gstr3b.isLoading} period={period} />
+        )}
+        {activeReport === 'tax' && (
+          <TaxSummaryView data={taxSummary.data?.data} isLoading={taxSummary.isLoading} />
         )}
         {activeReport === 'sales' && (
           <RegisterView title="Sales Register" data={salesReg.data?.data} isLoading={salesReg.isLoading} period={period} filename="sales-register" onExport={downloadCsv} />

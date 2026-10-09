@@ -11,6 +11,8 @@ import { formatCurrency } from '@/lib/utils'
 import { DataTable, type DataTableColumn } from '@/components/ui'
 import { MedicineMasterModal } from '@/components/medicines/medicine-master-modal'
 import { SAMPLE_MEDICINES, type SeedMedicine } from '@/data/sample-medicines'
+import { getActiveRegion } from '@/lib/region'
+import { DRUG_SCHEDULE_CODES, scheduleLabel } from '@rxflow/regional'
 
 interface Medicine {
   id: string
@@ -91,8 +93,10 @@ export default function MedicinesPage() {
           packSize: r.packSize?.trim(),
           packUnit: r.packUnit?.trim() || 'tablets',
           mrp: parseFloat(r.mrp ?? '0') || 0,
-          hsn: r.hsn?.trim() || '30049099',
-          gstRate: parseFloat(r.gstRate ?? '12') || 12,
+          // Defaults: HS heading 3004 (medicaments; India's 8-digit HSN is 30049099), the
+          // country's default tax rate. A literal 0% is kept — `|| default` used to turn it into 12%.
+          hsn: r.hsn?.trim() || (getActiveRegion().code === 'IN' ? '30049099' : '3004'),
+          gstRate: Number.isFinite(parseFloat(r.gstRate ?? '')) ? parseFloat(r.gstRate!) : getActiveRegion().tax.defaultRate,
           schedule: (r.schedule?.trim().toUpperCase() || 'OTC') as SeedMedicine['schedule'],
           requiresPrescription: ['true', 'yes', '1'].includes((r.requiresPrescription ?? '').toLowerCase()),
         }))
@@ -138,14 +142,17 @@ export default function MedicinesPage() {
             <Upload className="w-4 h-4" />
             Upload CSV
           </button>
-          <button
-            onClick={() => importMutation.mutate(SAMPLE_MEDICINES as Partial<SeedMedicine>[])}
-            disabled={importMutation.isPending}
-            className="btn-secondary"
-          >
-            <Sparkles className="w-4 h-4" />
-            {importMutation.isPending ? 'Loading...' : `Load samples`}
-          </button>
+          {/* The bundled sample catalog is Indian (brands, HSN codes, schedules) — only offer it there */}
+          {getActiveRegion().code === 'IN' && (
+            <button
+              onClick={() => importMutation.mutate(SAMPLE_MEDICINES as Partial<SeedMedicine>[])}
+              disabled={importMutation.isPending}
+              className="btn-secondary"
+            >
+              <Sparkles className="w-4 h-4" />
+              {importMutation.isPending ? 'Loading...' : `Load samples`}
+            </button>
+          )}
           <button onClick={() => setEditing('new')} className="btn-primary">
             <Plus className="w-4 h-4" /> Add Medicine
           </button>
@@ -183,12 +190,10 @@ export default function MedicinesPage() {
         onRowClick={(m) => setEditing(m)}
         toolbar={
           <select className="input w-44" value={scheduleFilter} onChange={(e) => setScheduleFilter(e.target.value)}>
-            <option value="">All schedules</option>
-            <option value="OTC">OTC</option>
-            <option value="SCHEDULE_H">Schedule H</option>
-            <option value="SCHEDULE_H1">Schedule H1</option>
-            <option value="SCHEDULE_X">Schedule X</option>
-            <option value="SCHEDULE_G">Schedule G</option>
+            <option value="">All classifications</option>
+            {DRUG_SCHEDULE_CODES.map((code) => (
+              <option key={code} value={code}>{scheduleLabel(getActiveRegion(), code)}</option>
+            ))}
           </select>
         }
         columns={medicineColumns}
@@ -218,12 +223,12 @@ const medicineColumns: DataTableColumn<Medicine>[] = [
   { key: 'manufacturerName', header: 'Manufacturer', accessor: (m) => m.manufacturerName, render: (m) => <span className="text-xs text-surface-600">{m.manufacturerName}</span> },
   { key: 'packSize', header: 'Pack', align: 'center', accessor: (m) => m.packSize },
   { key: 'mrp', header: 'MRP', align: 'right', accessor: (m) => m.mrp, render: (m) => <span className="font-medium">{formatCurrency(m.mrp)}</span> },
-  { key: 'gstRate', header: 'GST', align: 'center', accessor: (m) => m.gstRate, render: (m) => `${m.gstRate}%` },
+  { key: 'gstRate', get header() { return getActiveRegion().tax.label }, align: 'center', accessor: (m) => m.gstRate, render: (m) => `${m.gstRate}%` },
   {
-    key: 'schedule', header: 'Schedule', align: 'center', accessor: (m) => m.schedule,
+    key: 'schedule', header: 'Classification', align: 'center', accessor: (m) => m.schedule,
     render: (m) => m.schedule === 'OTC'
-      ? <span className="badge-success">OTC</span>
-      : <span className="badge-warning">{m.schedule.replace('SCHEDULE_', 'Sch ')}</span>,
+      ? <span className="badge-success">{scheduleLabel(getActiveRegion(), 'OTC')}</span>
+      : <span className="badge-warning">{scheduleLabel(getActiveRegion(), m.schedule)}</span>,
   },
   {
     key: 'actions', header: '', sortable: false, pinned: true, align: 'right',

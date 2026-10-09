@@ -1,15 +1,62 @@
-import type { FastifyInstance } from 'fastify'
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '@rxflow/db'
 import { authenticate } from '../middleware/auth.js'
+import { httpError } from '../utils/http-error.js'
+import { getTenantRegion } from '../utils/regional.js'
+import {
+  zonedMonthRange, componentsFromLegacy, sumComponents, prescriptionSchedules, scheduleLabel,
+  type TaxComponent,
+} from '@rxflow/regional'
 
-// Returns the start/end of a YYYY-MM period
-function monthRange(period: string): { from: Date; to: Date } {
+/**
+ * Start/end of a YYYY-MM period as the pharmacy's LOCAL calendar month. (UTC boundaries used to
+ * push an Indian sale made between 00:00 and 05:30 IST on the 1st into the previous return.)
+ */
+function monthRange(period: string, timeZone: string): { from: Date; to: Date } {
   const [year, month] = period.split('-').map(Number)
-  if (!year || !month) throw new Error('Invalid period')
-  const from = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0))
-  const to = new Date(Date.UTC(year, month, 1, 0, 0, 0))
-  return { from, to }
+  if (!year || !month) throw httpError(400, 'Invalid period')
+  return zonedMonthRange(year, month, timeZone)
+}
+
+/** GSTR returns exist only under India's GST; other countries use the tax summary. */
+async function requireIndianGst(tenantId: string) {
+  const region = await getTenantRegion(tenantId)
+  if (region.tax.system !== 'IN_GST') {
+    throw httpError(400, `GSTR returns apply to Indian GST only. Use the ${region.tax.label} summary report instead.`)
+  }
+  return region
+}
+
+interface StoredLine {
+  taxableAmount: number
+  taxBreakdown: unknown
+  cgstRate: number; cgstAmount: number; sgstRate: number; sgstAmount: number; igstRate: number; igstAmount: number
+}
+const componentsOf = (l: StoredLine): TaxComponent[] =>
+  Array.isArray(l.taxBreakdown) ? (l.taxBreakdown as TaxComponent[]) : componentsFromLegacy(l)
+
+/** Group invoice lines by total tax rate, and collect their tax components. */
+function summariseLines(lines: StoredLine[]) {
+  const byRate = new Map<number, { rate: number; taxable: number; tax: number }>()
+  const components: TaxComponent[][] = []
+  for (const l of lines) {
+    const comps = componentsOf(l)
+    const rate = Number(comps.reduce((r, c) => r + c.rate, 0).toFixed(4))
+    const tax = comps.reduce((t, c) => t + c.amount, 0)
+    const row = byRate.get(rate) ?? { rate, taxable: 0, tax: 0 }
+    row.taxable += l.taxableAmount
+    row.tax += tax
+    byRate.set(rate, row)
+    components.push(comps)
+  }
+  const rows = [...byRate.values()].sort((a, b) => a.rate - b.rate)
+  return {
+    taxable: rows.reduce((s, r) => s + r.taxable, 0),
+    tax: rows.reduce((s, r) => s + r.tax, 0),
+    byRate: rows,
+    components: sumComponents(components),
+  }
 }
 
 export async function reportRoutes(app: FastifyInstance) {
@@ -18,7 +65,8 @@ export async function reportRoutes(app: FastifyInstance) {
   app.get('/gstr1', { preHandler: [authenticate] }, async (request, reply) => {
     const { tenantId } = request.user
     const query = z.object({ period: z.string().regex(/^\d{4}-\d{2}$/) }).parse(request.query)
-    const { from, to } = monthRange(query.period)
+    const region = await requireIndianGst(tenantId)
+    const { from, to } = monthRange(query.period, region.timezone)
 
     const [invoices, creditNotes] = await Promise.all([
       prisma.invoice.findMany({
@@ -177,7 +225,8 @@ export async function reportRoutes(app: FastifyInstance) {
   app.get('/gstr3b', { preHandler: [authenticate] }, async (request, reply) => {
     const { tenantId } = request.user
     const query = z.object({ period: z.string().regex(/^\d{4}-\d{2}$/) }).parse(request.query)
-    const { from, to } = monthRange(query.period)
+    const region = await requireIndianGst(tenantId)
+    const { from, to } = monthRange(query.period, region.timezone)
 
     // Outward supplies (sales), credit notes (reductions), and inward supplies (purchases for ITC)
     const [outward, creditNoteAgg, inward] = await Promise.all([
@@ -323,12 +372,53 @@ export async function reportRoutes(app: FastifyInstance) {
 
   // ── Schedule H1 Register (CDSCO compliance) ─────────────────────────────────
   // Mandatory register of every Schedule H1 sale with batch, qty, customer, prescription.
-  app.get('/schedule-h1-register', { preHandler: [authenticate] }, async (request, reply) => {
+  // ── Tax summary (any country) ───────────────────────────────────────────────
+  // GET /api/v1/reports/tax-summary?period=2026-05
+  // Output tax on sales (net of credit notes) and input tax on purchases (net of debit notes),
+  // by rate and by component — the basis for a VAT / sales-tax / GST return anywhere.
+  app.get('/tax-summary', { preHandler: [authenticate] }, async (request, reply) => {
+    const { tenantId } = request.user
+    const query = z.object({ period: z.string().regex(/^\d{4}-\d{2}$/) }).parse(request.query)
+    const region = await getTenantRegion(tenantId)
+    const { from, to } = monthRange(query.period, region.timezone)
+    const linesOf = (type: 'SALE' | 'CREDIT_NOTE' | 'PURCHASE' | 'DEBIT_NOTE') =>
+      prisma.invoiceItem.findMany({
+        where: { invoice: { tenantId, type, createdAt: { gte: from, lt: to } } },
+        select: {
+          taxableAmount: true, taxBreakdown: true,
+          cgstRate: true, cgstAmount: true, sgstRate: true, sgstAmount: true, igstRate: true, igstAmount: true,
+        },
+      })
+    const [sales, creditNotes, purchases, debitNotes] = await Promise.all([
+      linesOf('SALE'), linesOf('CREDIT_NOTE'), linesOf('PURCHASE'), linesOf('DEBIT_NOTE'),
+    ])
+    const out = summariseLines(sales)
+    const outReturns = summariseLines(creditNotes)
+    const inp = summariseLines(purchases)
+    const inpReturns = summariseLines(debitNotes)
+    const outputTax = out.tax - outReturns.tax
+    const inputTax = inp.tax - inpReturns.tax
+    return reply.send({
+      success: true,
+      data: {
+        period: query.period,
+        country: region.country,
+        currency: region.currency,
+        taxLabel: region.tax.label,
+        sales: out, creditNotes: outReturns, purchases: inp, debitNotes: inpReturns,
+        outputTax, inputTax, netPayable: outputTax - inputTax,
+      },
+    })
+  })
+
+  // ── Controlled / restricted drugs register ──────────────────────────────────
+  // India: Schedule H/H1/X register; UK: CD register; US: controlled-substance log … The tiers
+  // included by default are those the tenant's country treats as prescription-only.
+  const controlledRegister = async (request: FastifyRequest, reply: FastifyReply) => {
     const { tenantId } = request.user
     const query = request.query as { from?: string; to?: string; schedule?: string }
-    const schedules = query.schedule
-      ? [query.schedule]
-      : ['SCHEDULE_H', 'SCHEDULE_H1', 'SCHEDULE_X']
+    const region = await getTenantRegion(tenantId)
+    const schedules: string[] = query.schedule ? [query.schedule] : prescriptionSchedules(region)
 
     const where: any = {
       invoice: { tenantId, type: 'SALE' },
@@ -375,9 +465,13 @@ export async function reportRoutes(app: FastifyInstance) {
         customerName: it.invoice.customer?.name ?? 'Walk-in',
         customerPhone: it.invoice.customer?.phone ?? '',
         customerAddress: it.invoice.customer?.addressLine1 ?? '',
+        scheduleLabel: scheduleLabel(region, it.medicine?.schedule),
       })),
+      meta: { registerName: region.register.name, retentionYears: region.register.retentionYears, schedules },
     })
-  })
+  }
+  app.get('/controlled-register', { preHandler: [authenticate] }, controlledRegister)
+  app.get('/schedule-h1-register', { preHandler: [authenticate] }, controlledRegister) // original path, kept for India
 
   // ── License Expiry Alerts ───────────────────────────────────────────────────
   // Returns tenant + supplier drug licenses sorted by days-to-expiry.

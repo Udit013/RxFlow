@@ -2,9 +2,12 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '@rxflow/db'
 import { authenticate } from '../middleware/auth.js'
+import { zonedMonthRange, currentZonedMonthRange } from '@rxflow/regional'
+import { paymentMethodSchema } from '../utils/regional.js'
 import { getPaginationParams, buildPaginationMeta } from '../utils/pagination.js'
 import { audit } from '../utils/audit.js'
 import { assertTenantRefs } from '../utils/tenant-guard.js'
+import { getTenantRegion } from '../utils/regional.js'
 
 // Common expense categories — used to seed the dropdown. Free text also allowed.
 export const EXPENSE_CATEGORIES = [
@@ -15,13 +18,14 @@ export const EXPENSE_CATEGORIES = [
 ]
 export const INCOME_CATEGORIES = ['Interest', 'Commission', 'Scrap Sale', 'Other Income']
 
-function rangeFromQuery(q: { from?: string; to?: string; period?: string }): { from: Date; to: Date } {
+/** Requested period, as the pharmacy's local calendar month (or explicit from/to). */
+function rangeFromQuery(q: { from?: string; to?: string; period?: string }, timeZone: string): { from: Date; to: Date } {
   if (q.period && /^\d{4}-\d{2}$/.test(q.period)) {
     const [y, m] = q.period.split('-').map(Number)
-    return { from: new Date(Date.UTC(y, m - 1, 1)), to: new Date(Date.UTC(y, m, 1)) }
+    return zonedMonthRange(y!, m!, timeZone)
   }
   const to = q.to ? new Date(q.to) : new Date()
-  const from = q.from ? new Date(q.from) : new Date(to.getFullYear(), to.getMonth(), 1)
+  const from = q.from ? new Date(q.from) : currentZonedMonthRange(to, timeZone).from
   return { from, to }
 }
 
@@ -55,7 +59,7 @@ export async function accountRoutes(app: FastifyInstance) {
       direction: z.enum(['IN', 'OUT']).default('OUT'),
       category: z.string().min(1),
       amount: z.number().positive(),
-      paymentMethod: z.enum(['CASH', 'UPI', 'NEFT', 'RTGS', 'CHEQUE', 'CREDIT', 'CARD']).default('CASH'),
+      paymentMethod: paymentMethodSchema.default('CASH'),
       paidTo: z.string().optional(),
       reference: z.string().optional(),
       notes: z.string().optional(),
@@ -119,7 +123,7 @@ export async function accountRoutes(app: FastifyInstance) {
   // Net profit = Gross profit − Operating expenses + Other income
   app.get('/profit-loss', { preHandler: [authenticate] }, async (request, reply) => {
     const { tenantId } = request.user
-    const { from, to } = rangeFromQuery(request.query as any)
+    const { from, to } = rangeFromQuery(request.query as any, (await getTenantRegion(tenantId)).timezone)
 
     const [saleAgg, cnAgg, purchaseItems, expenseRows] = await Promise.all([
       prisma.invoice.aggregate({
@@ -215,7 +219,7 @@ export async function accountRoutes(app: FastifyInstance) {
   // Cash out: payments made (supplier) + operating expenses
   app.get('/cash-flow', { preHandler: [authenticate] }, async (request, reply) => {
     const { tenantId } = request.user
-    const { from, to } = rangeFromQuery(request.query as any)
+    const { from, to } = rangeFromQuery(request.query as any, (await getTenantRegion(tenantId)).timezone)
 
     const [payments, expenses] = await Promise.all([
       prisma.payment.findMany({
@@ -258,9 +262,7 @@ export async function accountRoutes(app: FastifyInstance) {
   // ── Summary (for dashboard tile / quick view) ───────────────────────────────
   app.get('/summary', { preHandler: [authenticate] }, async (request, reply) => {
     const { tenantId } = request.user
-    const now = new Date()
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+    const { from: monthStart, to: monthEnd } = currentZonedMonthRange(new Date(), (await getTenantRegion(tenantId)).timezone)
 
     const [expenseAgg, incomeAgg] = await Promise.all([
       prisma.expense.aggregate({ where: { tenantId, direction: 'OUT', incurredAt: { gte: monthStart, lt: monthEnd } }, _sum: { amount: true }, _count: true }),

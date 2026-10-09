@@ -8,7 +8,8 @@ import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft, Phone, Mail, MapPin, FileText, Pencil, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
-import { formatCurrency, formatDate, optionalNumber } from '@/lib/utils'
+import { formatCurrency, formatDate, optionalNumber, moneySymbol } from '@/lib/utils'
+import { useRegion } from '@/lib/region'
 
 interface SupplierForm {
   name: string
@@ -186,6 +187,7 @@ export default function SupplierDetailPage() {
 }
 
 function EditSupplierModal({ supplier, onClose, onSaved }: { supplier: any; onClose: () => void; onSaved: () => void }) {
+  const region = useRegion()
   const { register, handleSubmit, formState: { errors } } = useForm<SupplierForm>({
     defaultValues: {
       name: supplier.name,
@@ -241,12 +243,12 @@ function EditSupplierModal({ supplier, onClose, onSaved }: { supplier: any; onCl
             <input className="input" type="email" {...register('email')} />
           </div>
           <div>
-            <label className="label">GSTIN</label>
+            <label className="label">{region.fields.taxId.label}</label>
             <input className="input" {...register('gstin')} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="label">Drug License #</label>
+              <label className="label">{region.fields.license.label}</label>
               <input className="input font-mono text-xs" {...register('drugLicenseNumber')} />
             </div>
             <div>
@@ -260,7 +262,7 @@ function EditSupplierModal({ supplier, onClose, onSaved }: { supplier: any; onCl
               <input className="input" {...register('city')} />
             </div>
             <div>
-              <label className="label">State</label>
+              <label className="label">{region.fields.region.label}</label>
               <input className="input" {...register('state')} />
             </div>
           </div>
@@ -270,7 +272,7 @@ function EditSupplierModal({ supplier, onClose, onSaved }: { supplier: any; onCl
               <input className="input" type="number" {...register('creditDays', optionalNumber)} />
             </div>
             <div>
-              <label className="label">Credit Limit (₹)</label>
+              <label className="label">Credit Limit ({moneySymbol()})</label>
               <input className="input" type="number" {...register('creditLimit', optionalNumber)} />
             </div>
           </div>

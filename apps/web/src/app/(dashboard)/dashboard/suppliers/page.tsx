@@ -10,6 +10,8 @@ import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { formatCurrency, optionalNumber } from '@/lib/utils'
 import { DataTable, type DataTableColumn } from '@/components/ui'
+import { useRegion, getActiveRegion } from '@/lib/region'
+import { taxIdRules } from '@/lib/regional-form'
 
 interface Supplier {
   id: string
@@ -38,8 +40,6 @@ interface SupplierForm {
   creditDays: number
 }
 
-// 15-char Indian GSTIN
-const GSTIN_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/
 
 const supplierColumns: DataTableColumn<Supplier>[] = [
   {
@@ -60,7 +60,7 @@ const supplierColumns: DataTableColumn<Supplier>[] = [
       </div>
     ),
   },
-  { key: 'gstin', header: 'GSTIN', accessor: (s) => s.gstin ?? '', render: (s) => <span className="font-mono text-xs text-surface-600">{s.gstin ?? '—'}</span> },
+  { key: 'gstin', get header() { return getActiveRegion().fields.taxId.label }, accessor: (s) => s.gstin ?? '', render: (s) => <span className="font-mono text-xs text-surface-600">{s.gstin ?? '—'}</span> },
   { key: 'creditDays', header: 'Credit Days', align: 'center', accessor: (s) => s.creditDays, render: (s) => `${s.creditDays}d` },
   {
     key: 'outstandingBalance', header: 'Outstanding', align: 'right', accessor: (s) => s.outstandingBalance ?? 0,
@@ -69,6 +69,7 @@ const supplierColumns: DataTableColumn<Supplier>[] = [
 ]
 
 export default function SuppliersPage() {
+  const region = useRegion()
   const [showCreate, setShowCreate] = useState(false)
   const queryClient = useQueryClient()
   const router = useRouter()
@@ -98,7 +99,7 @@ export default function SuppliersPage() {
         isLoading={isLoading}
         rowKey={(s) => s.id}
         columns={supplierColumns}
-        searchPlaceholder="Search by name, company, GSTIN, phone…"
+        searchPlaceholder={`Search by name, company, ${region.fields.taxId.label}, phone…`}
         exportFileName="rxflow-suppliers"
         emptyIcon={Truck}
         emptyTitle="No suppliers yet"
@@ -121,6 +122,7 @@ export default function SuppliersPage() {
 }
 
 function CreateSupplierModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const region = useRegion()
   const { register, handleSubmit, watch, formState: { errors } } = useForm<SupplierForm>({
     defaultValues: { creditDays: 30, gstRegistrationType: 'REGULAR' },
   })
@@ -163,30 +165,30 @@ function CreateSupplierModal({ onClose, onCreated }: { onClose: () => void; onCr
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="label">GST Registration</label>
+              <label className="label">{region.tax.label} registration</label>
               <select className="input" {...register('gstRegistrationType')}>
-                <option value="REGULAR">Regular</option>
-                <option value="COMPOSITE">Composite</option>
-                <option value="NON_GST">Non-GST</option>
+                <option value="REGULAR">Registered</option>
+                {region.supportsCompositionScheme && <option value="COMPOSITE">Composition scheme</option>}
+                <option value="NON_GST">Unregistered</option>
               </select>
             </div>
             <div>
-              <label className="label">GSTIN{gstType !== 'NON_GST' ? ' (optional)' : ' (n/a)'}</label>
+              <label className="label">{region.fields.taxId.label}{gstType !== 'NON_GST' ? ' (optional)' : ' (n/a)'}</label>
               <input
                 className="input font-mono text-xs uppercase"
                 disabled={gstType === 'NON_GST'}
                 {...register('gstin', {
-                  validate: (v) => !v || GSTIN_PATTERN.test(v.toUpperCase().trim()) || 'Invalid GSTIN — 15 chars, e.g. 27AAACR5055K1ZV',
+                  validate: taxIdRules(region).validate,
                   setValueAs: (v: string) => (v ? v.toUpperCase().trim() : v),
                 })}
-                placeholder="27AAACR5055K1ZV"
+                placeholder={region.fields.taxId.example ?? ''}
               />
               {errors.gstin && <p className="text-xs text-red-600 mt-1">{errors.gstin.message}</p>}
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="label">Drug License No.</label>
+              <label className="label">{region.fields.license.label}</label>
               <input className="input font-mono text-xs" {...register('drugLicenseNumber')} placeholder="WB/HGL/20B-21B/1234" />
             </div>
             <div>

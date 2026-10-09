@@ -6,10 +6,11 @@ import { X, Pill, ListChecks, IndianRupee, Save } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
+import { useRegion } from '@/lib/region'
+import { DRUG_SCHEDULE_CODES, type DrugScheduleCode } from '@rxflow/regional'
 
 // "Type" in the UI = dosage form. Limited to the common set requested.
 const FORMS = ['TABLET', 'CAPSULE', 'SYRUP', 'INJECTION', 'OINTMENT', 'DROPS', 'CREAM', 'POWDER', 'OTHER']
-const SCHEDULES = ['OTC', 'SCHEDULE_H', 'SCHEDULE_H1', 'SCHEDULE_X', 'SCHEDULE_G']
 const STATUSES = ['CONTINUE', 'DISCONTINUE', 'INACTIVE']
 const MED_TYPES = ['NORMAL', 'CONTROLLED', 'OTC', 'PRESCRIPTION']
 const TAX_TYPES = ['TAXABLE', 'EXEMPT', 'NIL_RATED', 'ZERO_RATED']
@@ -23,11 +24,11 @@ const TABS = [
 type TabId = typeof TABS[number]['id']
 type FormState = Record<string, any>
 
-function emptyForm(): FormState {
+function emptyForm(defaultTaxRate = 12): FormState {
   return {
     // primary
     name: '', manufacturerName: '', division: '', hsn: '30049099', dosageForm: 'TABLET',
-    packing: '', gstRate: 12, composition: '', minStock: '', defaultReorderLevel: 10,
+    packing: '', gstRate: defaultTaxRate, composition: '', minStock: '', defaultReorderLevel: 10,
     // details
     shortName: '', genericName: '', brandName: '', category: '', status: 'CONTINUE',
     medicineType: 'NORMAL', strength: '', schedule: 'OTC', requiresPrescription: false, description: '',
@@ -54,7 +55,9 @@ export function MedicineMasterModal({ medicine, onClose }: { medicine?: any; onC
   const isEdit = !!medicine?.id
   const queryClient = useQueryClient()
   const [tab, setTab] = useState<TabId>('primary')
-  const [form, setForm] = useState<FormState>(() => (isEdit ? fromMedicine(medicine) : emptyForm()))
+  const region = useRegion()
+  const [form, setForm] = useState<FormState>(() => (isEdit ? fromMedicine(medicine) : emptyForm(region.tax.defaultRate)))
+  const scheduleOptions = DRUG_SCHEDULE_CODES.map((code) => ({ value: code, label: `${region.drugSchedules[code].label} — ${region.drugSchedules[code].description}` }))
   const bodyRef = useRef<HTMLDivElement>(null)
 
   const set = (patch: Partial<FormState>) => setForm((p) => ({ ...p, ...patch }))
@@ -120,7 +123,7 @@ export function MedicineMasterModal({ medicine, onClose }: { medicine?: any; onC
 
   function handleSubmit() {
     if (!form.name || !form.manufacturerName || !form.hsn) {
-      toast.error('Product Name, Manufacturer and HSN Code are required')
+      toast.error(`Product Name, Manufacturer and ${region.fields.productCode.label} are required`)
       setTab('primary')
       return
     }
@@ -133,7 +136,7 @@ export function MedicineMasterModal({ medicine, onClose }: { medicine?: any; onC
         <div className="flex items-center justify-between px-5 py-3.5 border-b border-surface-200">
           <div>
             <h2 className="font-semibold text-surface-900">{isEdit ? 'Edit Medicine' : 'New Medicine'}</h2>
-            <p className="text-2xs text-surface-500">Only Product Name, Manufacturer & HSN are required · Tab through fields, auto-advances tabs</p>
+            <p className="text-2xs text-surface-500">Only Product Name, Manufacturer & {region.fields.productCode.label} are required · Tab through fields, auto-advances tabs</p>
             {isEdit && medicine?.isShared && (
               <p className="mt-1 text-2xs text-brand-700">
                 Shared catalog entry — your changes are saved as your pharmacy&apos;s own copy.
@@ -168,10 +171,10 @@ export function MedicineMasterModal({ medicine, onClose }: { medicine?: any; onC
               <Field label="Product Name" required><input className="input" value={form.name} onChange={(e) => set({ name: e.target.value })} /></Field>
               <Field label="Manufacturer" required><input className="input" value={form.manufacturerName} onChange={(e) => set({ manufacturerName: e.target.value })} /></Field>
               <Field label="Division"><input className="input" value={form.division} onChange={(e) => set({ division: e.target.value })} placeholder="Marketing division" /></Field>
-              <Field label="HSN Code" required><input className="input font-mono" value={form.hsn} onChange={(e) => set({ hsn: e.target.value })} /></Field>
+              <Field label={region.fields.productCode.label} required><input className="input font-mono" value={form.hsn} onChange={(e) => set({ hsn: e.target.value })} /></Field>
               <Field label="Type / Form"><Select value={form.dosageForm} onChange={(v) => set({ dosageForm: v })} options={FORMS} /></Field>
               <Field label="Packing"><input className="input" value={form.packing} onChange={(e) => set({ packing: e.target.value })} placeholder="10x10, Strip, Bottle…" /></Field>
-              <Field label="Tax / GST %"><input type="number" step="0.01" className="input" value={form.gstRate} onChange={(e) => set({ gstRate: e.target.value })} /></Field>
+              <Field label={`${region.tax.label} %`}><input type="number" step="0.01" className="input" value={form.gstRate} onChange={(e) => set({ gstRate: e.target.value })} /></Field>
               <Field label="Composition"><input className="input" value={form.composition} onChange={(e) => set({ composition: e.target.value })} placeholder="Paracetamol 500mg…" /></Field>
               <Field label="Minimum Stock"><input type="number" className="input" value={form.minStock} onChange={(e) => set({ minStock: e.target.value })} /></Field>
               <Field label="Reorder Level"><input type="number" className="input" value={form.defaultReorderLevel} onChange={(e) => set({ defaultReorderLevel: e.target.value })} /></Field>
@@ -181,11 +184,18 @@ export function MedicineMasterModal({ medicine, onClose }: { medicine?: any; onC
           {tab === 'details' && (
             <Grid>
               <Field label="Short Name"><input className="input" value={form.shortName} onChange={(e) => set({ shortName: e.target.value })} /></Field>
-              <Field label="Generic Name"><input className="input" value={form.genericName} onChange={(e) => set({ genericName: e.target.value })} placeholder="Defaults to product name" /></Field>
+              <Field label={region.medicine.genericNameLabel}><input className="input" value={form.genericName} onChange={(e) => set({ genericName: e.target.value })} placeholder="Defaults to product name" /></Field>
               <Field label="Brand Name"><input className="input" value={form.brandName} onChange={(e) => set({ brandName: e.target.value })} placeholder="Defaults to product name" /></Field>
               <Field label="Strength"><input className="input" value={form.strength} onChange={(e) => set({ strength: e.target.value })} placeholder="500mg" /></Field>
               <Field label="Category"><input className="input" value={form.category} onChange={(e) => set({ category: e.target.value })} placeholder="Antibiotic, Analgesic…" /></Field>
-              <Field label="Schedule"><Select value={form.schedule} onChange={(v) => set({ schedule: v })} options={SCHEDULES} /></Field>
+              <Field label="Classification">
+                <Select
+                  value={form.schedule}
+                  // Picking a tier pre-sets "requires prescription" the way this country treats it
+                  onChange={(v) => set({ schedule: v, requiresPrescription: region.drugSchedules[v as DrugScheduleCode].requiresPrescription })}
+                  options={scheduleOptions}
+                />
+              </Field>
               <Field label="Status"><Select value={form.status} onChange={(v) => set({ status: v })} options={STATUSES} /></Field>
               <Field label="Regulatory Type"><Select value={form.medicineType} onChange={(v) => set({ medicineType: v })} options={MED_TYPES} /></Field>
               <Field label="Description" full><textarea className="input min-h-[60px]" value={form.description} onChange={(e) => set({ description: e.target.value })} /></Field>
@@ -243,10 +253,13 @@ function Field({ label, required, full, children }: { label: string; required?: 
   )
 }
 
-function Select({ value, onChange, options }: { value: string; onChange: (v: string) => void; options: string[] }) {
+function Select({ value, onChange, options }: { value: string; onChange: (v: string) => void; options: (string | { value: string; label: string })[] }) {
   return (
     <select className="input" value={value} onChange={(e) => onChange(e.target.value)}>
-      {options.map((o) => <option key={o} value={o}>{o.replace(/_/g, ' ')}</option>)}
+      {options.map((o) => {
+        const opt = typeof o === 'string' ? { value: o, label: o.replace(/_/g, ' ') } : o
+        return <option key={opt.value} value={opt.value}>{opt.label}</option>
+      })}
     </select>
   )
 }

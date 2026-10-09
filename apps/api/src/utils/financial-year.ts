@@ -1,29 +1,16 @@
 /**
- * Indian financial year helpers.
- * FY runs Apr 1 → Mar 31. FY 2025-26 = Apr 1, 2025 → Mar 31, 2026.
+ * Financial-year helpers. The real logic lives in @rxflow/regional (fiscal years differ by
+ * country and are evaluated in the tenant's timezone); these wrappers keep the original API,
+ * whose defaults — April start, UTC — are India's convention.
  */
+import { getFiscalYear, getFiscalYearBounds as fiscalBounds } from '@rxflow/regional'
 
-export function getFinancialYear(date: Date = new Date()): { startYear: number; endYear: number; label: string } {
-  // UTC getters keep numbering deterministic across server timezones and
-  // consistent with getFinancialYearBounds (which builds UTC boundaries).
-  const month = date.getUTCMonth() // 0-indexed: 0=Jan, 3=Apr
-  const year = date.getUTCFullYear()
-  // If month is Jan-Mar (0,1,2), FY started in previous calendar year
-  const startYear = month < 3 ? year - 1 : year
-  const endYear = startYear + 1
-  return {
-    startYear,
-    endYear,
-    label: `${startYear}-${String(endYear).slice(-2)}`,
-  }
+export function getFinancialYear(date: Date = new Date(), startMonth = 4, timeZone = 'UTC') {
+  return getFiscalYear(date, startMonth, timeZone)
 }
 
-export function getFinancialYearBounds(date: Date = new Date()): { from: Date; to: Date } {
-  const { startYear } = getFinancialYear(date)
-  return {
-    from: new Date(Date.UTC(startYear, 3, 1, 0, 0, 0)), // Apr 1 00:00
-    to: new Date(Date.UTC(startYear + 1, 3, 1, 0, 0, 0)), // Apr 1 next year (exclusive)
-  }
+export function getFinancialYearBounds(date: Date = new Date(), startMonth = 4, timeZone = 'UTC') {
+  return fiscalBounds(date, startMonth, timeZone)
 }
 
 /**

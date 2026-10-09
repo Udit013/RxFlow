@@ -97,13 +97,13 @@ export default function LoginPage() {
             The pharmacy&rsquo;s<br />book of record.
           </h1>
           <p className="text-brand-200/80 text-[15px] mt-4 max-w-sm leading-relaxed">
-            Stock, batches, expiries, GST, dues — every entry accounted for, on every device, in real time.
+            Stock, batches, expiries, tax, dues — every entry accounted for, on every device, in real time.
           </p>
 
           <div className="mt-12 max-w-sm">
             {[
               'Batch & expiry-true inventory across stores',
-              'GST billing, returns and debit notes',
+              'Tax-compliant billing — GST, VAT, sales tax',
               'Distributor CSV import, any format',
               'Payroll, commissions and ledgers',
             ].map((text, i) => (
@@ -116,7 +116,7 @@ export default function LoginPage() {
         </div>
 
         <p className="font-mono text-[11px] text-brand-300/50 tracking-wide">
-          © 2026 RxFlow · built for Indian pharma
+          © 2026 RxFlow · made in India, for pharmacies everywhere
         </p>
       </div>
 

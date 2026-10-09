@@ -35,6 +35,12 @@ describe('canAccess (role matrix)', () => {
     expect(canAccess('STORE_MANAGER', 'GET', '/api/v1/backup/export')).toBe(false)
   })
 
+  it('the controlled-drugs register is readable by pharmacists under either name', () => {
+    expect(canAccess('PHARMACIST', 'GET', '/api/v1/reports/controlled-register')).toBe(true)
+    expect(canAccess('PHARMACIST', 'GET', '/api/v1/reports/tax-summary')).toBe(false)
+    expect(canAccess('ACCOUNTANT', 'GET', '/api/v1/reports/tax-summary')).toBe(true)
+  })
+
   it('live-sync replay stays open while the audit log is restricted', () => {
     expect(canAccess('VIEWER', 'GET', '/api/v1/audit-logs/since')).toBe(true)
     expect(canAccess('VIEWER', 'GET', '/api/v1/audit-logs')).toBe(false)

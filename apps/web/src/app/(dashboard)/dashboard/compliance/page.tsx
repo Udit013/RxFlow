@@ -8,18 +8,19 @@ import { Shield, AlertTriangle, CheckCircle2, Calendar, Download, FileText } fro
 import { api } from '@/lib/api'
 import { cn, formatDate } from '@/lib/utils'
 import { AnimatedSection, PageHeader, MetricCard } from '@/components/ui'
+import { useRegion } from '@/lib/region'
+import { zonedMonthRange, prescriptionSchedules, scheduleLabel } from '@rxflow/regional'
 
 function thisMonth(): string {
   const d = new Date()
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
-function monthRange(period: string) {
+/** A YYYY-MM period as the pharmacy's local calendar month. */
+function monthRange(period: string, timeZone: string) {
   const [y, m] = period.split('-').map(Number)
-  return {
-    from: new Date(Date.UTC(y, m - 1, 1)).toISOString(),
-    to: new Date(Date.UTC(y, m, 0, 23, 59, 59)).toISOString(),
-  }
+  const { from, to } = zonedMonthRange(y!, m!, timeZone)
+  return { from: from.toISOString(), to: new Date(to.getTime() - 1).toISOString() }
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -30,6 +31,7 @@ const STATUS_STYLES: Record<string, string> = {
 }
 
 export default function CompliancePage() {
+  const region = useRegion()
   const [tab, setTab] = useState<'h1' | 'licenses'>('h1')
 
   return (
@@ -39,14 +41,14 @@ export default function CompliancePage() {
           icon={Shield}
           eyebrow="Admin"
           title="Compliance"
-          description="Schedule H/H1/X register & drug-license expiry tracking (CDSCO)"
+          description={`${region.register.name} & licence expiry tracking`}
         />
       </AnimatedSection>
 
       <AnimatedSection>
         <div className="flex items-center gap-1 bg-white border border-surface-200/70 rounded-xl p-1 w-fit shadow-xs">
           {([
-            ['h1', 'Schedule H/H1/X Register', FileText],
+            ['h1', region.register.name, FileText],
             ['licenses', 'License Expiry', Calendar],
           ] as const).map(([k, label, Icon]) => (
             <button
@@ -72,14 +74,15 @@ export default function CompliancePage() {
 }
 
 function ScheduleH1Tab() {
+  const region = useRegion()
   const [period, setPeriod] = useState(thisMonth())
   const [scheduleFilter, setScheduleFilter] = useState<string>('')
 
   const { data, isLoading } = useQuery({
     queryKey: ['h1-register', period, scheduleFilter],
     queryFn: () => {
-      const { from, to } = monthRange(period)
-      return api.get('/reports/schedule-h1-register', {
+      const { from, to } = monthRange(period, region.timezone)
+      return api.get('/reports/controlled-register', {
         params: { from, to, schedule: scheduleFilter || undefined },
       }).then((r) => r.data)
     },
@@ -92,7 +95,7 @@ function ScheduleH1Tab() {
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
-    a.download = `schedule-h1-register-${period}.csv`
+    a.download = `${region.register.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${period}.csv`
     a.click()
     URL.revokeObjectURL(a.href)
   }
@@ -103,10 +106,10 @@ function ScheduleH1Tab() {
         <label className="text-sm text-slate-600">Period</label>
         <input type="month" value={period} onChange={(e) => setPeriod(e.target.value)} className="input w-auto" />
         <select className="input w-auto" value={scheduleFilter} onChange={(e) => setScheduleFilter(e.target.value)}>
-          <option value="">All scheduled drugs</option>
-          <option value="SCHEDULE_H">Schedule H only</option>
-          <option value="SCHEDULE_H1">Schedule H1 only</option>
-          <option value="SCHEDULE_X">Schedule X only</option>
+          <option value="">All prescription-only classes</option>
+          {prescriptionSchedules(region).map((code) => (
+            <option key={code} value={code}>{scheduleLabel(region, code)} only</option>
+          ))}
         </select>
         <span className="ml-auto text-sm text-slate-500">{rows.length} entries</span>
         <button onClick={exportCsv} disabled={rows.length === 0} className="btn-primary">
@@ -115,8 +118,10 @@ function ScheduleH1Tab() {
       </div>
 
       <div className="card p-3 bg-amber-50 border-amber-200 text-xs text-amber-900">
-        <strong>Note:</strong> CDSCO requires this register to be available for inspection at all times. This export
-        is a starting point — verify with your local Drug Inspector for any state-specific format requirements.
+        <strong>Note:</strong> keep the {region.register.name.toLowerCase()} available for inspection
+        {region.register.retentionYears ? <> and retain records for at least {region.register.retentionYears} years</> : null}.
+        {region.code === 'IN' ? ' CDSCO and your State Drug Inspector may require a specific format — ' : ' Your regulator may prescribe a specific format — '}
+        this export is a starting point.
       </div>
 
       <div className="card overflow-hidden">
@@ -152,7 +157,7 @@ function ScheduleH1Tab() {
                       <p className="font-medium">{r.medicine}</p>
                       <p className="text-xs text-slate-500">{r.strength} · {r.manufacturer}</p>
                     </td>
-                    <td className="px-3 py-2"><span className="badge-warning text-[10px]">{r.schedule.replace('SCHEDULE_', '')}</span></td>
+                    <td className="px-3 py-2"><span className="badge-warning text-[10px]">{scheduleLabel(region, r.schedule)}</span></td>
                     <td className="px-3 py-2 font-mono text-xs">{r.batchNumber}</td>
                     <td className="px-3 py-2 text-xs">{formatDate(r.expiryDate, 'MM/YY')}</td>
                     <td className="px-3 py-2 text-center font-medium">{r.quantity}</td>

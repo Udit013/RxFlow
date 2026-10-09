@@ -7,8 +7,10 @@ import { Search, ChevronDown, Settings, LogOut, Menu } from 'lucide-react'
 import { authService } from '@/lib/auth'
 import { NotificationBell } from '@/components/notification-bell'
 import { useUi } from '@/lib/ui-store'
+import { useT } from '@/lib/i18n'
 
 export function TopBar() {
+  const t = useT()
   const router = useRouter()
   const [user, setUser] = useState<ReturnType<typeof authService.getStoredUser>>(null)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -46,7 +48,7 @@ export function TopBar() {
         type="button"
         onClick={() => setMobileNavOpen(!mobileNavOpen)}
         className="lg:hidden p-1.5 -ml-1 rounded-sm text-surface-600 hover:bg-surface-200/70 hover:text-surface-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
-        aria-label="Open navigation"
+        aria-label={t('Open navigation')}
         aria-controls="app-sidebar"
         aria-expanded={mobileNavOpen}
       >
@@ -61,7 +63,7 @@ export function TopBar() {
         className="group flex items-center gap-2 bg-paper border border-surface-300 rounded-sm pl-2.5 pr-1.5 py-1.5 flex-1 min-w-0 max-w-80 text-left hover:border-surface-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
       >
         <Search className="w-3.5 h-3.5 text-surface-400 shrink-0" aria-hidden="true" />
-        <span className="text-[13px] text-surface-500 flex-1 truncate">Find anything…</span>
+        <span className="text-[13px] text-surface-500 flex-1 truncate">{t('Find anything…')}</span>
         <kbd className="hidden sm:inline text-[10px] text-surface-500 border border-surface-300 bg-surface-100 px-1.5 py-0.5 rounded-sm font-mono group-hover:border-surface-400">⌘K</kbd>
       </button>
 
@@ -76,7 +78,7 @@ export function TopBar() {
             onClick={() => setMenuOpen((o) => !o)}
             aria-haspopup="menu"
             aria-expanded={menuOpen}
-            aria-label="Account menu"
+            aria-label={t('Account menu')}
             className="flex items-center gap-2.5 pl-3 ml-1 sm:ml-2 border-l border-surface-300 py-1 rounded-sm hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
           >
             <div className="w-7 h-7 bg-ink rounded-sm flex items-center justify-center text-paper text-xs font-semibold font-display">
@@ -105,7 +107,7 @@ export function TopBar() {
                   onClick={() => setMenuOpen(false)}
                   className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-surface-700 hover:bg-surface-100 focus:outline-none focus-visible:bg-surface-100"
                 >
-                  <Settings className="w-4 h-4 text-surface-400" aria-hidden="true" /> Settings
+                  <Settings className="w-4 h-4 text-surface-400" aria-hidden="true" /> {t('Settings')}
                 </Link>
                 <button
                   type="button"
@@ -113,7 +115,7 @@ export function TopBar() {
                   onClick={handleLogout}
                   className="w-full flex items-center gap-2.5 px-4 py-2 text-[13px] text-surface-700 hover:bg-surface-100 focus:outline-none focus-visible:bg-surface-100"
                 >
-                  <LogOut className="w-4 h-4 text-surface-400" aria-hidden="true" /> Sign out
+                  <LogOut className="w-4 h-4 text-surface-400" aria-hidden="true" /> {t('Sign out')}
                 </button>
               </div>
             </div>

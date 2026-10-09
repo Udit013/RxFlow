@@ -2,11 +2,12 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '@rxflow/db'
 import { authenticate } from '../middleware/auth.js'
+import { phoneSchema } from '../utils/regional.js'
 import { getPaginationParams, buildPaginationMeta } from '../utils/pagination.js'
 
 const salesRepSchema = z.object({
   name: z.string().min(1),
-  phone: z.string().min(10),
+  phone: phoneSchema,
   email: z.string().email().optional(),
   employeeCode: z.string().optional(),
   territory: z.string().optional(),

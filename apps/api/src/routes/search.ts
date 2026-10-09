@@ -20,7 +20,7 @@ export async function searchRoutes(app: FastifyInstance) {
       prisma.medicine.findMany({
         where: {
           isActive: true,
-          AND: [catalogWhere(tenantId)],
+          AND: [await catalogWhere(tenantId)],
           OR: [
             { name: { contains: term, mode: 'insensitive' } },
             { genericName: { contains: term, mode: 'insensitive' } },

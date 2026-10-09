@@ -2,24 +2,24 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { prisma, Prisma } from '@rxflow/db'
 import { authenticate } from '../middleware/auth.js'
+import { phoneSchema, getTenantRegion, assertTaxId } from '../utils/regional.js'
 import { getPaginationParams, buildPaginationMeta } from '../utils/pagination.js'
 import { audit } from '../utils/audit.js'
 
 const emptyToUndefined = (v: unknown) => (v === '' ? undefined : v)
 
-// 15-char Indian GSTIN: 2-digit state code, PAN, entity code, 'Z', checksum
-export const GSTIN_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/
 
 const supplierSchema = z.object({
   name: z.string().min(1),
   companyName: z.string().min(1),
-  gstin: z.preprocess(emptyToUndefined, z.string().regex(GSTIN_REGEX, 'Invalid GSTIN format (e.g. 27AAACR5055K1ZV)').optional()),
-  // GST registration type: REGULAR (has GSTIN), COMPOSITE (composition scheme), NON_GST (unregistered)
+  // Tax registration number (GSTIN in India, VAT no., EIN, TRN …) — format checked per country
+  gstin: z.preprocess(emptyToUndefined, z.string().trim().toUpperCase().optional()),
+  // Registration type: REGULAR (registered), COMPOSITE (India's composition scheme), NON_GST (unregistered)
   gstRegistrationType: z.enum(['REGULAR', 'COMPOSITE', 'NON_GST']).optional(),
   panNumber: z.preprocess(emptyToUndefined, z.string().optional()),
   drugLicenseNumber: z.preprocess(emptyToUndefined, z.string().optional()),
   drugLicenseExpiryDate: z.preprocess(emptyToUndefined, z.string().transform((s) => new Date(s)).optional()),
-  phone: z.string().min(10),
+  phone: phoneSchema,
   email: z.preprocess(emptyToUndefined, z.string().email().optional()),
   addressLine1: z.string().optional(),
   city: z.string().optional(),
@@ -74,6 +74,7 @@ export async function supplierRoutes(app: FastifyInstance) {
   app.post('/', { preHandler: [authenticate] }, async (request, reply) => {
     const { tenantId } = request.user
     const body = supplierSchema.parse(request.body)
+    assertTaxId(await getTenantRegion(tenantId), body.gstin)
     const supplier = await prisma.supplier.create({ data: { ...body, tenantId } })
     await audit(request, {
       action: 'supplier.create', entityType: 'Supplier', entityId: supplier.id,
@@ -87,6 +88,7 @@ export async function supplierRoutes(app: FastifyInstance) {
     const { id } = request.params as { id: string }
     const { tenantId } = request.user
     const body = supplierSchema.partial().parse(request.body)
+    assertTaxId(await getTenantRegion(tenantId), body.gstin)
     const supplier = await prisma.supplier.findFirst({ where: { id, tenantId } })
     if (!supplier) return reply.status(404).send({ success: false, error: 'Supplier not found' })
     const updated = await prisma.supplier.update({ where: { id }, data: body })

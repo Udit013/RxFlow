@@ -10,6 +10,7 @@
  */
 import { prisma } from '@rxflow/db'
 import { getFinancialYear, formatFyNumber } from './financial-year.js'
+import { getTenantRegion } from './regional.js'
 
 type NumberedModel = 'order' | 'invoice' | 'stockTransfer' | 'stockTake'
 
@@ -32,7 +33,10 @@ export async function nextFyNumber(
   prefix: string,
   date: Date = new Date(),
 ): Promise<string> {
-  const fy = getFinancialYear(date)
+  // The tenant's fiscal year (India: April–March → "2025-26"; calendar-year countries → "2026"),
+  // evaluated in the tenant's timezone so numbering flips at local midnight.
+  const region = await getTenantRegion(tenantId)
+  const fy = getFinancialYear(date, region.fiscalYearStartMonth, region.timezone)
   const stem = `${prefix}/${fy.label}/`
   const field = NUMBER_FIELD[model]
   // Dynamic delegate access — every model above has tenantId + a string number field.

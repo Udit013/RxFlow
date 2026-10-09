@@ -11,6 +11,9 @@ import { api } from '@/lib/api'
 import { authService, buildTenantHeader } from '@/lib/auth'
 import { downloadInvoicePdf, buildWhatsAppInvoiceMessage, openWhatsAppInvoice } from '@/lib/pdf-invoice'
 import { cn, formatCurrency, formatDate } from '@/lib/utils'
+import { useRegion } from '@/lib/region'
+import { paymentMethodLabel } from '@rxflow/regional'
+import { taxColumns, lineTaxFor, invoiceTaxRows } from '@/lib/invoice-tax'
 
 interface PaymentForm {
   amount: number
@@ -52,6 +55,16 @@ export default function InvoiceDetailPage() {
     enabled: !!id && data?.data?.type === 'PURCHASE',
   })
 
+  // Original invoice number when this is a credit/debit note. Declared before the early returns
+  // below: hooks must run in the same order on every render (it was after them, which crashed
+  // the page with "Rendered more hooks than during the previous render").
+  const originalInvoiceId: string | undefined = data?.data?.originalInvoiceId
+  const { data: originalInvoiceData } = useQuery({
+    queryKey: ['original-invoice', originalInvoiceId],
+    queryFn: () => api.get(`/invoices/${originalInvoiceId}`).then((r) => r.data),
+    enabled: !!originalInvoiceId,
+  })
+
   if (isLoading) return <div className="p-8 text-slate-400">Loading...</div>
   if (!data?.data) return <div className="p-8 text-slate-400">Invoice not found</div>
 
@@ -65,13 +78,11 @@ export default function InvoiceDetailPage() {
     return u ? buildTenantHeader(u.tenant) : null
   })()
 
-  // Fetch original invoice number when this is a CN
-  const { data: originalInvoiceData } = useQuery({
-    queryKey: ['original-invoice', inv?.originalInvoiceId],
-    queryFn: () => api.get(`/invoices/${inv.originalInvoiceId}`).then((r) => r.data),
-    enabled: !!inv?.originalInvoiceId,
-  })
   const originalInvoiceNumber = originalInvoiceData?.data?.invoiceNumber
+
+  // One column per tax component actually charged (CGST/SGST, IGST, VAT, sales tax …)
+  const taxCols = taxColumns(inv?.items ?? [])
+  const footSpan = 5 + taxCols.length
 
   const downloadPdf = () => {
     if (!tenantHeader) return
@@ -86,6 +97,7 @@ export default function InvoiceDetailPage() {
         cgstRate: it.cgstRate, cgstAmount: it.cgstAmount,
         sgstRate: it.sgstRate, sgstAmount: it.sgstAmount,
         igstRate: it.igstRate, igstAmount: it.igstAmount,
+        taxBreakdown: it.taxBreakdown,
         total: it.total,
       })),
       totalTax: inv.totalTax ?? 0,
@@ -181,8 +193,7 @@ export default function InvoiceDetailPage() {
               <th className="text-left px-3 py-2">Exp</th>
               <th className="text-center px-3 py-2">Qty</th>
               <th className="text-right px-3 py-2">Rate</th>
-              <th className="text-right px-3 py-2">CGST</th>
-              <th className="text-right px-3 py-2">SGST</th>
+              {taxCols.map((c) => <th key={c.code} className="text-right px-3 py-2">{c.label}</th>)}
               <th className="text-right px-3 py-2">Total</th>
             </tr>
           </thead>
@@ -194,21 +205,20 @@ export default function InvoiceDetailPage() {
                 <td className="px-3 py-2 text-slate-600 text-xs">{formatDate(it.expiryDate, 'MM/YY')}</td>
                 <td className="px-3 py-2 text-center">{it.quantity}</td>
                 <td className="px-3 py-2 text-right">{formatCurrency(it.unitPrice)}</td>
-                <td className="px-3 py-2 text-right text-xs">{formatCurrency(it.cgstAmount ?? 0)}</td>
-                <td className="px-3 py-2 text-right text-xs">{formatCurrency(it.sgstAmount ?? 0)}</td>
+                {taxCols.map((c) => <td key={c.code} className="px-3 py-2 text-right text-xs">{formatCurrency(lineTaxFor(it, c.code))}</td>)}
                 <td className="px-3 py-2 text-right font-medium">{formatCurrency(it.total)}</td>
               </tr>
             ))}
           </tbody>
           <tfoot className="bg-slate-50">
-            <tr><td colSpan={7} className="px-3 py-2 text-right text-slate-600">Subtotal</td><td className="px-3 py-2 text-right">{formatCurrency(inv.subtotal)}</td></tr>
-            {inv.discountAmount > 0 && <tr><td colSpan={7} className="px-3 py-2 text-right text-slate-600">Discount</td><td className="px-3 py-2 text-right">-{formatCurrency(inv.discountAmount)}</td></tr>}
-            <tr><td colSpan={7} className="px-3 py-2 text-right text-slate-600">CGST</td><td className="px-3 py-2 text-right">{formatCurrency(inv.cgst)}</td></tr>
-            <tr><td colSpan={7} className="px-3 py-2 text-right text-slate-600">SGST</td><td className="px-3 py-2 text-right">{formatCurrency(inv.sgst)}</td></tr>
-            {inv.igst > 0 && <tr><td colSpan={7} className="px-3 py-2 text-right text-slate-600">IGST</td><td className="px-3 py-2 text-right">{formatCurrency(inv.igst)}</td></tr>}
-            {inv.otherCharges > 0 && <tr><td colSpan={7} className="px-3 py-2 text-right text-slate-600">Transport / other charges</td><td className="px-3 py-2 text-right">{formatCurrency(inv.otherCharges)}</td></tr>}
-            {Math.abs(inv.roundOff ?? 0) >= 0.01 && <tr><td colSpan={7} className="px-3 py-2 text-right text-slate-600">Round off</td><td className="px-3 py-2 text-right">{formatCurrency(inv.roundOff)}</td></tr>}
-            <tr className="border-t"><td colSpan={7} className="px-3 py-2 text-right font-bold">Grand Total</td><td className="px-3 py-2 text-right font-bold">{formatCurrency(inv.grandTotal)}</td></tr>
+            <tr><td colSpan={footSpan} className="px-3 py-2 text-right text-slate-600">Subtotal</td><td className="px-3 py-2 text-right">{formatCurrency(inv.subtotal)}</td></tr>
+            {inv.discountAmount > 0 && <tr><td colSpan={footSpan} className="px-3 py-2 text-right text-slate-600">Discount</td><td className="px-3 py-2 text-right">-{formatCurrency(inv.discountAmount)}</td></tr>}
+            {invoiceTaxRows(inv).map((r) => (
+              <tr key={r.label}><td colSpan={footSpan} className="px-3 py-2 text-right text-slate-600">{r.label}</td><td className="px-3 py-2 text-right">{formatCurrency(r.amount)}</td></tr>
+            ))}
+            {inv.otherCharges > 0 && <tr><td colSpan={footSpan} className="px-3 py-2 text-right text-slate-600">Transport / other charges</td><td className="px-3 py-2 text-right">{formatCurrency(inv.otherCharges)}</td></tr>}
+            {Math.abs(inv.roundOff ?? 0) >= 0.01 && <tr><td colSpan={footSpan} className="px-3 py-2 text-right text-slate-600">Round off</td><td className="px-3 py-2 text-right">{formatCurrency(inv.roundOff)}</td></tr>}
+            <tr className="border-t"><td colSpan={footSpan} className="px-3 py-2 text-right font-bold">Grand Total</td><td className="px-3 py-2 text-right font-bold">{formatCurrency(inv.grandTotal)}</td></tr>
           </tfoot>
         </table></div>
       </div>
@@ -577,6 +587,7 @@ function PurchaseReturnModal({ invoice, onClose, onCreated }: { invoice: any; on
 function RecordPaymentModal({
   invoiceId, maxAmount, onClose, onSaved,
 }: { invoiceId: string; maxAmount: number; onClose: () => void; onSaved: () => void }) {
+  const region = useRegion()
   const { register, handleSubmit, formState: { errors } } = useForm<PaymentForm>({
     defaultValues: { amount: maxAmount, method: 'CASH' },
   })
@@ -616,13 +627,13 @@ function RecordPaymentModal({
           <div>
             <label className="label">Payment Method *</label>
             <select className="input" {...register('method', { required: true })}>
-              {['CASH', 'UPI', 'NEFT', 'RTGS', 'CHEQUE', 'CARD', 'CREDIT'].map((m) => (
-                <option key={m} value={m}>{m}</option>
+              {region.paymentMethods.map((m) => (
+                <option key={m} value={m}>{paymentMethodLabel(region, m)}</option>
               ))}
             </select>
           </div>
           <div>
-            <label className="label">Reference (UPI ID / cheque # / txn ID)</label>
+            <label className="label">Reference ({region.paymentMethods.includes('UPI') ? 'UPI ID / ' : ''}{paymentMethodLabel(region, 'CHEQUE').toLowerCase()} no. / transaction ID)</label>
             <input className="input" {...register('reference')} />
           </div>
           <div className="flex justify-end gap-2 pt-2">

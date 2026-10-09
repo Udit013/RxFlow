@@ -7,9 +7,10 @@ import { Trash2, Search, PackagePlus, Save, Edit3, FileSpreadsheet, Clock, X } f
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { authService } from '@/lib/auth'
-import { cn, formatCurrency, formatDate } from '@/lib/utils'
+import { cn, formatCurrency, formatDate, moneySymbol } from '@/lib/utils'
 import { CsvImportFlow } from '@/components/purchases/csv-import-flow'
 import { SmartCsvImport } from '@/components/purchases/smart-csv-import'
+import { getActiveRegion } from '@/lib/region'
 
 interface POLine {
   medicineId: string
@@ -51,7 +52,9 @@ export default function NewPurchasePage() {
   const [medQuery, setMedQuery] = useState('')
   const [lines, setLines] = useState<POLine[]>([])
   const [mode, setMode] = useState<'manual' | 'csv'>('manual')
-  const [csvMode, setCsvMode] = useState<'smart' | 'generic'>('smart')
+  // Auto-detecting distributor formats ship for markets that have them (India's MARG exports);
+  // elsewhere start with the generic column mapper.
+  const [csvMode, setCsvMode] = useState<'smart' | 'generic'>(() => (getActiveRegion().csvImportPresets ? 'smart' : 'generic'))
   const [transportCharge, setTransportCharge] = useState<number>(0)
   const [salesman, setSalesman] = useState<SalesRep | null>(null)
   const [commissionPercent, setCommissionPercent] = useState<number>(0)
@@ -96,7 +99,7 @@ export default function NewPurchasePage() {
         purchasePrice: Number((m.mrp * 0.8).toFixed(2)),
         mrp: m.mrp,
         sellRate: m.mrp, // defaults to current selling price (MRP); overridable
-        gstRate: m.gstRate ?? 12,
+        gstRate: m.gstRate ?? getActiveRegion().tax.defaultRate,
         discountPercent: 0,
       },
     ])
@@ -299,10 +302,10 @@ function ManualFlow(props: any) {
                 <th className="text-left px-2 py-2">Lot</th>
                 <th className="text-left px-2 py-2">Expiry * <span className="normal-case font-normal">(MM/YY)</span></th>
                 <th className="text-center px-2 py-2">Qty</th>
-                <th className="text-right px-2 py-2">Buy ₹</th>
+                <th className="text-right px-2 py-2">Buy {moneySymbol()}</th>
                 <th className="text-center px-2 py-2">Disc %</th>
                 <th className="text-right px-2 py-2">MRP</th>
-                <th className="text-right px-2 py-2">Sell ₹</th>
+                <th className="text-right px-2 py-2">Sell {moneySymbol()}</th>
                 <th className="text-center px-2 py-2">GST</th>
                 <th className="text-right px-2 py-2">Line</th>
                 <th />
@@ -386,14 +389,14 @@ function ManualFlow(props: any) {
             <div className="flex gap-1.5">
               <select className="input w-20" value={specialDiscType} onChange={(e) => setSpecialDiscType(e.target.value as 'PERCENT' | 'AMOUNT')} aria-label="Special discount type">
                 <option value="PERCENT">%</option>
-                <option value="AMOUNT">₹</option>
+                <option value="AMOUNT">{moneySymbol()}</option>
               </select>
               <input type="number" min="0" step="0.5" className="input flex-1" value={specialDiscValue} onChange={(e) => setSpecialDiscValue(Math.max(0, parseFloat(e.target.value) || 0))} placeholder="0" />
             </div>
             {specialDiscAmount > 0 && <p className="help-text">−{formatCurrency(specialDiscAmount)} off the taxable base</p>}
           </div>
           <div>
-            <label className="label">Transportation / Delivery charge (₹)</label>
+            <label className="label">Transportation / Delivery charge ({moneySymbol()})</label>
             <input type="number" min="0" step="1" className="input" value={transportCharge} onChange={(e) => setTransportCharge(parseFloat(e.target.value) || 0)} placeholder="0" />
           </div>
           <div>

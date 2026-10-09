@@ -3,18 +3,21 @@
 import { useEffect, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
-import { Settings, Building, Save, X, Plus, Users as UsersIcon, AlertTriangle, Wifi, Trash2 } from 'lucide-react'
+import { Settings, Building, Save, X, Plus, Users as UsersIcon, AlertTriangle, Wifi, Trash2, Globe2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { authService } from '@/lib/auth'
 import { cn, formatDate } from '@/lib/utils'
 import { DeleteAccountModal } from '@/components/delete-account-modal'
+import { useRegion } from '@/lib/region'
+import { taxIdRules } from '@/lib/regional-form'
+import { RegionTab } from '@/components/settings/region-tab'
 
 const ROLES = ['TENANT_ADMIN', 'STORE_MANAGER', 'PHARMACIST', 'SALES_REP', 'ACCOUNTANT', 'DELIVERY_STAFF', 'VIEWER'] as const
 
 export default function SettingsPage() {
-  const [tab, setTab] = useState<'tenant' | 'users' | 'lan'>('tenant')
+  const [tab, setTab] = useState<'tenant' | 'region' | 'users' | 'lan'>('tenant')
   const [user, setUser] = useState<ReturnType<typeof authService.getStoredUser>>(null)
 
   useEffect(() => { setUser(authService.getStoredUser()) }, [])
@@ -26,13 +29,14 @@ export default function SettingsPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title flex items-center gap-2"><Settings className="w-5 h-5" /> Settings</h1>
-          <p className="text-sm text-slate-500">Tenant configuration, team members, LAN deployment</p>
+          <p className="text-sm text-slate-500">Tenant configuration, region & tax, team members, LAN deployment</p>
         </div>
       </div>
 
       <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 w-fit">
         {([
           ['tenant', 'Tenant & Operations', Building],
+          ['region', 'Region & Tax', Globe2],
           ['users', 'Users & Roles', UsersIcon],
           ['lan', 'LAN Deployment', Wifi],
         ] as const).map(([k, label, Icon]) => (
@@ -50,6 +54,7 @@ export default function SettingsPage() {
       </div>
 
       {tab === 'tenant' && <TenantTab user={user} />}
+      {tab === 'region' && <RegionTab canEdit={user.role === 'TENANT_ADMIN' || user.role === 'SUPER_ADMIN'} />}
       {tab === 'users' && <UsersTab currentUserId={user.id} />}
       {tab === 'lan' && <LanTab />}
     </div>
@@ -71,6 +76,7 @@ interface TenantForm {
 }
 
 function TenantTab({ user }: { user: NonNullable<ReturnType<typeof authService.getStoredUser>> }) {
+  const region = useRegion()
   const queryClient = useQueryClient()
   const { data } = useQuery({
     queryKey: ['tenant'],
@@ -149,15 +155,15 @@ function TenantTab({ user }: { user: NonNullable<ReturnType<typeof authService.g
             <input className="input" {...register('name', { required: true })} />
           </div>
           <div>
-            <label className="label">GSTIN</label>
-            <input className="input font-mono text-xs" {...register('gstin')} placeholder="27AAACR5055K1ZV" />
+            <label className="label">{region.fields.taxId.label}</label>
+            <input className="input font-mono text-xs" {...register('gstin', taxIdRules(region))} placeholder={region.fields.taxId.example ?? ''} />
           </div>
           <div>
-            <label className="label">Drug License Number</label>
+            <label className="label">{region.fields.license.label}</label>
             <input className="input font-mono text-xs" {...register('drugLicenseNumber')} />
           </div>
           <div>
-            <label className="label">Drug License Expiry</label>
+            <label className="label">Licence expiry</label>
             <input type="date" className="input" {...register('drugLicenseExpiryDate')} />
           </div>
           <div>
@@ -177,11 +183,11 @@ function TenantTab({ user }: { user: NonNullable<ReturnType<typeof authService.g
             <input className="input" {...register('city')} />
           </div>
           <div>
-            <label className="label">State</label>
+            <label className="label">{region.fields.region.label}</label>
             <input className="input" {...register('state')} placeholder="Maharashtra" />
           </div>
           <div>
-            <label className="label">Pincode</label>
+            <label className="label">{region.fields.postalCode.label}</label>
             <input className="input" {...register('pincode')} />
           </div>
         </div>

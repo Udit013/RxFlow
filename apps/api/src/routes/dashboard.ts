@@ -1,20 +1,23 @@
 import type { FastifyInstance } from 'fastify'
 import { prisma } from '@rxflow/db'
 import { authenticate } from '../middleware/auth.js'
+import { getTenantRegion } from '../utils/regional.js'
+import { startOfZonedDay, addZonedDays, currentZonedMonthRange } from '@rxflow/regional'
 
 export async function dashboardRoutes(app: FastifyInstance) {
   // GET /api/v1/dashboard — Main dashboard metrics
   app.get('/', { preHandler: [authenticate] }, async (request, reply) => {
     const { tenantId } = request.user
 
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const tomorrow = new Date(today)
-    tomorrow.setDate(tomorrow.getDate() + 1)
+    // "Today" and "this month" are the PHARMACY's local day and month — the server runs on UTC,
+    // which used to start an Indian pharmacy's day at 05:30 IST.
+    const { timezone } = await getTenantRegion(tenantId)
+    const now = new Date()
+    const today = startOfZonedDay(now, timezone)
+    const tomorrow = addZonedDays(now, 1, timezone)
     const ninetyDaysOut = new Date(today.getTime() + 90 * 24 * 60 * 60 * 1000)
     // Current month bounds for finance tiles
-    const monthStart = new Date(Date.UTC(today.getFullYear(), today.getMonth(), 1))
-    const monthEnd = new Date(Date.UTC(today.getFullYear(), today.getMonth() + 1, 1))
+    const { from: monthStart, to: monthEnd } = currentZonedMonthRange(now, timezone)
 
     const [
       todaySales,
@@ -187,14 +190,14 @@ export async function dashboardRoutes(app: FastifyInstance) {
     // Revenue chart (last 7 days)
     const revenueChart = await prisma.$queryRaw<{ date: string; revenue: number; orders: bigint }[]>`
       SELECT
-        DATE("createdAt") as date,
+        DATE(("createdAt" AT TIME ZONE 'UTC') AT TIME ZONE ${timezone}) as date,
         SUM(total) as revenue,
         COUNT(*) as orders
       FROM "Order"
       WHERE "tenantId" = ${tenantId}
         AND type = 'SALE'
-        AND "createdAt" >= ${new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)}
-      GROUP BY DATE("createdAt")
+        AND "createdAt" >= ${addZonedDays(now, -7, timezone)}
+      GROUP BY 1 -- by position: the timezone is a bound parameter, so a repeated expression wouldn't match
       ORDER BY date ASC
     `
 
@@ -287,21 +290,22 @@ export async function dashboardRoutes(app: FastifyInstance) {
     const period = query.period ?? '30d'
 
     const days = period === '7d' ? 7 : period === '30d' ? 30 : period === '90d' ? 90 : 365
-    const from = new Date(Date.now() - days * 24 * 60 * 60 * 1000)
+    const { timezone } = await getTenantRegion(tenantId)
+    const from = addZonedDays(new Date(), -days, timezone) // local midnight, N days ago
 
     const where: Record<string, unknown> = { tenantId, type: 'SALE', createdAt: { gte: from } }
     if (query.storeId) where.storeId = query.storeId
 
     const salesByDay = await prisma.$queryRaw<{ date: string; revenue: number; count: bigint }[]>`
       SELECT
-        DATE("createdAt") as date,
+        DATE(("createdAt" AT TIME ZONE 'UTC') AT TIME ZONE ${timezone}) as date,
         SUM(total) as revenue,
         COUNT(*) as count
       FROM "Order"
       WHERE "tenantId" = ${tenantId}
         AND type = 'SALE'
         AND "createdAt" >= ${from}
-      GROUP BY DATE("createdAt")
+      GROUP BY 1 -- by position: the timezone is a bound parameter, so a repeated expression wouldn't match
       ORDER BY date ASC
     `
 

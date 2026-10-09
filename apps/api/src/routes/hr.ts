@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '@rxflow/db'
 import { authenticate } from '../middleware/auth.js'
+import { phoneSchema, paymentMethodSchema } from '../utils/regional.js'
 import { getPaginationParams, buildPaginationMeta } from '../utils/pagination.js'
 import { audit } from '../utils/audit.js'
 
@@ -59,7 +60,7 @@ export async function hrRoutes(app: FastifyInstance) {
 
   const employeeSchema = z.object({
     name: z.string().min(1),
-    phone: z.string().min(10),
+    phone: phoneSchema,
     email: z.string().email().optional().or(z.literal('').transform(() => undefined)),
     employeeCode: z.string().optional(),
     designation: z.string().optional(),
@@ -340,7 +341,7 @@ export async function hrRoutes(app: FastifyInstance) {
   app.post('/payroll/payslip/:id/pay', { preHandler: [authenticate] }, async (request, reply) => {
     const { tenantId, userId } = request.user
     const { id } = request.params as { id: string }
-    const body = z.object({ method: z.enum(['CASH', 'UPI', 'NEFT', 'RTGS', 'CHEQUE', 'CARD']).default('NEFT') }).parse(request.body)
+    const body = z.object({ method: paymentMethodSchema.default('NEFT') }).parse(request.body)
 
     const slip = await prisma.payslip.findFirst({ where: { id, payrollRun: { tenantId } }, include: { payrollRun: true } })
     if (!slip) return reply.status(404).send({ success: false, error: 'Payslip not found' })

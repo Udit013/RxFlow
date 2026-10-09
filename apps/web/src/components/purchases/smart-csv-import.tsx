@@ -11,6 +11,7 @@ import { authService } from '@/lib/auth'
 import { cn, formatCurrency } from '@/lib/utils'
 import { PARSERS, autoDetect, parseWith, looksLikeHtfFormat } from '@/lib/purchase-import/registry'
 import type { NormalizedLine } from '@/lib/purchase-import/types'
+import { getActiveRegion } from '@/lib/region'
 
 interface MatchCandidate { id: string; name: string; strength?: string; manufacturer?: string; mrp?: number; hsn?: string; gstRate?: number; score: number }
 
@@ -179,7 +180,7 @@ export function SmartCsvImport({ onUseGenericMapper }: { onUseGenericMapper?: ()
               packSize: r.pack || '1',
               mrp: r.mrp || 0,
               hsn: r.hsn || '30049099',
-              gstRate: r.gstRate ?? 12,
+              gstRate: r.gstRate ?? getActiveRegion().tax.defaultRate,
             })
             medicineId = created.data.data.id
           } catch {
@@ -195,7 +196,7 @@ export function SmartCsvImport({ onUseGenericMapper }: { onUseGenericMapper?: ()
           purchasePrice: r.purchaseRate,
           mrp: r.mrp,
           sellingPrice: r.mrp,
-          gstRate: r.gstRate ?? 12,
+          gstRate: r.gstRate ?? getActiveRegion().tax.defaultRate,
           discountPercent: r.discountPercent ?? 0,
         })
       }

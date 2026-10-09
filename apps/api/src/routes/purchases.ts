@@ -200,7 +200,7 @@ export async function purchaseRoutes(app: FastifyInstance) {
     const body = z.object({ names: z.array(z.string()).max(2000) }).parse(request.body)
 
     const allMedicines = await prisma.medicine.findMany({
-      where: { isActive: true, ...catalogWhere(request.user.tenantId) },
+      where: { isActive: true, ...(await catalogWhere(request.user.tenantId)) },
       select: { id: true, name: true, genericName: true, brandName: true, strength: true, manufacturerName: true, mrp: true, hsn: true, gstRate: true, dosageForm: true },
       take: 5000,
     })

@@ -80,6 +80,7 @@ enum PaymentMethod {
   CHEQUE
   CREDIT
   CARD
+  BANK_TRANSFER
 }
 
 enum InvoiceType {
@@ -238,6 +239,14 @@ model Tenant {
   trialEndsAt       DateTime?
   // Operations flags
   allowNegativeStock Boolean         @default(false)
+  // Regional settings (packages/regional). Defaults = India, so tenants created before
+  // localisation keep their behaviour. `country` selects the RegionProfile (tax system, labels,
+  // drug-tier meaning, registers); the rest override that profile's defaults.
+  country               String       @default("IN")
+  currency              String       @default("INR")
+  locale                String       @default("en-IN")
+  timezone              String       @default("Asia/Kolkata")
+  fiscalYearStartMonth  Int          @default(4)
   settings          Json             @default("{}")
   metadata          Json             @default("{}")
   createdAt         DateTime         @default(now())
@@ -426,6 +435,9 @@ model Medicine {
   // a private copy that points back via forkedFromId and hides the original for that tenant.
   ownerTenantId        String?
   forkedFromId         String?
+  // Market this catalog entry belongs to (brand names differ by country). NULL = international,
+  // visible everywhere. Shared rows are filtered to the tenant's country; private rows ignore it.
+  country              String?
   // Metadata
   createdAt            DateTime     @default(now())
   updatedAt            DateTime     @updatedAt
@@ -443,6 +455,7 @@ model Medicine {
 
   @@index([genericName])
   @@index([ownerTenantId])
+  @@index([country])
   @@index([forkedFromId])
   @@index([manufacturerName])
   @@index([dosageForm])
@@ -766,6 +779,8 @@ model Invoice {
   roundOff      Float         @default(0)
   // Non-taxable charges carried from the order (e.g. purchase transport), included in grandTotal
   otherCharges  Float         @default(0)
+  // Invoice-level tax components, grouped by code + rate (see InvoiceItem.taxBreakdown)
+  taxBreakdown  Json?
   grandTotal    Float
   paymentStatus PaymentStatus @default(PENDING)
   dueDate       DateTime?
@@ -815,6 +830,10 @@ model InvoiceItem {
   sgstAmount      Float    @default(0)
   igstRate        Float    @default(0)
   igstAmount      Float    @default(0)
+  // Country-agnostic tax: total tax on the line + its components [{code,label,rate,amount}].
+  // The CGST/SGST/IGST columns above stay populated for Indian GST (GSTR reports read them).
+  taxAmount       Float    @default(0)
+  taxBreakdown    Json?
   total           Float
 
   invoice  Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)

@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { authService } from '@/lib/auth'
 import { cn, formatCurrency } from '@/lib/utils'
+import { getActiveRegion } from '@/lib/region'
 
 // ── Field definitions ────────────────────────────────────────────────────────
 
@@ -209,7 +210,8 @@ export function CsvImportFlow() {
         const qty = Number(r[mapping.quantity!] ?? 0)
         const buy = Number(r[mapping.purchasePrice!] ?? 0)
         const mrp = Number(r[mapping.mrp!] ?? 0)
-        const gst = mapping.gstRate ? Number(r[mapping.gstRate] ?? 12) : 12
+        const fallbackRate = getActiveRegion().tax.defaultRate
+        const gst = mapping.gstRate ? Number(r[mapping.gstRate] ?? fallbackRate) : fallbackRate
         const disc = mapping.discountPercent ? Number(r[mapping.discountPercent] ?? 0) : 0
 
         const cand = matches[i]?.candidates ?? []

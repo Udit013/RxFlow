@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '@rxflow/db'
 import { authenticate } from '../middleware/auth.js'
 import { catalogWhere, usableWhere, updateMedicineForTenant } from '../utils/medicine-scope.js'
+import { getTenantRegion } from '../utils/regional.js'
 import { getPaginationParams, buildPaginationMeta } from '../utils/pagination.js'
 
 const optStr = (v: unknown) => (v === '' ? undefined : v)
@@ -24,9 +25,9 @@ export const createMedicineSchema = z.object({
   packSizeNumeric: z.number().int().optional(),
   packUnit: z.string().default('tablets'),
   mrp: z.number().min(0).optional(),
-  gstRate: z.number().min(0).max(100).default(12),
+  gstRate: z.number().min(0).max(100).optional(), // default comes from the tenant's country
   schedule: z.enum(['OTC','SCHEDULE_H','SCHEDULE_H1','SCHEDULE_X','SCHEDULE_G']).default('OTC'),
-  requiresPrescription: z.boolean().default(false),
+  requiresPrescription: z.boolean().optional(), // default follows the country's rule for the tier
   aliases: z.array(z.string()).default([]),
   barcodes: z.array(z.string()).default([]),
   searchTokens: z.array(z.string()).default([]),
@@ -72,7 +73,7 @@ export async function medicineRoutes(app: FastifyInstance) {
       limit: Number(query.limit),
     })
 
-    const where: Record<string, unknown> = { isActive: true, AND: [catalogWhere(tenantId)] }
+    const where: Record<string, unknown> = { isActive: true, AND: [await catalogWhere(tenantId)] }
 
     if (query.search) {
       where.OR = [
@@ -133,11 +134,15 @@ export async function medicineRoutes(app: FastifyInstance) {
   // POST /api/v1/medicines
   app.post('/', { preHandler: [authenticate] }, async (request, reply) => {
     const body = createMedicineSchema.parse(request.body)
+    const region = await getTenantRegion(request.user.tenantId)
 
     const medicine = await prisma.medicine.create({
       data: {
         ...body,
         ownerTenantId: request.user.tenantId, // private to the creating tenant
+        country: region.country,
+        gstRate: body.gstRate ?? region.tax.defaultRate,
+        requiresPrescription: body.requiresPrescription ?? region.drugSchedules[body.schedule].requiresPrescription,
         // Fill DB-required columns the form may leave blank, derived from essentials.
         genericName: body.genericName || body.name,
         brandName: body.brandName || body.name,
@@ -188,6 +193,7 @@ export async function medicineRoutes(app: FastifyInstance) {
       })).min(1).max(2000),
     })
     const { medicines } = bulkSchema.parse(request.body)
+    const region = await getTenantRegion(request.user.tenantId)
 
     let created = 0
     let skipped = 0
@@ -198,7 +204,7 @@ export async function medicineRoutes(app: FastifyInstance) {
       try {
         const existing = await prisma.medicine.findFirst({
           where: {
-            ...catalogWhere(request.user.tenantId),
+            ...(await catalogWhere(request.user.tenantId)),
             name: { equals: m.name, mode: 'insensitive' },
             strength: m.strength,
             manufacturerName: { equals: m.manufacturerName, mode: 'insensitive' },
@@ -219,14 +225,15 @@ export async function medicineRoutes(app: FastifyInstance) {
             packUnit: m.packUnit ?? 'tablets',
             mrp: m.mrp ?? 0,
             hsn: m.hsn,
-            gstRate: m.gstRate ?? 12,
+            gstRate: m.gstRate ?? region.tax.defaultRate,
             schedule: m.schedule ?? 'OTC',
-            requiresPrescription: m.requiresPrescription ?? false,
+            requiresPrescription: m.requiresPrescription ?? region.drugSchedules[m.schedule ?? 'OTC'].requiresPrescription,
             aliases: m.aliases ?? [],
             barcodes: m.barcodes ?? [],
             searchTokens: m.searchTokens ?? [],
             isVerified: false,
             ownerTenantId: request.user.tenantId,
+            country: region.country,
           },
         })
         created++
@@ -338,7 +345,7 @@ export async function medicineRoutes(app: FastifyInstance) {
     const { barcode } = request.params as { barcode: string }
 
     const medicine = await prisma.medicine.findFirst({
-      where: { barcodes: { has: barcode }, isActive: true, ...catalogWhere(request.user.tenantId) },
+      where: { barcodes: { has: barcode }, isActive: true, ...(await catalogWhere(request.user.tenantId)) },
       include: { compositions: true },
     })
 

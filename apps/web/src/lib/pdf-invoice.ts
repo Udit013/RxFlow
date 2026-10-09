@@ -10,6 +10,23 @@ async function loadPdfLib() {
   return { JsPDF, autoTable }
 }
 import { formatCurrency, formatDate } from './utils'
+import { getActiveRegion } from './region'
+import { lineTaxComponents, taxColumns, invoiceTaxRows } from './invoice-tax'
+
+/**
+ * Money for the PDF. jsPDF's built-in Helvetica only covers WinAnsi, which has $ £ € ¥ but not
+ * ₹ (or most other symbols) — those printed as a wrong glyph. Use the ISO code instead
+ * ("INR 1,064.00") whenever the symbol isn't printable.
+ */
+function pdfMoney(amount: number): string {
+  const { currency, locale } = getActiveRegion()
+  const display = ['USD', 'GBP', 'EUR', 'JPY'].includes(currency) ? 'symbol' : 'code'
+  try {
+    return new Intl.NumberFormat(locale, { style: 'currency', currency, currencyDisplay: display }).format(amount)
+  } catch {
+    return formatCurrency(amount)
+  }
+}
 
 interface InvoiceItem {
   medicineName: string
@@ -25,6 +42,7 @@ interface InvoiceItem {
   sgstAmount?: number
   igstRate?: number
   igstAmount?: number
+  taxBreakdown?: unknown
   total?: number
   taxableAmount?: number
 }
@@ -74,13 +92,14 @@ export async function generateInvoicePdf(invoice: InvoiceData, tenant: TenantHea
   if (tenant.address) { doc.text(tenant.address, margin, y); y += 4 }
   if (tenant.phone) { doc.text(`Phone: ${tenant.phone}`, margin, y); y += 4 }
   if (tenant.email) { doc.text(`Email: ${tenant.email}`, margin, y); y += 4 }
-  if (tenant.gstin) { doc.text(`GSTIN: ${tenant.gstin}`, margin, y); y += 4 }
-  if (tenant.drugLicense) { doc.text(`Drug Lic: ${tenant.drugLicense}`, margin, y); y += 4 }
+  const region = getActiveRegion()
+  if (tenant.gstin) { doc.text(`${region.fields.taxId.label}: ${tenant.gstin}`, margin, y); y += 4 }
+  if (tenant.drugLicense) { doc.text(`${region.fields.license.label}: ${tenant.drugLicense}`, margin, y); y += 4 }
 
   // Right side — invoice title + meta
   const isCreditNote = invoice.type === 'CREDIT_NOTE'
   const isDebitNote = invoice.type === 'DEBIT_NOTE'
-  const title = isCreditNote ? 'CREDIT NOTE' : isDebitNote ? 'DEBIT NOTE' : 'TAX INVOICE'
+  const title = isCreditNote ? 'CREDIT NOTE' : isDebitNote ? 'DEBIT NOTE' : region.tax.invoiceTitle.toUpperCase()
   doc.setFontSize(20).setFont('helvetica', 'bold')
   if (isCreditNote) doc.setTextColor(180, 30, 30)
   doc.text(title, pageWidth - margin, 18, { align: 'right' })
@@ -113,14 +132,15 @@ export async function generateInvoicePdf(invoice: InvoiceData, tenant: TenantHea
     if ((party as any).phone) { doc.text((party as any).phone, margin, by); by += 4 }
     const addr = [(party as any).addressLine1, (party as any).city, (party as any).state, (party as any).pincode].filter(Boolean).join(', ')
     if (addr) { doc.text(addr, margin, by); by += 4 }
-    if ((party as any).gstin) { doc.text(`GSTIN: ${(party as any).gstin}`, margin, by); by += 4 }
+    if ((party as any).gstin) { doc.text(`${region.fields.taxId.label}: ${(party as any).gstin}`, margin, by); by += 4 }
     y = by + 2
   }
 
-  // Items table
+  // Items table — one column per tax component charged (CGST/SGST, IGST, VAT, sales tax …)
+  const taxCols = taxColumns(invoice.items)
   autoTable(doc, {
     startY: y,
-    head: [['#', 'Item', 'Batch', 'Exp', 'HSN', 'Qty', 'Rate', 'CGST', 'SGST', 'Total']],
+    head: [['#', 'Item', 'Batch', 'Exp', region.fields.productCode.label.replace(/ code$/i, ''), 'Qty', 'Rate', ...taxCols.map((c) => c.label), 'Total']],
     body: invoice.items.map((it, i) => [
       i + 1,
       it.medicineName,
@@ -128,20 +148,20 @@ export async function generateInvoicePdf(invoice: InvoiceData, tenant: TenantHea
       it.expiryDate ? formatDate(it.expiryDate, 'MM/YY') : '—',
       it.hsn ?? '—',
       it.quantity,
-      formatCurrency(it.unitPrice),
-      it.cgstAmount ? `${it.cgstRate ?? 0}% ${formatCurrency(it.cgstAmount)}` : '—',
-      it.sgstAmount ? `${it.sgstRate ?? 0}% ${formatCurrency(it.sgstAmount)}` : '—',
-      formatCurrency(it.total ?? 0),
+      pdfMoney(it.unitPrice),
+      ...taxCols.map((col) => {
+        const c = lineTaxComponents(it).find((x) => x.code === col.code)
+        return c?.amount ? `${c.rate}% ${pdfMoney(c.amount)}` : '—'
+      }),
+      pdfMoney(it.total ?? 0),
     ]),
     styles: { fontSize: 8, cellPadding: 2 },
     headStyles: { fillColor: [7, 122, 206], textColor: 255, fontStyle: 'bold' },
     columnStyles: {
       0: { cellWidth: 8 },
       5: { halign: 'center' },
-      6: { halign: 'right' },
-      7: { halign: 'right' },
-      8: { halign: 'right' },
-      9: { halign: 'right' },
+      // Rate, each tax column and Total are right-aligned
+      ...Object.fromEntries(Array.from({ length: taxCols.length + 2 }, (_, k) => [6 + k, { halign: 'right' as const }])),
     },
     margin: { left: margin, right: margin },
   })
@@ -157,16 +177,14 @@ export async function generateInvoicePdf(invoice: InvoiceData, tenant: TenantHea
     doc.text(value, pageWidth - margin, ty, { align: 'right' })
     ty += 5
   }
-  totalsRow('Subtotal', formatCurrency(invoice.subtotal))
-  if (invoice.discountAmount > 0) totalsRow('Discount', `-${formatCurrency(invoice.discountAmount)}`)
-  if (invoice.cgst > 0) totalsRow('CGST', formatCurrency(invoice.cgst))
-  if (invoice.sgst > 0) totalsRow('SGST', formatCurrency(invoice.sgst))
-  if (invoice.igst > 0) totalsRow('IGST', formatCurrency(invoice.igst))
-  if ((invoice.otherCharges ?? 0) > 0) totalsRow('Transport / other', formatCurrency(invoice.otherCharges!))
-  if (Math.abs(invoice.roundOff ?? 0) >= 0.01) totalsRow('Round off', formatCurrency(invoice.roundOff!))
+  totalsRow('Subtotal', pdfMoney(invoice.subtotal))
+  if (invoice.discountAmount > 0) totalsRow('Discount', `-${pdfMoney(invoice.discountAmount)}`)
+  for (const row of invoiceTaxRows(invoice)) if (row.amount > 0) totalsRow(row.label, pdfMoney(row.amount))
+  if ((invoice.otherCharges ?? 0) > 0) totalsRow('Transport / other', pdfMoney(invoice.otherCharges!))
+  if (Math.abs(invoice.roundOff ?? 0) >= 0.01) totalsRow('Round off', pdfMoney(invoice.roundOff!))
   doc.setDrawColor(200).line(totalsX, ty - 1, pageWidth - margin, ty - 1)
   ty += 2
-  totalsRow(isCreditNote ? 'Refund Amount' : 'Grand Total', formatCurrency(invoice.grandTotal), true)
+  totalsRow(isCreditNote ? 'Refund Amount' : 'Grand Total', pdfMoney(invoice.grandTotal), true)
 
   if (isCreditNote && invoice.notes) {
     ty += 4
@@ -207,7 +225,7 @@ export function buildWhatsAppInvoiceMessage(invoice: InvoiceData, tenant: Tenant
     invoice.items.length > 10 ? `... +${invoice.items.length - 10} more items` : '',
     '',
     `Subtotal: ${formatCurrency(invoice.subtotal)}`,
-    `Tax: ${formatCurrency(invoice.totalTax)}`,
+    `${getActiveRegion().tax.label}: ${formatCurrency(invoice.totalTax)}`,
     isCreditNote ? `*Refund: ${formatCurrency(invoice.grandTotal)}*` : `*Total: ${formatCurrency(invoice.grandTotal)}*`,
     isCreditNote && invoice.notes ? `Reason: ${invoice.notes}` : '',
     `Status: ${invoice.paymentStatus}`,

@@ -563,6 +563,7 @@ const RULES: Rule[] = [
   R(READ, 'hr/*', FINANCE), // salaries, payroll
   R(READ, 'accounts/*', FINANCE),
   R(READ, 'reports/schedule-h1-register', [...FINANCE, 'PHARMACIST']),
+  R(READ, 'reports/controlled-register', [...FINANCE, 'PHARMACIST']), // country-neutral name of the same register
   R(READ, 'reports/license-expiry', [...FINANCE, 'PHARMACIST']),
   R(READ, 'reports/*', FINANCE),
   R(READ, 'sales-reps/:id/commission-report', FINANCE),

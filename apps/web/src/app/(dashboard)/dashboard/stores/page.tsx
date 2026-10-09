@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { authService } from '@/lib/auth'
 import { cn, formatDate } from '@/lib/utils'
+import { useRegion } from '@/lib/region'
 
 interface StoreRow {
   id: string
@@ -37,6 +38,7 @@ interface StoreForm {
 }
 
 export default function StoresPage() {
+  const region = useRegion()
   const queryClient = useQueryClient()
   const [showModal, setShowModal] = useState<'new' | { id: string } | null>(null)
   const [user] = useState(() => authService.getStoredUser())
@@ -113,7 +115,7 @@ export default function StoresPage() {
                   </p>
                 )}
                 {s.phone && <p className="flex items-center gap-1.5"><Phone className="w-3 h-3" />{s.phone}</p>}
-                {s.gstin && <p className="font-mono">GSTIN: {s.gstin}</p>}
+                {s.gstin && <p className="font-mono">{region.fields.taxId.label}: {s.gstin}</p>}
                 {s.drugLicenseNumber && <p className="font-mono">DL: {s.drugLicenseNumber}</p>}
                 <p className="text-[10px] text-slate-400 pt-1">Created {formatDate(s.createdAt)}</p>
               </div>
@@ -143,6 +145,7 @@ export default function StoresPage() {
 }
 
 function StoreModal({ existing, onClose, onSaved }: { existing?: StoreRow; onClose: () => void; onSaved: () => void }) {
+  const region = useRegion()
   const isEdit = !!existing
   const { register, handleSubmit, formState: { errors } } = useForm<StoreForm>({
     defaultValues: existing ? {
@@ -202,12 +205,12 @@ function StoreModal({ existing, onClose, onSaved }: { existing?: StoreRow; onClo
               <input className="input" {...register('city', { required: true })} />
             </div>
             <div>
-              <label className="label">State *</label>
+              <label className="label">{region.fields.region.label} *</label>
               <input className="input" {...register('state', { required: true })} placeholder="Maharashtra" />
             </div>
             <div>
-              <label className="label">Pincode *</label>
-              <input className="input" {...register('pincode', { required: true, minLength: 4 })} />
+              <label className="label">{region.fields.postalCode.label}</label>
+              <input className="input" {...register('pincode')} />
             </div>
           </div>
           <div>
@@ -216,11 +219,11 @@ function StoreModal({ existing, onClose, onSaved }: { existing?: StoreRow; onClo
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="label">GSTIN (if different from tenant)</label>
+              <label className="label">{region.fields.taxId.label} (if different from the business)</label>
               <input className="input font-mono text-xs" {...register('gstin')} />
             </div>
             <div>
-              <label className="label">Drug License #</label>
+              <label className="label">{region.fields.license.label}</label>
               <input className="input font-mono text-xs" {...register('drugLicenseNumber')} />
             </div>
           </div>

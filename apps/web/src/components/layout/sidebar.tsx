@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { useUi } from '@/lib/ui-store'
 import { authService } from '@/lib/auth'
 import { canAccess } from '@rxflow/types'
+import { useT } from '@/lib/i18n'
 import {
   LayoutDashboard, Package, ShoppingCart, FileText,
   Users, Truck, Pill, BarChart3, Settings,
@@ -68,6 +69,7 @@ const navItems = [
 ]
 
 export function Sidebar() {
+  const t = useT()
   const pathname = usePathname()
   // Hide destinations the signed-in role can't use (the API enforces the same matrix).
   const [role, setRole] = useState<string | null>(null)
@@ -129,7 +131,7 @@ export function Sidebar() {
             type="button"
             onClick={() => setOpen(false)}
             className="lg:hidden -mr-1.5 p-1.5 rounded-sm text-brand-200/70 hover:text-paper hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
-            aria-label="Close navigation"
+            aria-label={t('Close navigation')}
           >
             <X className="w-4 h-4" />
           </button>
@@ -140,7 +142,7 @@ export function Sidebar() {
           {sections.map((section) => (
             <div key={section.label} className="mb-5">
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-300/60 px-5 mb-1.5">
-                {section.label}
+                {t(section.label)}
               </p>
               <ul>
                 {section.items.map((item) => {
@@ -164,7 +166,7 @@ export function Sidebar() {
                         )}
                       >
                         <item.icon aria-hidden="true" className={cn('w-4 h-4 shrink-0', isActive ? 'text-brand-300' : 'text-brand-200/50')} />
-                        {item.label}
+                        {t(item.label)}
                       </Link>
                     </li>
                   )

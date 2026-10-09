@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/Udit013/RxFlow/actions/workflows/ci.yml/badge.svg)](https://github.com/Udit013/RxFlow/actions/workflows/ci.yml)
 
-> A modern, full-featured pharmacy ERP for the Indian market — inventory, GST billing, multi-store, accounts, payroll, and compliance — built to replace legacy tools like Marg, Tally, and Pharmarack.
+> A modern, full-featured pharmacy ERP — inventory, tax-compliant billing, multi-store, accounts, payroll, and compliance. Built **India-first** to replace legacy tools like Marg, Tally, and Pharmarack, and configurable for **any country**: currency, tax system, formats, regulatory labels and language come from per-country profiles.
 
 **Live demo:** [rx-flow-web.vercel.app](https://rx-flow-web.vercel.app) — click **Create account** to spin up your own pharmacy workspace.
 
@@ -14,7 +14,7 @@
 
 A cloud-native, multi-tenant pharmacy management system. Each signup creates an isolated pharmacy workspace with its own stores, staff, inventory, and books.
 
-**Built for:** retail pharmacies · wholesale distributors · chain pharmacies · hospitals · clinics · suppliers.
+**Built for:** retail pharmacies · wholesale distributors · chain pharmacies · hospitals · clinics · suppliers — in India and worldwide (bundled profiles: India, United States, United Kingdom, UAE, plus a configurable international profile).
 
 ---
 
@@ -46,6 +46,14 @@ A cloud-native, multi-tenant pharmacy management system. Each signup creates an 
 - **Compliance** — Schedule H/H1/X register, drug-license expiry alerts
 - **Reports** — stock valuation, PDF + **Excel (.xlsx)** + CSV export
 
+### Global by configuration
+- **Per-country profiles** (`packages/regional`) — currency, locale, timezone, fiscal year, tax engine, field labels & validation (GSTIN / VAT no. / EIN / TRN, PIN / ZIP / postcode), drug-classification labels, controlled-drug register, payment methods
+- **Tax engines** — India GST (CGST+SGST / IGST), VAT, US sales tax, or none; India keeps GSTR-1/3B, every country gets a tax summary report
+- **Local time** — "today", monthly reports and fiscal-year document numbering follow the pharmacy's timezone and fiscal year
+- **Per-market catalogs** — shared medicines are scoped to the pharmacy's country
+- **Languages** — app shell in English, Hindi and Spanish; untranslated text falls back to English
+- **Settings → Region & Tax** with a live preview; existing pharmacies default to India and behave exactly as before
+
 ### Platform
 - **Auth** — email/password (bcrypt) or email OTP; short-lived access token in memory + rotating refresh token in an **httpOnly cookie**, with per-device sessions (sign out one device or all); self-serve signup
 - **Role-based access** — one permission matrix (Admin, Store Manager, Pharmacist, Sales Rep, Accountant, Delivery Staff, Viewer) enforced by the API and reflected in the navigation
@@ -68,7 +76,8 @@ rxflow/                         ← Monorepo (pnpm workspaces + Turborepo)
 │   └── web/                    ← Next.js 14 frontend (App Router)
 ├── packages/
 │   ├── db/                     ← Prisma ORM + PostgreSQL schema
-│   ├── types/                  ← Shared TypeScript types
+│   ├── types/                  ← Shared TypeScript types + role matrix
+│   ├── regional/               ← Country profiles, tax engines, time & format helpers
 │   └── medicine-intelligence/  ← Medicine normalization + fuzzy matching
 ├── render.yaml                 ← Render blueprint (API)
 ├── DEPLOYMENT.md               ← Full free-tier deploy guide
@@ -146,7 +155,7 @@ pnpm test          # run the unit suite (Vitest)
 pnpm test:watch    # watch mode
 ```
 
-63 tests covering the money- and security-critical logic: Indian financial-year boundaries and collision-safe document numbering, GST/discount/commission and invoice arithmetic, the auth middleware and role matrix, medicine copy-on-write, refresh-token hashing, and the multi-distributor CSV parsers — the parser tests are pinned to verbatim rows from real supplier invoices, so a config regression can't silently break an import format.
+82 tests covering the money- and security-critical logic: the regional tax engines, timezone/fiscal-year boundaries (incl. daylight saving) and per-country validation, collision-safe document numbering, GST/VAT/sales-tax/discount/commission and invoice arithmetic, the auth middleware and role matrix, medicine copy-on-write, refresh-token hashing, and the multi-distributor CSV parsers — the parser tests are pinned to verbatim rows from real supplier invoices, so a config regression can't silently break an import format.
 
 ---
 
@@ -197,7 +206,7 @@ See [PROJECT_DOCUMENTATION.md](PROJECT_DOCUMENTATION.md) (Section 5) for the ful
 
 ---
 
-## India-specific compliance
+## India-specific compliance (the India profile)
 
 - **GST** — CGST/SGST/IGST on every invoice, inter-state IGST routing, GSTR-1/3B
 - **HSN codes** per medicine
@@ -215,7 +224,9 @@ pnpm --filter @rxflow/web exec tsc --noEmit   # type-check web
 pnpm --filter @rxflow/api deploy:seed             # reseed demo data
 ```
 
-The schema source of truth is `packages/db/prisma/schema.prisma`. After editing it, run `prisma generate` + `prisma db push`, and add an idempotent SQL file to `packages/db/prisma/manual-migrations/` for production (the Render build runs the latest one).
+The schema source of truth is `packages/db/prisma/schema.prisma`. After editing it, run `prisma generate` + `prisma db push`, and for production add an idempotent SQL file to `packages/db/prisma/manual-migrations/` and list it in `IDEMPOTENT` — the Render build (`packages/db/scripts/deploy-db.sh`) applies every listed file on each deploy.
+
+To support a new country, add a profile under `packages/regional/src/profiles/` — see [PROJECT_DOCUMENTATION.md](PROJECT_DOCUMENTATION.md), Section 20.
 
 For the complete technical handbook — architecture, data model, auth, business logic, and deployment — see [PROJECT_DOCUMENTATION.md](PROJECT_DOCUMENTATION.md).
 

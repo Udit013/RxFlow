@@ -7,7 +7,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, XCircle, Search, TrendingUp, TrendingDown, Save } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
-import { cn, debounce, formatDate } from '@/lib/utils'
+import { cn, debounce, formatDate, formatCurrency } from '@/lib/utils'
 
 const STATUS_STYLES: Record<string, string> = {
   DRAFT: 'badge-neutral',
@@ -139,17 +139,17 @@ export default function StockTakeDetailPage() {
         <div className="metric-card">
           <p className="text-xs text-slate-500 uppercase flex items-center gap-1"><TrendingUp className="w-3 h-3 text-green-600" /> Overage</p>
           <p className="text-lg font-bold text-green-700">+{stats.positive}</p>
-          <p className="text-xs text-green-600">₹{stats.gainValue.toFixed(0)} value</p>
+          <p className="text-xs text-green-600">{formatCurrency(stats.gainValue)} value</p>
         </div>
         <div className="metric-card">
           <p className="text-xs text-slate-500 uppercase flex items-center gap-1"><TrendingDown className="w-3 h-3 text-red-600" /> Shortage</p>
           <p className="text-lg font-bold text-red-700">-{stats.negative}</p>
-          <p className="text-xs text-red-600">₹{stats.lossValue.toFixed(0)} loss</p>
+          <p className="text-xs text-red-600">{formatCurrency(stats.lossValue)} loss</p>
         </div>
         <div className="metric-card">
           <p className="text-xs text-slate-500 uppercase">Net Impact</p>
           <p className={cn('text-lg font-bold', stats.gainValue - stats.lossValue >= 0 ? 'text-green-700' : 'text-red-700')}>
-            ₹{(stats.gainValue - stats.lossValue).toFixed(0)}
+            {formatCurrency(stats.gainValue - stats.lossValue)}
           </p>
         </div>
       </div>

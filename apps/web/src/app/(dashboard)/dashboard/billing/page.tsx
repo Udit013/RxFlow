@@ -7,7 +7,9 @@ import { Search, Trash2, Plus, Minus, ShoppingCart, Receipt, UserCheck, Pause, P
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { authService } from '@/lib/auth'
-import { cn, debounce, formatCurrency } from '@/lib/utils'
+import { cn, debounce, formatCurrency, moneySymbol } from '@/lib/utils'
+import { useRegion, getActiveRegion } from '@/lib/region'
+import { paymentMethodLabel } from '@rxflow/regional'
 
 interface InventoryItem {
   id: string
@@ -35,7 +37,9 @@ interface CartLine {
 interface Customer { id: string; name: string; phone: string; salesRepId?: string | null }
 interface SalesRep { id: string; name: string; defaultCommissionPercent: number }
 
-const PAYMENT_METHODS = ['CASH', 'UPI', 'CARD', 'CREDIT'] as const
+// Quick-pay buttons at the counter: the fast methods the pharmacy's country uses
+// (India: Cash · UPI · Card · Credit — as before; elsewhere UPI simply doesn't appear).
+const QUICK_PAY_METHODS = ['CASH', 'UPI', 'CARD', 'CREDIT']
 
 export default function BillingPage() {
   return (
@@ -57,7 +61,9 @@ function BillingPageInner() {
   const [customerSearch, setCustomerSearch] = useState('')
   const [salesRep, setSalesRep] = useState<SalesRep | null>(null)
   const [commissionPercent, setCommissionPercent] = useState<number>(0)
-  const [paymentMethod, setPaymentMethod] = useState<typeof PAYMENT_METHODS[number]>('CASH')
+  const region = useRegion()
+  const quickPayMethods = region.paymentMethods.filter((m) => QUICK_PAY_METHODS.includes(m))
+  const [paymentMethod, setPaymentMethod] = useState<string>('CASH')
 
   useEffect(() => {
     const user = authService.getStoredUser()
@@ -107,7 +113,7 @@ function BillingPageInner() {
               batchId: inv.batches[0]?.id,
               quantity: cappedQty,
               unitPrice: inv.sellingPrice,
-              taxRate: inv.medicine.gstRate ?? 12,
+              taxRate: inv.medicine.gstRate ?? getActiveRegion().tax.defaultRate,
               available: inv.availableQuantity,
               discountPercent: 0,
               batchPurchaseDiscount: inv.batches[0]?.discountPercent ?? 0,
@@ -175,7 +181,7 @@ function BillingPageInner() {
         batchId: item.batches[0]?.id,
         quantity: 1,
         unitPrice: item.sellingPrice,
-        taxRate: item.medicine.gstRate ?? 12,
+        taxRate: item.medicine.gstRate ?? getActiveRegion().tax.defaultRate,
         available: item.availableQuantity,
         discountPercent: 0,
         batchPurchaseDiscount: item.batches[0]?.discountPercent ?? 0,
@@ -450,7 +456,7 @@ function BillingPageInner() {
                 <tr className="bg-slate-50 text-xs uppercase text-slate-500">
                   <th className="text-left px-4 py-2">Item</th>
                   <th className="text-center px-4 py-2">Qty</th>
-                  <th className="text-right px-4 py-2">Price (₹)</th>
+                  <th className="text-right px-4 py-2">Price ({moneySymbol()})</th>
                   <th className="text-right px-4 py-2">Total</th>
                   <th className="px-2 py-2" />
                 </tr>
@@ -590,7 +596,7 @@ function BillingPageInner() {
         <div>
           <label className="label">Payment Method</label>
           <div className="grid grid-cols-2 gap-2">
-            {PAYMENT_METHODS.map((m) => (
+            {quickPayMethods.map((m) => (
               <button
                 key={m}
                 onClick={() => setPaymentMethod(m)}
@@ -599,7 +605,7 @@ function BillingPageInner() {
                   paymentMethod === m ? 'bg-brand-600 text-white border-brand-600' : 'border-slate-200 hover:bg-slate-50'
                 )}
               >
-                {m}
+                {paymentMethodLabel(region, m)}
               </button>
             ))}
           </div>
@@ -611,7 +617,7 @@ function BillingPageInner() {
             <div className="flex items-center gap-1">
               <select className="border border-surface-300 rounded-sm text-xs px-1 py-0.5 bg-paper" value={specialDiscType} onChange={(e) => setSpecialDiscType(e.target.value as 'PERCENT' | 'AMOUNT')} aria-label="Special discount type">
                 <option value="PERCENT">%</option>
-                <option value="AMOUNT">₹</option>
+                <option value="AMOUNT">{moneySymbol()}</option>
               </select>
               <input type="number" min="0" step="0.5" className="w-16 text-right border border-surface-300 rounded-sm px-1.5 py-0.5 text-xs bg-paper" value={specialDiscValue} onChange={(e) => setSpecialDiscValue(Math.max(0, parseFloat(e.target.value) || 0))} aria-label="Special discount value" />
             </div>

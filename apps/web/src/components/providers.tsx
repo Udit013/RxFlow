@@ -3,6 +3,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { warmUpApi } from '@/lib/api'
+import { useRegion } from '@/lib/region'
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -25,6 +26,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   // Every entry point (login, register, dashboard) starts the API waking immediately.
   useEffect(() => { warmUpApi() }, [])
+
+  // <html lang> follows the pharmacy's locale so screen readers pronounce text correctly.
+  const { locale } = useRegion()
+  useEffect(() => { document.documentElement.lang = locale }, [locale])
 
   return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
 }

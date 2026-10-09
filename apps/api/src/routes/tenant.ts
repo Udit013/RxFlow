@@ -3,6 +3,8 @@ import { z } from 'zod'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@rxflow/db'
 import { authenticate } from '../middleware/auth.js'
+import { phoneSchema, assertTaxId, invalidateTenantRegion } from '../utils/regional.js'
+import { REGION_PROFILES, resolveRegion, isValidCurrency, isValidLocale, isValidTimeZone } from '@rxflow/regional'
 import { audit } from '../utils/audit.js'
 import { assertTenantRefs } from '../utils/tenant-guard.js'
 
@@ -33,9 +35,27 @@ export async function tenantRoutes(app: FastifyInstance) {
       state: z.string().optional(),
       pincode: z.string().optional(),
       allowNegativeStock: z.boolean().optional(),
+      // Regional settings — see packages/regional. Changing them affects documents created from
+      // now on; existing invoices keep the tax and currency they were issued with.
+      country: z.string().trim().toUpperCase().min(2).max(4).optional(),
+      currency: z.string().trim().toUpperCase().refine(isValidCurrency, 'Unknown currency code').optional(),
+      locale: z.string().trim().refine(isValidLocale, 'Unsupported locale').optional(),
+      timezone: z.string().trim().refine(isValidTimeZone, 'Unknown timezone').optional(),
+      fiscalYearStartMonth: z.number().int().min(1).max(12).optional(),
     }).parse(request.body)
 
+    if (body.country && !REGION_PROFILES[body.country]) body.country = 'INTL'
+    // Validate the tax ID against the country it will belong to (new or current).
+    if (body.gstin) {
+      const current = await prisma.tenant.findUnique({
+        where: { id: tenantId },
+        select: { country: true, currency: true, locale: true, timezone: true, fiscalYearStartMonth: true },
+      })
+      assertTaxId(resolveRegion({ ...current, ...(body.country ? { country: body.country } : {}) }), body.gstin)
+    }
+
     const updated = await prisma.tenant.update({ where: { id: tenantId }, data: body })
+    invalidateTenantRegion(tenantId)
     return reply.send({ success: true, data: updated })
   })
 
@@ -63,7 +83,7 @@ export async function tenantRoutes(app: FastifyInstance) {
     const body = z.object({
       name: z.string().min(2),
       email: z.string().email(),
-      phone: z.string().min(10),
+      phone: phoneSchema,
       password: z.string().min(8),
       role: z.enum(['TENANT_ADMIN', 'STORE_MANAGER', 'PHARMACIST', 'SALES_REP', 'ACCOUNTANT', 'DELIVERY_STAFF', 'VIEWER']),
       storeIds: z.array(z.string()).default([]),
@@ -142,7 +162,7 @@ export async function tenantRoutes(app: FastifyInstance) {
       addressLine1: z.string().min(1, 'Address required'),
       city: z.string().min(1, 'City required'),
       state: z.string().min(1, 'State required'),
-      pincode: z.string().min(4, 'Pincode required'),
+      pincode: z.string().default(''), // not every country uses postal codes (e.g. UAE)
       phone: z.string().optional(),
       gstin: z.string().optional(),
       drugLicenseNumber: z.string().optional(),

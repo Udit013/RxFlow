@@ -2,9 +2,11 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '@rxflow/db'
 import { authenticate } from '../middleware/auth.js'
+import { phoneSchema } from '../utils/regional.js'
 import { audit } from '../utils/audit.js'
 import { createMedicineSchema } from './medicines.js'
 import { catalogWhere } from '../utils/medicine-scope.js'
+import { getTenantRegion } from '../utils/regional.js'
 
 /**
  * Tenant-scoped JSON backup/restore.
@@ -38,7 +40,7 @@ export async function backupRoutes(app: FastifyInstance) {
       prisma.supplier.findMany({ where: { tenantId } }),
       prisma.salesRep.findMany({ where: { tenantId } }),
       // Medicines are global, but we still dump the IDs referenced by this tenant's inventory
-      prisma.medicine.findMany({ where: catalogWhere(tenantId), take: 5000 }), // never other tenants' private rows
+      prisma.medicine.findMany({ where: await catalogWhere(tenantId), take: 5000 }), // never other tenants' private rows
       prisma.inventoryItem.findMany({ where: { tenantId } }),
       prisma.batch.findMany({ where: { inventoryItem: { tenantId } } }),
       prisma.order.findMany({ where: { tenantId } }),
@@ -124,6 +126,7 @@ export async function backupRoutes(app: FastifyInstance) {
     // names/MRP/GST via an uploaded file) — it only re-inserts medicines that are missing,
     // and only through the same validated field whitelist as POST /medicines.
     if (Array.isArray(dump.medicines)) {
+      const region = await getTenantRegion(tenantId)
       for (const m of dump.medicines) {
         if (typeof m?.id !== 'string') continue
         const existing = await prisma.medicine.findUnique({ where: { id: m.id }, select: { id: true } })
@@ -143,6 +146,9 @@ export async function backupRoutes(app: FastifyInstance) {
               ...v,
               id: m.id,
               ownerTenantId: tenantId,
+              country: region.country,
+              gstRate: v.gstRate ?? region.tax.defaultRate,
+              requiresPrescription: v.requiresPrescription ?? region.drugSchedules[v.schedule].requiresPrescription,
               genericName: v.genericName || v.name,
               brandName: v.brandName || v.name,
               strength: v.strength || 'NA',
@@ -229,7 +235,7 @@ export async function backupRoutes(app: FastifyInstance) {
     const body = z.object({
       rows: z.array(z.object({
         name: z.string().min(1),
-        phone: z.string().min(10),
+        phone: phoneSchema,
         email: z.string().optional(),
         gstin: z.string().optional(),
         city: z.string().optional(),
@@ -279,7 +285,7 @@ export async function backupRoutes(app: FastifyInstance) {
       rows: z.array(z.object({
         name: z.string().min(1),
         companyName: z.string().min(1),
-        phone: z.string().min(10),
+        phone: phoneSchema,
         email: z.string().optional(),
         gstin: z.string().optional(),
         city: z.string().optional(),

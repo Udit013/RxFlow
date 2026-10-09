@@ -16,7 +16,7 @@ export async function categoryRoutes(app: FastifyInstance) {
     // Count medicines per category name, over the medicines this tenant actually sees
     const counts = await prisma.medicine.groupBy({
       by: ['category'],
-      where: { category: { in: categories.map((c) => c.name) }, isActive: true, ...catalogWhere(tenantId) },
+      where: { category: { in: categories.map((c) => c.name) }, isActive: true, ...(await catalogWhere(tenantId)) },
       _count: true,
     })
     const countMap = new Map(counts.map((c) => [c.category, c._count]))

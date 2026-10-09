@@ -1,6 +1,8 @@
 /**
  * Medicine catalog scoping.
  *
+ *  - Medicine.country = the market a SHARED row belongs to (NULL = international).
+ *
  * `Medicine` is one table shared by every tenant:
  *  - ownerTenantId = NULL  → shared catalog row (seeded / pre-existing). Read-only to tenants.
  *  - ownerTenantId = T     → private to tenant T (created by T, or T's edited copy of a shared row).
@@ -11,13 +13,23 @@
 import type { Prisma } from '@rxflow/db'
 import { prisma } from '@rxflow/db'
 import { httpError } from './http-error.js'
+import { getTenantRegion } from './regional.js'
 
-/** Catalog listing/search filter: own rows + shared rows this tenant hasn't replaced with a copy. */
-export function catalogWhere(tenantId: string): Prisma.MedicineWhereInput {
+/**
+ * Catalog listing/search filter: the tenant's own rows, plus shared rows for its market
+ * (country, or international = NULL) that it hasn't replaced with a private copy. Brand names
+ * differ by country, so a US pharmacy is not shown India's catalog and vice versa.
+ */
+export async function catalogWhere(tenantId: string): Promise<Prisma.MedicineWhereInput> {
+  const { country } = await getTenantRegion(tenantId)
   return {
     OR: [
       { ownerTenantId: tenantId },
-      { ownerTenantId: null, forks: { none: { ownerTenantId: tenantId } } },
+      {
+        ownerTenantId: null,
+        forks: { none: { ownerTenantId: tenantId } },
+        OR: [{ country }, { country: null }],
+      },
     ],
   }
 }

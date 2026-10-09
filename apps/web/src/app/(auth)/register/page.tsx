@@ -9,13 +9,16 @@ import { z } from 'zod'
 import { toast } from 'sonner'
 import { Eye, EyeOff, Pill, Building2, User, Mail, Phone, Lock } from 'lucide-react'
 import { authService } from '@/lib/auth'
+import { getRegionProfile, listRegionProfiles, isPlausiblePhone, phoneHint } from '@rxflow/regional'
 
 const registerSchema = z.object({
   pharmacyName: z.string().min(2, 'Enter your pharmacy / business name'),
   tenantType: z.enum(['RETAIL_PHARMACY', 'WHOLESALE_DISTRIBUTOR', 'CHAIN_PHARMACY', 'HOSPITAL', 'CLINIC', 'SUPPLIER']),
   name: z.string().min(2, 'Enter your name'),
   email: z.string().email('Enter a valid email'),
-  phone: z.string().min(10, 'Enter a valid phone number'),
+  phone: z.string().refine(isPlausiblePhone, 'Enter a valid phone number'),
+  // Decides tax system, currency, formats and regulatory labels — editable later in Settings
+  country: z.string().min(2),
   password: z.string().min(8, 'At least 8 characters'),
 })
 
@@ -35,10 +38,12 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
 
-  const { register, handleSubmit, formState: { errors } } = useForm<RegisterForm>({
+  const { register, handleSubmit, watch, formState: { errors } } = useForm<RegisterForm>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { tenantType: 'RETAIL_PHARMACY' },
+    defaultValues: { tenantType: 'RETAIL_PHARMACY', country: 'IN' },
   })
+  const countryProfile = getRegionProfile(watch('country'))
+  const phoneWarning = phoneHint(countryProfile, watch('phone'))
 
   const onSubmit = async (data: RegisterForm) => {
     setLoading(true)
@@ -71,7 +76,7 @@ export default function RegisterPage() {
             Open your own<br />book of record.
           </h1>
           <p className="text-brand-200/80 text-[15px] mt-4 max-w-sm leading-relaxed">
-            A private workspace for your pharmacy — inventory, billing, GST and payroll, from the first entry.
+            A private workspace for your pharmacy — inventory, billing, tax and payroll, from the first entry.
           </p>
 
           <div className="mt-12 max-w-sm">
@@ -89,7 +94,7 @@ export default function RegisterPage() {
           </div>
         </div>
 
-        <p className="font-mono text-[11px] text-brand-300/50 tracking-wide">© 2026 RxFlow · built for Indian pharma</p>
+        <p className="font-mono text-[11px] text-brand-300/50 tracking-wide">© 2026 RxFlow · made in India, for pharmacies everywhere</p>
       </div>
 
       {/* Right panel — register form */}
@@ -114,6 +119,18 @@ export default function RegisterPage() {
                 <input className="input pl-9" placeholder="Sunrise Medical Store" {...register('pharmacyName')} />
               </div>
               {errors.pharmacyName && <p className="text-red-500 text-xs mt-1">{errors.pharmacyName.message}</p>}
+            </div>
+
+            <div>
+              <label className="label">Country</label>
+              <select className="input" {...register('country')}>
+                {listRegionProfiles().map((p) => (
+                  <option key={p.code} value={p.code}>{p.flag} {p.name}</option>
+                ))}
+              </select>
+              <p className="text-xs text-slate-500 mt-1">
+                Sets {countryProfile.tax.label}, {countryProfile.currency} and local formats — you can fine-tune these later in Settings.
+              </p>
             </div>
 
             <div>
@@ -145,9 +162,11 @@ export default function RegisterPage() {
                 <label className="label">Phone *</label>
                 <div className="relative">
                   <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input className="input pl-9" placeholder="9876543210" autoComplete="tel" {...register('phone')} />
+                  <input className="input pl-9" placeholder={`${countryProfile.phone.dialCode} …`.trim()} autoComplete="tel" {...register('phone')} />
                 </div>
-                {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone.message}</p>}
+                {errors.phone
+                  ? <p className="text-red-500 text-xs mt-1">{errors.phone.message}</p>
+                  : phoneWarning && <p className="text-amber-600 text-xs mt-1">{phoneWarning}</p>}
               </div>
             </div>
 

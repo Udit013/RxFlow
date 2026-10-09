@@ -183,6 +183,7 @@ function InvoiceRow({ invoice, order }: { invoice: any; order: any }) {
           sgstAmount: it.sgstAmount,
           igstRate: it.igstRate,
           igstAmount: it.igstAmount,
+          taxBreakdown: it.taxBreakdown,
           total: it.total,
         })),
         totalTax: full.totalTax ?? 0,

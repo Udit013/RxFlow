@@ -5,6 +5,7 @@ import { authenticate } from '../middleware/auth.js'
 import { normalizeMedicineName, extractMedicinesFromText } from '@rxflow/medicine-intelligence'
 import { initializeMatcher } from '@rxflow/medicine-intelligence'
 import { env } from '../utils/env.js'
+import { catalogWhere } from '../utils/medicine-scope.js'
 
 // Cache the matcher in memory. One shared promise, so the background warm-up and a request
 // arriving mid-load don't both query and index the catalog.
@@ -48,6 +49,21 @@ async function loadMatcher() {
   )
 }
 
+/**
+ * The matcher is one index of the shared catalog across ALL markets. Keep only results this
+ * tenant's catalog shows (its country's shared rows + international ones, minus rows it has
+ * replaced with a private copy), preserving the matcher's ranking.
+ */
+async function visibleToTenant<T extends { medicine: { id: string } }>(tenantId: string, results: T[]): Promise<T[]> {
+  if (results.length === 0) return results
+  const allowed = await prisma.medicine.findMany({
+    where: { id: { in: results.map((r) => r.medicine.id) }, ...(await catalogWhere(tenantId)) },
+    select: { id: true },
+  })
+  const ok = new Set(allowed.map((m) => m.id))
+  return results.filter((r) => ok.has(r.medicine.id))
+}
+
 export async function medicineIntelligenceRoutes(app: FastifyInstance) {
   // Initialize matcher on plugin load
   // Warm the matcher in the BACKGROUND. Awaiting it here held the server from listening
@@ -71,7 +87,8 @@ export async function medicineIntelligenceRoutes(app: FastifyInstance) {
 
     const { getMatcher } = await import('@rxflow/medicine-intelligence')
     const matcher = getMatcher()
-    const results = matcher.searchWithStrengthFilter(query, limit)
+    // Over-fetch, then drop other markets' entries, so the caller still gets up to `limit`.
+    const results = (await visibleToTenant(request.user.tenantId, matcher.searchWithStrengthFilter(query, limit * 3))).slice(0, limit)
 
     // Log sync event
     await prisma.medicineSyncLog.create({
@@ -117,11 +134,11 @@ export async function medicineIntelligenceRoutes(app: FastifyInstance) {
     const { getMatcher } = await import('@rxflow/medicine-intelligence')
     const matcher = getMatcher()
 
-    const results = extracted.map((name) => ({
+    const results = await Promise.all(extracted.map(async (name) => ({
       extracted: name,
       normalized: normalizeMedicineName(name),
-      matches: matcher.search(name, 3),
-    }))
+      matches: (await visibleToTenant(request.user.tenantId, matcher.search(name, 9))).slice(0, 3),
+    })))
 
     return reply.send({ success: true, data: results })
   })
@@ -149,7 +166,7 @@ export async function medicineIntelligenceRoutes(app: FastifyInstance) {
       await ensureMatcherLoaded()
       const { getMatcher } = await import('@rxflow/medicine-intelligence')
       const matcher = getMatcher()
-      const results = matcher.search(q, Number(limit))
+      const results = (await visibleToTenant(request.user.tenantId, matcher.search(q, Number(limit) * 3))).slice(0, Number(limit))
       return reply.send({
         success: true,
         data: results.map((r) => r.medicine),

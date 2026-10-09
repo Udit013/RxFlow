@@ -9,8 +9,10 @@ import { Sidebar } from '@/components/layout/sidebar'
 import { TopBar } from '@/components/layout/topbar'
 import { CommandPalette } from '@/components/command-palette'
 import { LiveSync } from '@/components/live-sync'
+import { useT } from '@/lib/i18n'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const t = useT()
   const router = useRouter()
   // Gate the shell on a valid session. The access token lives only in memory, so a page load
   // first trades the httpOnly refresh cookie for a new one. Pages render only after that —
@@ -27,7 +29,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
     ensureSession().then((ok) => {
       if (cancelled) return
-      if (ok) setAuthed(true)
+      if (ok) {
+        setAuthed(true)
+        void authService.refreshProfile() // regional settings may have changed elsewhere
+      }
       else {
         clearLocalSession()
         router.replace('/login')
@@ -44,7 +49,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[60] focus:px-3 focus:py-2 focus:rounded-sm focus:bg-ink focus:text-paper focus:text-sm"
       >
-        Skip to content
+        {t('Skip to content')}
       </a>
       <Sidebar />
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">

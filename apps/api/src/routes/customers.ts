@@ -2,19 +2,21 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '@rxflow/db'
 import { authenticate } from '../middleware/auth.js'
+import { phoneSchema, getTenantRegion, assertTaxId } from '../utils/regional.js'
 import { getPaginationParams, buildPaginationMeta } from '../utils/pagination.js'
 import { audit } from '../utils/audit.js'
 
 const customerSchema = z.object({
   name: z.string().min(1),
-  phone: z.string().min(10),
+  phone: phoneSchema,
   email: z.preprocess((v) => (v === '' ? undefined : v), z.string().email().optional()),
   dateOfBirth: z.preprocess((v) => (v === '' ? undefined : v), z.string().transform((d) => new Date(d)).optional()),
   addressLine1: z.string().optional(),
   city: z.string().optional(),
   state: z.string().optional(),
   pincode: z.string().optional(),
-  gstin: z.string().regex(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/, 'Invalid GSTIN format (e.g. 27AAACR5055K1ZV)').optional().or(z.literal('').transform(() => undefined)),
+  // Tax registration number (GSTIN in India, VAT no., EIN, TRN …)
+  gstin: z.preprocess((v) => (v === '' ? undefined : v), z.string().trim().toUpperCase().optional()), // validated per country in the handler
   gstRegistrationType: z.enum(['REGULAR', 'COMPOSITE', 'NON_GST']).optional(),
   drugLicenseNumber: z.preprocess((v) => (v === '' ? undefined : v), z.string().optional()),
   drugLicenseExpiryDate: z.preprocess((v) => (v === '' ? undefined : v), z.string().transform((s) => new Date(s)).optional()),
@@ -67,6 +69,7 @@ export async function customerRoutes(app: FastifyInstance) {
   app.post('/', { preHandler: [authenticate] }, async (request, reply) => {
     const { tenantId } = request.user
     const body = customerSchema.parse(request.body)
+    assertTaxId(await getTenantRegion(tenantId), body.gstin)
 
     const existing = await prisma.customer.findUnique({
       where: { tenantId_phone: { tenantId, phone: body.phone } },
@@ -86,6 +89,7 @@ export async function customerRoutes(app: FastifyInstance) {
     const { id } = request.params as { id: string }
     const { tenantId } = request.user
     const body = customerSchema.partial().parse(request.body)
+    assertTaxId(await getTenantRegion(tenantId), body.gstin)
     const customer = await prisma.customer.findFirst({ where: { id, tenantId } })
     if (!customer) return reply.status(404).send({ success: false, error: 'Customer not found' })
     const updated = await prisma.customer.update({ where: { id }, data: body })

@@ -335,10 +335,13 @@ async function main() {
   ]
 
   for (const med of medicines) {
+    // The demo catalog is Indian (brand names, HSN codes, schedules) — tag it so pharmacies in
+    // other countries don't see it in their shared catalog.
     const existing = await prisma.medicine.findFirst({ where: { name: med.name, ownerTenantId: null } })
     if (!existing) {
       await prisma.medicine.create({
         data: {
+          country: 'IN',
           name: med.name,
           genericName: med.genericName,
           brandName: med.brandName,

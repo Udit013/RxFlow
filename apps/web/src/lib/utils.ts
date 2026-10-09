@@ -3,6 +3,8 @@ import { twMerge } from 'tailwind-merge'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import localizedFormat from 'dayjs/plugin/localizedFormat'
+import { formatMoney, formatPlainNumber, currencySymbol } from '@rxflow/regional'
+import { getActiveRegion } from './region'
 
 dayjs.extend(relativeTime)
 dayjs.extend(localizedFormat)
@@ -25,17 +27,24 @@ export const optionalNumber = {
   },
 }
 
-export function formatCurrency(amount: number, currency = 'INR'): string {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount)
+/**
+ * Money in the pharmacy's currency and locale (₹12,34,567.50 · $1,234,567.50 · £… · AED …).
+ * Pass `currency` only to show an amount in a different currency than the tenant's.
+ */
+export function formatCurrency(amount: number, currency?: string): string {
+  const region = getActiveRegion()
+  return formatMoney(amount, { currency: currency ?? region.currency, locale: region.locale })
 }
 
-export function formatDate(date: string | Date, format = 'DD MMM YYYY'): string {
-  return dayjs(date).format(format)
+/** The tenant currency's symbol as its locale writes it — for field labels like "Price (₹)". */
+export function moneySymbol(): string {
+  const region = getActiveRegion()
+  return currencySymbol({ currency: region.currency, locale: region.locale })
+}
+
+/** Dates in the pharmacy's convention (DD MMM YYYY, MMM D, YYYY …) unless a format is given. */
+export function formatDate(date: string | Date, format?: string): string {
+  return dayjs(date).format(format ?? getActiveRegion().dateFormat)
 }
 
 export function formatRelativeTime(date: string | Date): string {
@@ -43,7 +52,7 @@ export function formatRelativeTime(date: string | Date): string {
 }
 
 export function formatNumber(num: number): string {
-  return new Intl.NumberFormat('en-IN').format(num)
+  return formatPlainNumber(num, getActiveRegion().locale)
 }
 
 export function getDaysUntilExpiry(expiryDate: string | Date): number {

@@ -2,7 +2,7 @@
 const nextConfig = {
   // The app talks to the Fastify API over HTTP (axios), not Server Actions,
   // so no allowedOrigins config is needed.
-  transpilePackages: ['@rxflow/types'],
+  transpilePackages: ['@rxflow/types', '@rxflow/regional'],
   images: {
     domains: ['localhost', 'storage.rxflow.in'],
   },
@@ -10,6 +10,15 @@ const nextConfig = {
   // locally (tsc --noEmit is clean). Type errors STILL fail the build.
   eslint: {
     ignoreDuringBuilds: true,
+  },
+  // Workspace packages are ESM TypeScript, where relative imports must be written with a
+  // `.js` extension (Node's rule). Teach webpack to resolve those to the `.ts` sources.
+  webpack(config) {
+    config.resolve.extensionAlias = {
+      ...(config.resolve.extensionAlias ?? {}),
+      '.js': ['.ts', '.tsx', '.js'],
+    }
+    return config
   },
   // Auth endpoints are proxied through this app's own origin so the API's httpOnly refresh
   // cookie is FIRST-party (same site as the UI). A cross-site cookie from the API's domain

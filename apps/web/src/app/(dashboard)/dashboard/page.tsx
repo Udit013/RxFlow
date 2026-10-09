@@ -8,7 +8,7 @@ import {
 } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { api } from '@/lib/api'
-import { formatCurrency, formatDate, formatNumber } from '@/lib/utils'
+import { formatCurrency, formatDate, formatNumber, moneySymbol } from '@/lib/utils'
 import { MetricCard, SectionCard, EmptyState } from '@/components/ui'
 
 interface DashboardData {
@@ -105,7 +105,7 @@ export default function DashboardPage() {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#eef1f3" vertical={false} />
                 <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#6a7681' }} tickFormatter={(v) => formatDate(v, 'DD MMM')} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: '#6a7681' }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: '#6a7681' }} tickFormatter={(v) => `${moneySymbol()}${(v / 1000).toFixed(0)}k`} axisLine={false} tickLine={false} />
                 <Tooltip contentStyle={{ borderRadius: '0.5rem', border: '1px solid #e3e8ec', fontSize: 12, padding: '6px 10px' }} formatter={(v: number) => [formatCurrency(v), 'Revenue']} />
                 <Area type="monotone" dataKey="revenue" stroke="#0a8a52" fill="url(#rev)" strokeWidth={2} dot={{ fill: '#0a8a52', r: 2.5 }} activeDot={{ r: 4 }} />
               </AreaChart>

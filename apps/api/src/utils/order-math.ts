@@ -1,8 +1,14 @@
 /**
- * Pure order/commission arithmetic — no I/O, fully unit-testable.
+ * Pure order/commission arithmetic — no I/O, fully unit-testable, country-agnostic (tax systems
+ * come from @rxflow/regional).
  * Single source of truth for how line items roll up into an order and how
  * salesman commission is computed, shared by orders + purchases routes.
  */
+
+import {
+  applyTax, taxComponentsFor, legacyGstColumns, sumComponents, roundToIncrement,
+  totalTax as totalTaxOf, type TaxComponent, type TaxContext, type TaxSystemId,
+} from '@rxflow/regional'
 
 export interface OrderLineInput {
   quantity: number
@@ -69,6 +75,10 @@ export function applySpecialDiscount(totals: OrderTotals, special?: SpecialDisco
 export interface InvoiceLineAmounts {
   discountAmount: number
   taxableAmount: number
+  /** Country-agnostic tax: total and components. */
+  taxAmount: number
+  taxBreakdown: TaxComponent[]
+  /** Legacy Indian-GST columns (zero for other tax systems). */
   cgstRate: number
   cgstAmount: number
   sgstRate: number
@@ -86,6 +96,8 @@ export interface InvoiceAmounts {
   sgst: number
   igst: number
   totalTax: number
+  /** Invoice-level components grouped by code + rate. */
+  taxBreakdown: TaxComponent[]
   /** Taxable value after all discounts (stored as Invoice.total). */
   taxable: number
   otherCharges: number
@@ -93,15 +105,26 @@ export interface InvoiceAmounts {
   grandTotal: number
 }
 
+export interface InvoiceTaxSetup {
+  system: TaxSystemId
+  /** Local name of the tax ("GST", "VAT", "Sales tax"). */
+  label: string
+  /** Seller/buyer regions — only India's GST looks at them. */
+  context?: TaxContext
+  /** Round the grand total to this increment (India: 1 = whole rupee; 0.01 = cents). */
+  cashRounding?: number
+}
+
 /**
- * GST invoice arithmetic for an order: per-line CGST+SGST (intra-state) or IGST (inter-state),
- * the order's bill-level special discount spread proportionally across lines (so each line's
- * GST is charged on its reduced value — matching `applySpecialDiscount`), and non-taxable
- * other charges (e.g. purchase transport) added before rounding to the rupee.
+ * Tax-invoice arithmetic for an order, for any country: each line's tax is split into the
+ * components its tax system charges (CGST+SGST / IGST, VAT, sales tax, none), the order's
+ * bill-level special discount is spread proportionally across lines (so tax is charged on each
+ * line's reduced value — matching `applySpecialDiscount`), and non-taxable other charges (e.g.
+ * purchase transport) are added before rounding to the country's cash increment.
  */
 export function computeInvoiceAmounts(
   items: OrderLineInput[],
-  isInterState: boolean,
+  tax: InvoiceTaxSetup,
   special?: SpecialDiscount | null,
   otherCharges = 0,
 ): InvoiceAmounts {
@@ -110,39 +133,39 @@ export function computeInvoiceAmounts(
   const taxableBefore = base.subtotal - base.discountAmount
   const scale = taxableBefore > 0 ? (taxableBefore - specialDiscountAmount) / taxableBefore : 1
 
-  const lines = items.map((item) => {
+  const lines = items.map((item): InvoiceLineAmounts => {
     const lineTotal = item.quantity * item.unitPrice
     const lineDiscount = (lineTotal * item.discountPercent) / 100
     const taxableBeforeSpecial = lineTotal - lineDiscount
     const taxableAmount = taxableBeforeSpecial * scale
-    const cgstRate = isInterState ? 0 : item.taxRate / 2
-    const sgstRate = isInterState ? 0 : item.taxRate / 2
-    const igstRate = isInterState ? item.taxRate : 0
-    const cgstAmount = (taxableAmount * cgstRate) / 100
-    const sgstAmount = (taxableAmount * sgstRate) / 100
-    const igstAmount = (taxableAmount * igstRate) / 100
+    const taxBreakdown = applyTax(taxableAmount, taxComponentsFor(tax.system, tax.label, item.taxRate, tax.context))
+    const taxAmount = totalTaxOf(taxBreakdown)
     return {
       discountAmount: lineDiscount + (taxableBeforeSpecial - taxableAmount),
       taxableAmount,
-      cgstRate, cgstAmount, sgstRate, sgstAmount, igstRate, igstAmount,
-      total: taxableAmount + cgstAmount + sgstAmount + igstAmount,
+      taxAmount,
+      taxBreakdown,
+      ...legacyGstColumns(taxBreakdown),
+      total: taxableAmount + taxAmount,
     }
   })
 
   const sum = (f: (l: InvoiceLineAmounts) => number) => lines.reduce((acc, l) => acc + f(l), 0)
-  const cgst = sum((l) => l.cgstAmount)
-  const sgst = sum((l) => l.sgstAmount)
-  const igst = sum((l) => l.igstAmount)
   const taxable = sum((l) => l.taxableAmount)
-  const totalTax = cgst + sgst + igst
+  const totalTax = sum((l) => l.taxAmount)
   const charges = Math.max(0, otherCharges)
   const raw = taxable + totalTax + charges
-  const grandTotal = Math.round(raw)
+  const grandTotal = roundToIncrement(raw, tax.cashRounding ?? 0.01)
   return {
     lines,
     subtotal: base.subtotal,
     discountAmount: sum((l) => l.discountAmount),
-    cgst, sgst, igst, totalTax, taxable,
+    cgst: sum((l) => l.cgstAmount),
+    sgst: sum((l) => l.sgstAmount),
+    igst: sum((l) => l.igstAmount),
+    totalTax,
+    taxBreakdown: sumComponents(lines.map((l) => l.taxBreakdown)),
+    taxable,
     otherCharges: charges,
     roundOff: grandTotal - raw,
     grandTotal,

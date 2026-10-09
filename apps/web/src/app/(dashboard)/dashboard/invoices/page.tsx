@@ -65,6 +65,7 @@ export default function InvoicesPage() {
           sgstAmount: it.sgstAmount,
           igstRate: it.igstRate,
           igstAmount: it.igstAmount,
+          taxBreakdown: it.taxBreakdown,
           total: it.total,
         })),
         totalTax: full.totalTax ?? 0,

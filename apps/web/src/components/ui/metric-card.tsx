@@ -4,7 +4,7 @@ import { useEffect, useRef, type ReactNode } from 'react'
 import Link from 'next/link'
 import { gsap } from 'gsap'
 import type { LucideIcon } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, formatNumber } from '@/lib/utils'
 
 type Tone = 'brand' | 'success' | 'warning' | 'danger' | 'neutral' | 'accent'
 
@@ -50,7 +50,7 @@ export function MetricCard({
       ease: 'power2.out',
       onUpdate: () => {
         const formatted = countUp >= 1000
-          ? new Intl.NumberFormat('en-IN').format(Math.round(obj.v))
+          ? formatNumber(Math.round(obj.v))
           : Math.round(obj.v).toString()
         node.textContent = formatted
       },

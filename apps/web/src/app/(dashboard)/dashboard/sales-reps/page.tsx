@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form'
 import { UserCheck, Plus, Phone, X, MapPin, Percent } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
-import { formatCurrency, optionalNumber } from '@/lib/utils'
+import { formatCurrency, optionalNumber, moneySymbol } from '@/lib/utils'
 
 interface SalesRep {
   id: string
@@ -196,7 +196,7 @@ function CreateSalesRepModal({ onClose, onCreated }: { onClose: () => void; onCr
               <input className="input" type="number" step="0.1" {...register('defaultCommissionPercent', { required: true, valueAsNumber: true, min: 0, max: 100 })} />
             </div>
             <div>
-              <label className="label">Flat Bonus (₹) per order</label>
+              <label className="label">Flat Bonus ({moneySymbol()}) per order</label>
               <input className="input" type="number" step="1" {...register('flatBonusAmount', optionalNumber)} />
             </div>
           </div>

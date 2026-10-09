@@ -4,6 +4,8 @@ import { randomInt, randomUUID } from 'node:crypto'
 import bcrypt from 'bcryptjs'
 import { prisma } from '@rxflow/db'
 import { authenticate } from '../middleware/auth.js'
+import { phoneSchema } from '../utils/regional.js'
+import { regionDefaults } from '@rxflow/regional'
 import { setRefreshCookie, clearRefreshCookie, readRefreshCookie, hashRefreshToken, refreshTokenMatches } from '../utils/session-cookie.js'
 
 const loginSchema = z.object({
@@ -17,7 +19,10 @@ const registerSchema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
   password: z.string().min(8),
-  phone: z.string().min(10),
+  phone: phoneSchema,
+  // Region the pharmacy operates in — selects tax system, currency, formats and regulatory
+  // labels. Defaults to India (the primary market); anything unknown becomes 'INTL'.
+  country: z.string().trim().min(2).max(4).default('IN'),
 })
 
 function slugify(name: string): string {
@@ -94,6 +99,8 @@ export async function authRoutes(app: FastifyInstance) {
           addressLine1: user.tenant.addressLine1 ?? null, city: user.tenant.city ?? null,
           state: user.tenant.state ?? null, pincode: user.tenant.pincode ?? null,
           allowNegativeStock: user.tenant.allowNegativeStock ?? false,
+          country: user.tenant.country, currency: user.tenant.currency, locale: user.tenant.locale,
+          timezone: user.tenant.timezone, fiscalYearStartMonth: user.tenant.fiscalYearStartMonth,
         },
         stores: user.stores.map((us) => ({ id: us.store.id, name: us.store.name, code: us.store.code, isPrimary: us.isPrimary })),
       },
@@ -148,10 +155,8 @@ export async function authRoutes(app: FastifyInstance) {
           type: body.tenantType as any,
           phone: body.phone,
           email: body.email,
-          settings: {
-            currency: 'INR', timezone: 'Asia/Kolkata', gstEnabled: true,
-            creditDays: 30, lowStockThreshold: 10, expiryAlertDays: 90,
-          },
+          ...regionDefaults(body.country),
+          settings: { creditDays: 30, lowStockThreshold: 10, expiryAlertDays: 90 },
         },
       })
 

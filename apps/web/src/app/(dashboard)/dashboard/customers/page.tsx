@@ -8,8 +8,10 @@ import { useForm } from 'react-hook-form'
 import { Users, Plus, Phone, Mail, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
-import { formatCurrency, optionalNumber } from '@/lib/utils'
+import { formatCurrency, optionalNumber, moneySymbol } from '@/lib/utils'
 import { AnimatedSection, PageHeader, DataTable, type DataTableColumn } from '@/components/ui'
+import { useRegion } from '@/lib/region'
+import { taxIdRules } from '@/lib/regional-form'
 
 interface Customer {
   id: string
@@ -40,8 +42,6 @@ interface CustomerForm {
   salesRepId?: string
 }
 
-// 15-char Indian GSTIN
-const GSTIN_PATTERN = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/
 
 const customerColumns: DataTableColumn<Customer>[] = [
   {
@@ -125,6 +125,7 @@ export default function CustomersPage() {
 }
 
 function CreateCustomerModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const region = useRegion()
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<CustomerForm>({
     defaultValues: { creditLimit: 0, gstRegistrationType: 'REGULAR' },
   })
@@ -171,36 +172,33 @@ function CreateCustomerModal({ onClose, onCreated }: { onClose: () => void; onCr
               <input className="input" {...register('city')} />
             </div>
             <div>
-              <label className="label">State</label>
+              <label className="label">{region.fields.region.label}</label>
               <input className="input" {...register('state')} />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="label">GST Registration</label>
+              <label className="label">{region.tax.label} registration</label>
               <select className="input" {...register('gstRegistrationType')}>
-                <option value="REGULAR">Regular</option>
-                <option value="COMPOSITE">Composite</option>
-                <option value="NON_GST">Non-GST</option>
+                <option value="REGULAR">Registered</option>
+                {region.supportsCompositionScheme && <option value="COMPOSITE">Composition scheme</option>}
+                <option value="NON_GST">Unregistered</option>
               </select>
             </div>
             <div>
-              <label className="label">GSTIN (optional — makes B2B)</label>
+              <label className="label">{region.fields.taxId.label} (optional — business customer)</label>
               <input
                 className="input font-mono text-xs uppercase"
-                placeholder="27AAACR5055K1ZV"
-                {...register('gstin', {
-                  validate: (v) => !v || GSTIN_PATTERN.test(v.toUpperCase().trim()) || 'Invalid GSTIN — 15 chars, e.g. 27AAACR5055K1ZV',
-                  setValueAs: (v: string) => (v ? v.toUpperCase().trim() : v),
-                })}
+                placeholder={region.fields.taxId.example ?? ''}
+                {...register('gstin', taxIdRules(region))}
               />
               {errors.gstin && <p className="text-xs text-red-600 mt-1">{errors.gstin.message}</p>}
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="label">Drug License No.</label>
-              <input className="input font-mono text-xs" {...register('drugLicenseNumber')} placeholder="WB/HGL/20B-21B/1234" />
+              <label className="label">{region.fields.license.label}</label>
+              <input className="input font-mono text-xs" {...register('drugLicenseNumber')} placeholder={region.fields.license.example ?? ''} />
             </div>
             <div>
               <label className="label">License Valid Till</label>
@@ -209,7 +207,7 @@ function CreateCustomerModal({ onClose, onCreated }: { onClose: () => void; onCr
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="label">Credit Limit (₹)</label>
+              <label className="label">Credit Limit ({moneySymbol()})</label>
               <input className="input" type="number" {...register('creditLimit', optionalNumber)} />
             </div>
             <div>

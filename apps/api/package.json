@@ -26,6 +26,7 @@
     "@fastify/swagger-ui": "^3.0.0",
     "@rxflow/db": "workspace:*",
     "@rxflow/medicine-intelligence": "workspace:*",
+    "@rxflow/regional": "workspace:*",
     "@rxflow/types": "workspace:*",
     "bcryptjs": "^2.4.3",
     "dayjs": "^1.11.11",

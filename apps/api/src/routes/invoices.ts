@@ -5,6 +5,17 @@ import { authenticate } from '../middleware/auth.js'
 import { getPaginationParams, buildPaginationMeta } from '../utils/pagination.js'
 import { audit } from '../utils/audit.js'
 import { computeInvoiceAmounts } from '../utils/order-math.js'
+import { getTenantRegion, paymentMethodSchema } from '../utils/regional.js'
+import {
+  scaleComponents, sumComponents, componentsFromLegacy, formatMoney,
+  totalTax as totalTaxOf, type TaxComponent,
+} from '@rxflow/regional'
+import { Prisma } from '@rxflow/db'
+
+/** A stored line's tax components (rebuilt from the GST columns for lines written before them). */
+function lineComponents(item: { taxBreakdown?: unknown } & Parameters<typeof componentsFromLegacy>[0]): TaxComponent[] {
+  return Array.isArray(item.taxBreakdown) ? (item.taxBreakdown as TaxComponent[]) : componentsFromLegacy(item)
+}
 import { httpError } from '../utils/http-error.js'
 import { nextFyNumber, withUniqueRetry } from '../utils/numbering.js'
 
@@ -131,22 +142,28 @@ export async function invoiceRoutes(app: FastifyInstance) {
     })
     if (existingInvoice) return reply.send({ success: true, data: existingInvoice, existing: true })
 
-    // Determine inter-state vs intra-state for GST routing
-    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } })
-    const sellerState = tenant?.state?.toLowerCase()?.trim()
-    const buyerState =
-      order.type === 'SALE'
-        ? order.customer?.state?.toLowerCase()?.trim()
-        : order.supplier?.state?.toLowerCase()?.trim()
-    // If both states known and they differ → IGST. Default (unknown buyer) → CGST+SGST.
-    const isInterState = !!sellerState && !!buyerState && sellerState !== buyerState
+    // The tenant's country decides the tax system (India: CGST+SGST vs IGST by state; VAT;
+    // sales tax; none) and the cash rounding. Seller/buyer regions only matter to India's GST.
+    const region = await getTenantRegion(tenantId)
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { state: true } })
+    const buyerRegion = order.type === 'SALE' ? order.customer?.state : order.supplier?.state
 
     // Carry the order's bill-level special discount and transport charge into the invoice so
     // the tax document matches what was actually billed.
     const special = order.specialDiscountType && order.specialDiscountValue
       ? { type: order.specialDiscountType as 'PERCENT' | 'AMOUNT', value: order.specialDiscountValue }
       : null
-    const amounts = computeInvoiceAmounts(order.items, isInterState, special, order.transportCharge ?? 0)
+    const amounts = computeInvoiceAmounts(
+      order.items,
+      {
+        system: region.tax.system,
+        label: region.tax.label,
+        context: { sellerRegion: tenant?.state, buyerRegion },
+        cashRounding: region.cashRounding,
+      },
+      special,
+      order.transportCharge ?? 0,
+    )
 
     const invoiceItems = order.items.map((item, i) => {
       const l = amounts.lines[i]!
@@ -167,6 +184,8 @@ export async function invoiceRoutes(app: FastifyInstance) {
         sgstAmount: l.sgstAmount,
         igstRate: l.igstRate,
         igstAmount: l.igstAmount,
+        taxAmount: l.taxAmount,
+        taxBreakdown: l.taxBreakdown as unknown as Prisma.InputJsonValue,
         total: l.total,
       }
     })
@@ -189,6 +208,7 @@ export async function invoiceRoutes(app: FastifyInstance) {
           sgst: amounts.sgst,
           igst: amounts.igst,
           totalTax: amounts.totalTax,
+          taxBreakdown: amounts.taxBreakdown as unknown as Prisma.InputJsonValue,
           total: amounts.taxable,
           otherCharges: amounts.otherCharges,
           roundOff: amounts.roundOff,
@@ -217,7 +237,7 @@ export async function invoiceRoutes(app: FastifyInstance) {
     const { tenantId, userId } = request.user
     const body = z.object({
       amount: z.number().positive(),
-      method: z.enum(['CASH','UPI','NEFT','RTGS','CHEQUE','CREDIT','CARD']),
+      method: paymentMethodSchema,
       reference: z.string().optional(),
     }).parse(request.body)
 
@@ -225,10 +245,11 @@ export async function invoiceRoutes(app: FastifyInstance) {
     if (!invoice) {
       return reply.status(404).send({ success: false, error: 'Invoice not found' })
     }
+    const region = await getTenantRegion(tenantId)
 
     const payment = await prisma.$transaction(async (tx) => {
-      // Reject overpayments: a payment may settle at most the outstanding balance (under ₹1 of
-      // slack absorbs rupee rounding; a fully-paid invoice accepts nothing more). Checked inside the transaction alongside the insert.
+      // Reject overpayments: a payment may settle at most the outstanding balance (under one
+      // currency unit of slack absorbs rounding; a fully-paid invoice accepts nothing more). Checked inside the transaction alongside the insert.
       const alreadyPaid = (await tx.payment.aggregate({ where: { invoiceId: id }, _sum: { amount: true } }))._sum.amount ?? 0
       const outstanding = Math.max(0, invoice.grandTotal - alreadyPaid)
       if (outstanding < 0.01 || body.amount > outstanding + 0.99) {
@@ -236,7 +257,7 @@ export async function invoiceRoutes(app: FastifyInstance) {
           400,
           outstanding <= 0
             ? 'This invoice is already fully paid'
-            : `Payment exceeds the outstanding balance of ₹${outstanding.toFixed(2)}`,
+            : `Payment exceeds the outstanding balance of ${formatMoney(outstanding, region)}`,
         )
       }
 
@@ -347,6 +368,8 @@ export async function invoiceRoutes(app: FastifyInstance) {
           cgstAmount: (origItem.cgstAmount ?? 0) * ratio,
           sgstAmount: (origItem.sgstAmount ?? 0) * ratio,
           igstAmount: (origItem.igstAmount ?? 0) * ratio,
+          // Country-agnostic tax, pro-rated the same way (older lines rebuilt from GST columns)
+          taxBreakdown: scaleComponents(lineComponents(origItem), ratio),
           total: origItem.total * ratio,
         },
       })
@@ -364,7 +387,8 @@ export async function invoiceRoutes(app: FastifyInstance) {
       }),
       { subtotal: 0, discountAmount: 0, cgst: 0, sgst: 0, igst: 0, taxable: 0, total: 0 }
     )
-    const totalTax = totals.cgst + totals.sgst + totals.igst
+    const taxBreakdown = sumComponents(lines.map((l) => l.amounts.taxBreakdown))
+    const totalTax = totalTaxOf(taxBreakdown)
 
     let cnNumber = ''
 
@@ -386,6 +410,7 @@ export async function invoiceRoutes(app: FastifyInstance) {
             sgst: totals.sgst,
             igst: totals.igst,
             totalTax,
+            taxBreakdown: taxBreakdown as unknown as Prisma.InputJsonValue,
             total: totals.taxable,
             grandTotal: totals.total,
             paymentStatus: 'PAID', // credit notes are immediately settled against original
@@ -408,6 +433,8 @@ export async function invoiceRoutes(app: FastifyInstance) {
                 sgstAmount: l.amounts.sgstAmount,
                 igstRate: l.orig.igstRate ?? 0,
                 igstAmount: l.amounts.igstAmount,
+                taxAmount: totalTaxOf(l.amounts.taxBreakdown),
+                taxBreakdown: l.amounts.taxBreakdown as unknown as Prisma.InputJsonValue,
                 total: l.amounts.total,
               })),
             },
@@ -566,6 +593,8 @@ export async function invoiceRoutes(app: FastifyInstance) {
           cgstAmount: (origItem.cgstAmount ?? 0) * ratio,
           sgstAmount: (origItem.sgstAmount ?? 0) * ratio,
           igstAmount: (origItem.igstAmount ?? 0) * ratio,
+          // Country-agnostic tax, pro-rated the same way (older lines rebuilt from GST columns)
+          taxBreakdown: scaleComponents(lineComponents(origItem), ratio),
           total: origItem.total * ratio,
         },
       })
@@ -583,7 +612,8 @@ export async function invoiceRoutes(app: FastifyInstance) {
       }),
       { subtotal: 0, discountAmount: 0, cgst: 0, sgst: 0, igst: 0, taxable: 0, total: 0 }
     )
-    const totalTax = totals.cgst + totals.sgst + totals.igst
+    const taxBreakdown = sumComponents(lines.map((l) => l.amounts.taxBreakdown))
+    const totalTax = totalTaxOf(taxBreakdown)
     let dnNumber = ''
 
     const debitNote = await withUniqueRetry(async () => {
@@ -604,6 +634,7 @@ export async function invoiceRoutes(app: FastifyInstance) {
             sgst: totals.sgst,
             igst: totals.igst,
             totalTax,
+            taxBreakdown: taxBreakdown as unknown as Prisma.InputJsonValue,
             total: totals.taxable,
             grandTotal: totals.total,
             paymentStatus: 'PAID',
@@ -626,6 +657,8 @@ export async function invoiceRoutes(app: FastifyInstance) {
                 sgstAmount: l.amounts.sgstAmount,
                 igstRate: l.orig.igstRate ?? 0,
                 igstAmount: l.amounts.igstAmount,
+                taxAmount: totalTaxOf(l.amounts.taxBreakdown),
+                taxBreakdown: l.amounts.taxBreakdown as unknown as Prisma.InputJsonValue,
                 total: l.amounts.total,
               })),
             },

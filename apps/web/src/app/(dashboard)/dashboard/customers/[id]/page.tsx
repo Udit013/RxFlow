@@ -9,7 +9,9 @@ import { ArrowLeft, Phone, Mail, MapPin, CreditCard, Pencil, Trash2, X, Repeat, 
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { authService } from '@/lib/auth'
-import { formatCurrency, formatDate, optionalNumber } from '@/lib/utils'
+import { formatCurrency, formatDate, optionalNumber, moneySymbol } from '@/lib/utils'
+import { useRegion } from '@/lib/region'
+import { taxIdRules } from '@/lib/regional-form'
 
 interface CustomerForm {
   name: string
@@ -23,6 +25,7 @@ interface CustomerForm {
 }
 
 export default function CustomerDetailPage() {
+  const region = useRegion()
   const params = useParams<{ id: string }>()
   const router = useRouter()
   const queryClient = useQueryClient()
@@ -90,7 +93,7 @@ export default function CustomerDetailPage() {
               {c.phone && <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> {c.phone}</span>}
               {c.email && <span className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5" /> {c.email}</span>}
               {(c.city || c.state) && <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> {[c.city, c.state].filter(Boolean).join(', ')}</span>}
-              {c.gstin && <span className="font-mono text-xs bg-slate-100 px-2 py-0.5 rounded">GSTIN: {c.gstin}</span>}
+              {c.gstin && <span className="font-mono text-xs bg-slate-100 px-2 py-0.5 rounded">{region.fields.taxId.label}: {c.gstin}</span>}
             </div>
           </div>
           <div className="text-right">
@@ -275,6 +278,7 @@ export default function CustomerDetailPage() {
 }
 
 function EditCustomerModal({ customer, onClose, onSaved }: { customer: any; onClose: () => void; onSaved: () => void }) {
+  const region = useRegion()
   const { register, handleSubmit, formState: { errors } } = useForm<CustomerForm>({
     defaultValues: {
       name: customer.name,
@@ -324,16 +328,16 @@ function EditCustomerModal({ customer, onClose, onSaved }: { customer: any; onCl
               <input className="input" {...register('city')} />
             </div>
             <div>
-              <label className="label">State</label>
+              <label className="label">{region.fields.region.label}</label>
               <input className="input" {...register('state')} />
             </div>
           </div>
           <div>
-            <label className="label">GSTIN (optional)</label>
-            <input className="input font-mono text-xs" placeholder="27AAACR5055K1ZV" {...register('gstin')} />
+            <label className="label">{region.fields.taxId.label} (optional)</label>
+            <input className="input font-mono text-xs" placeholder={region.fields.taxId.example ?? ''} {...register('gstin', taxIdRules(region))} />
           </div>
           <div>
-            <label className="label">Credit Limit (₹)</label>
+            <label className="label">Credit Limit ({moneySymbol()})</label>
             <input className="input" type="number" {...register('creditLimit', optionalNumber)} />
           </div>
           <div className="flex justify-end gap-2 pt-2">

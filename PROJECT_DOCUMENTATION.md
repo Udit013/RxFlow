@@ -25,6 +25,7 @@
 17. [Core Concepts Explained](#17-core-concepts-explained)
 18. [Interview Preparation](#18-interview-preparation)
 19. [Complete Walkthrough](#19-complete-walkthrough)
+20. [Global Regional Configuration](#20-global-regional-configuration)
 
 ---
 
@@ -41,7 +42,7 @@ That's fragile in ways that are easy to miss until they hurt:
 - India's GST (Goods and Services Tax) regime requires itemized tax breakdowns (CGST/SGST for in-state sales, IGST for inter-state) and specific government-format returns (GSTR-1, GSTR-3B) — most legacy tools handle this clumsily or not at all.
 - Medicines have **batches** and **expiry dates**. Selling from the wrong batch, or not noticing a batch is about to expire, is a compliance and financial risk pharmacies live with daily.
 
-**RxFlow is a cloud-based, multi-tenant pharmacy ERP (Enterprise Resource Planning) system** that replaces that single-PC software with a real web application: the shop's data lives in a shared cloud database, any authorized device (a counter PC, a tablet, a phone) can see live stock levels and sales, and every business process a pharmacy actually runs — buying stock, selling stock, tracking expiries, managing GST, paying staff, reconciling accounts — is one connected system instead of a stack of spreadsheets and a legacy desktop app.
+**RxFlow is a cloud-based, multi-tenant pharmacy ERP (Enterprise Resource Planning) system — built India-first and configurable for any country (Section 20)** — that replaces that single-PC software with a real web application: the shop's data lives in a shared cloud database, any authorized device (a counter PC, a tablet, a phone) can see live stock levels and sales, and every business process a pharmacy actually runs — buying stock, selling stock, tracking expiries, managing GST, paying staff, reconciling accounts — is one connected system instead of a stack of spreadsheets and a legacy desktop app.
 
 > **Definition — "multi-tenant":**
 > **Simple:** Imagine one big apartment building where every family has their own locked apartment, but they all share the same building, the same front desk, and the same elevators. One codebase, one database, one deployment — but every pharmacy's data is invisible to every other pharmacy.
@@ -210,6 +211,7 @@ RxFlow/
 │   │   ├── prisma/manual-migrations/  # 21 idempotent SQL files tracing schema evolution
 │   │   └── src/index.ts          # Prisma client singleton, re-exports all generated types
 │   ├── types/                    # Shared DTOs (JwtPayload, domain interfaces) + the role matrix (canAccess)
+│   ├── regional/                 # Country profiles, tax engines, timezone/fiscal-year maths, formats (Section 20)
 │   ├── medicine-intelligence/    # Standalone fuzzy-matching + normalization engine
 │   └── ui/                       # (present; minimal — most UI actually lives in apps/web)
 ├── scripts/                       # One-off operational scripts (not part of the request lifecycle)
@@ -294,7 +296,7 @@ Most Prisma projects use `prisma migrate dev` to generate a versioned history of
 
 | Table | What it represents | Key fields worth knowing |
 |---|---|---|
-| `Tenant` | One pharmacy business (the "apartment" in the multi-tenant building) | `type` (RETAIL_PHARMACY / WHOLESALE_DISTRIBUTOR / CHAIN_PHARMACY / HOSPITAL / CLINIC / SUPPLIER), `plan` (STARTER/GROWTH/PRO/ENTERPRISE — currently unenforced, no billing logic reads it), `allowNegativeStock` (a real business-logic toggle — see Section 8), `settings`/`metadata` (Json, currently holding config like currency/timezone at signup) |
+| `Tenant` | One pharmacy business (the "apartment" in the multi-tenant building) | `type` (RETAIL_PHARMACY / WHOLESALE_DISTRIBUTOR / CHAIN_PHARMACY / HOSPITAL / CLINIC / SUPPLIER), `plan` (STARTER/GROWTH/PRO/ENTERPRISE — currently unenforced, no billing logic reads it), `allowNegativeStock` (a real business-logic toggle — see Section 8), regional settings `country` / `currency` / `locale` / `timezone` / `fiscalYearStartMonth` (default India — see Section 20), `settings`/`metadata` (Json) |
 | `Store` | A physical location belonging to a tenant (chain pharmacies have several) | `isHeadOffice`, unique per `(tenantId, code)` |
 | `User` | A login account | `role` (8-value enum from SUPER_ADMIN down to VIEWER), unique per `(tenantId, email)` — **the same email can register at two different tenants**, since uniqueness is scoped to the tenant, not global |
 | `UserStore` | Join table: which stores a user can access | `isPrimary` marks their default store |
@@ -744,7 +746,7 @@ Response: 201 Created, the full Order object with its items
 
 ### 6.5 Deep dive: generating a GST invoice from an order
 
-`POST /invoices/from-order/:orderId` is where India-specific tax law becomes code. The arithmetic is a pure function, `computeInvoiceAmounts()` in `utils/order-math.ts`, so it is unit-tested alongside the order math it must agree with:
+`POST /invoices/from-order/:orderId` is where tax law becomes code. The walkthrough below is the Indian GST engine; the same function runs VAT, US sales tax or no tax depending on the tenant's country (Section 20.3). The arithmetic is a pure function, `computeInvoiceAmounts()` in `utils/order-math.ts`, so it is unit-tested alongside the order math it must agree with:
 
 ```text
 Load the Order + its items + the customer's/supplier's state and the tenant's own state
@@ -1413,7 +1415,7 @@ Defines the design-token layer (the "Dispensary Ledger" system — see Section 7
 
 ### 14.1 What's actually tested, and why these specific things
 
-The test suite (Vitest, 63 tests across 9 files) targets the code where a subtle bug is both easy to introduce and hard to notice by reading it — mostly pure business logic, plus the security-critical middleware exercised through Fastify's `inject()` with no database:
+The test suite (Vitest, 82 tests across 10 files) targets the code where a subtle bug is both easy to introduce and hard to notice by reading it — mostly pure business logic, plus the security-critical middleware exercised through Fastify's `inject()` with no database:
 
 - **`order-math.test.ts`** — every GST/discount/commission calculation path described in Section 8: single-line and multi-line totals, the special-discount tax-scaling behavior (percent, flat amount, capping, stacking with line discounts), and commission math (net-of-tax base, fractional percentages, flat bonuses).
 - **`financial-year.test.ts`** — the Indian fiscal-year boundary logic (Apr 1–Mar 31), specifically pinning the exact Mar 31 → Apr 1 UTC boundary flip and the FY-number formatting/padding rules.
@@ -1422,6 +1424,8 @@ The test suite (Vitest, 63 tests across 9 files) targets the code where a subtle
 - **`numbering.test.ts`** — the next-sequence rule after deletions and past the 5-digit pad, and `withUniqueRetry` (retries only on P2002, gives up after the limit).
 - **`auth.test.ts` / `rbac.test.ts`** — a refresh-shaped token is rejected as an access token; a viewer gets 403 creating an order through the real middleware; the role matrix's key rules (finance-only payroll, delivery staff limited to status changes, admin-only workspace settings, unlisted writes failing closed).
 - **`medicine-scope.test.ts`** — copy-on-write: own rows update in place, a shared row forks and moves only this tenant's stock, a second edit reuses the copy, another tenant's private row is a 404 (Prisma mocked).
+- **`regional.test.ts`** (`packages/regional`) — the tax engines (India's intra/inter-state split, VAT, sales tax, none), legacy-column mapping and breakdown aggregation, cash rounding, timezone-aware day/month/fiscal-year boundaries including daylight-saving transitions, region resolution and fallbacks, tax-ID/postal/phone validation per country, and money formatting (₹12,34,567.50 vs $1,234,567.50).
+- **`invoice-amounts.test.ts`** also covers VAT, US sales tax with cent rounding, and the no-tax system.
 - **`session-cookie.test.ts`** — two tokens sharing a 72-byte prefix are told apart by the SHA-256 scheme (and demonstrably *not* by bcrypt); legacy bcrypt hashes are still accepted.
 
 Before the session/RBAC/catalog changes shipped they were also exercised end to end against a throwaway local Postgres: a scripted run of 39 API checks (cookie rotation and reuse rejection, multiple devices and single-device logout, legacy-session upgrade, viewer 403s, catalog forks invisible to other tenants, idempotent invoicing, overpayment rejection, numbering after a deleted parked sale, cross-tenant references) plus a browser pass through login → reload → live sync → sign-out. That run caught an API crash on boot (the shared types package couldn't export runtime values under ESM) that type-checking and unit tests had not.
@@ -1490,18 +1494,20 @@ Concurrency is configured to **cancel an in-progress run** if a new commit lands
 
 ### 15.3 Why `prisma db push` in the Render build step is deliberately non-fatal
 
-```yaml
-buildCommand: |
-  npm install -g pnpm@9.1.0
-  pnpm install --prod=false --frozen-lockfile=false
-  cd packages/db && pnpm exec prisma generate
-  (pnpm exec prisma db push --accept-data-loss || echo "schema already applied, continuing")
-  pnpm exec prisma db execute --schema prisma/schema.prisma \
-       --file prisma/manual-migrations/2026-10-03-ownership-invoice-charges-sessions.sql
-  (pnpm exec tsx prisma/seed.ts || echo "seed skipped (non-fatal)")
+```bash
+# Render build command
+npm install -g pnpm@9.1.0 && pnpm install --prod=false --frozen-lockfile=false && bash packages/db/scripts/deploy-db.sh
+
+# packages/db/scripts/deploy-db.sh
+prisma generate
+prisma db push --accept-data-loss || echo "already applied"     # creates a FRESH database; non-fatal
+for f in $(cat prisma/manual-migrations/IDEMPOTENT); do          # each re-runnable; FATAL on error
+  prisma db execute --file prisma/manual-migrations/$f
+done
+tsx prisma/seed.ts || echo "seed skipped"                          # idempotent demo data
 ```
 
-On a **redeploy** where the schema hasn't changed, `db push` would otherwise fail with errors like "type X already exists" (re-attempting to create enum types that are already present) and — without the `|| echo ...` fallback — that failure would **block the entire deployment**, even though the actual application code changes have nothing to do with the database schema. Making it non-fatal means a redeploy that only changed application logic (a bug fix, a new UI feature) isn't blocked by a schema-sync step that has nothing new to do. The trade-off, and a real failure mode this project hit in practice: if a schema change genuinely *does* need to reach production and `db push` fails for an unrelated reason, that failure is now silent — the deploy "succeeds" while the database is actually out of sync with the code that expects the new columns to exist. The mitigating practice this project follows: every schema change ships as its own idempotent, hand-written SQL file in `manual-migrations/` (`IF NOT EXISTS` guards, constraints added in `DO … EXCEPTION WHEN duplicate_object` blocks). The latest one — medicine ownership columns and backfill, `Invoice.otherCharges`, and the `AuthSession` table — runs **automatically and fatally** in the build: if it fails, the build fails and Render keeps the previous release live, instead of shipping code that expects columns the database doesn't have. It was verified by running it twice in a row against a fresh database.
+On a **redeploy** where the schema hasn't changed, `db push` would otherwise fail with errors like "type X already exists" (re-attempting to create enum types that are already present) and — without the `|| echo ...` fallback — that failure would **block the entire deployment**, even though the actual application code changes have nothing to do with the database schema. Making it non-fatal means a redeploy that only changed application logic (a bug fix, a new UI feature) isn't blocked by a schema-sync step that has nothing new to do. The trade-off, and a real failure mode this project hit in practice: if a schema change genuinely *does* need to reach production and `db push` fails for an unrelated reason, that failure is now silent — the deploy "succeeds" while the database is actually out of sync with the code that expects the new columns to exist. The mitigating practice this project follows: every schema change ships as its own idempotent, hand-written SQL file in `manual-migrations/` (`IF NOT EXISTS` guards, constraints added in `DO … EXCEPTION WHEN duplicate_object` blocks). Every file listed in `manual-migrations/IDEMPOTENT` (currently the ownership/sessions migration and the localisation migration) runs **automatically and fatally** in the build — new schema changes ship with the code, with no Render dashboard edits: if it fails, the build fails and Render keeps the previous release live, instead of shipping code that expects columns the database doesn't have. It was verified by running it twice in a row against a fresh database.
 
 ### 15.4 Cold starts: what was slow, and what changed
 
@@ -1516,7 +1522,7 @@ A visitor after a quiet spell paid for three things in sequence: Render waking t
 
 Avoiding the sleep entirely matters more than any boot optimisation: a GitHub Actions workflow (`keep-warm.yml`) pings `/health` every 10 minutes, inside Render's 750 free instance-hours a month. On the client side, every page load fires a fire-and-forget `/health` request (`warmUpApi()` in `lib/api.ts`), so a wake-up overlaps with the user typing their password; and the session loader explains itself after 4 seconds ("Waking up the server…") instead of sitting silently.
 
-**Still open, and the biggest steady-state cost:** the API runs in Render Singapore while the Neon database is in AWS us-east-1, so every query crosses the Pacific (~200 ms+ per round trip, multiplied by the sequential round trips inside a transaction). Moving the Neon project to Singapore is the next step (see `DEPLOYMENT.md`); it needs a dump/restore, so it isn't something to automate blindly.
+**Region alignment (done):** the API used to run in Render Singapore while the Neon database is in AWS us-east-1, so every query crossed the Pacific (~200 ms+ per round trip, multiplied by the sequential round trips in a transaction). The API now runs in Render Virginia beside the database; measured from the US East coast, a single-query request dropped from ~0.6–1.0 s to ~0.2 s.
 
 #### 💬 Interview Questions — Section 15
 
@@ -1764,6 +1770,111 @@ The moment that transaction commits, `audit()` writes the compliance trail row a
 **End of month.** The owner opens Reports, generates the GSTR-1 and GSTR-3B returns (Section 6.2), pulling every sale and purchase invoice recorded all month into the exact government-mandated format — numbers that were computed correctly the moment each sale happened, not re-derived or reconstructed after the fact from raw transaction data. HR runs payroll for the month; attendance records feed automatically into loss-of-pay proration (Section 8.4), and marking each payslip paid quietly creates a matching `Expense` row, so payroll flows into the P&L statement with zero additional manual bookkeeping.
 
 None of this required a single desktop PC to stay running, a single point of failure to survive, or any manual reconciliation between "what the software says" and "what actually happened" — because every one of these operations, from a ₹15 fever-tablet sale to a month-end GST return, is the same database, updated transactionally, in real time, visible from any authorized device the moment it happens.
+
+## 20. Global Regional Configuration
+
+RxFlow is built **India-first, not India-only**. India remains the primary market — and an Indian pharmacy behaves exactly as before — but nothing in the core business logic assumes India any more. Everything that differs by country lives in one place: the `@rxflow/regional` package.
+
+### 20.1 The design: a country-agnostic core plus regional profiles
+
+> **Analogy — a power adapter, not a rewired appliance:**
+> The appliance (orders, stock, invoices, ledgers) is the same everywhere. What changes at the border is the plug: the socket shape (tax system), the voltage label (currency), the wording on the dial (field names, drug classifications). RxFlow ships a set of adapters — one per country — and the appliance never needs rewiring.
+
+```text
+packages/regional/src/
+├── types.ts        RegionProfile — everything that varies by country
+├── profiles/       in.ts · us.ts · gb.ts · ae.ts · intl.ts   (one file per country)
+├── registry.ts     getRegionProfile(), resolveRegion(tenant), regionDefaults(country)
+├── tax.ts          tax engines: IN_GST · VAT · SALES_TAX · NONE
+├── time.ts         timezone-aware day / month / fiscal-year boundaries (no date library)
+├── validation.ts   tax IDs, postal codes, phone numbers
+└── format.ts       money, numbers, payment-method and drug-tier labels
+```
+
+The package is pure, dependency-free TypeScript used by **both** the API and the web app, so a label, a validation rule or a tax split can never disagree between server and browser.
+
+**What a `RegionProfile` defines:**
+
+| Area | India (`IN`) | United States (`US`) | United Kingdom (`GB`) | UAE (`AE`) | Other (`INTL`) |
+|---|---|---|---|---|---|
+| Currency · locale | INR · en-IN | USD · en-US | GBP · en-GB | AED · en-AE | USD · en-US (editable) |
+| Fiscal year | April | January | April | January | January |
+| Tax engine | GST: CGST+SGST / IGST | Sales tax (default 0% — Rx exempt in most states) | VAT 0/5/20% (default 0%) | VAT 0/5% (default 0%) | Single-component "Tax" |
+| Cash rounding | whole rupee | cents | pence | fils | cents |
+| Tax ID | GSTIN (validated) | EIN | VAT number | TRN | Tax ID (free text) |
+| Postal code | PIN code | ZIP code | Postcode | P.O. Box (optional) | Postal code |
+| Drug tiers | OTC · Sch. G · H · H1 · X | OTC · BTC · Rx · C-III–V · C-II | GSL · P · POM · CD 3–5 · CD 2 | OTC · Pharmacy · Rx · Semi-controlled · Controlled | generic |
+| Register | Schedule H1 register | Controlled substance log | Controlled drugs register | Controlled medicines register | Controlled drugs register |
+| Payments | Cash, UPI, Card, NEFT, RTGS, Cheque, Credit | Cash, Card, ACH, Check, Credit | Cash, Card, Bank transfer, Cheque, Credit | same as UK | same as UK |
+| Statutory returns | GSTR-1, GSTR-3B | — (tax summary) | — (tax summary) | — (tax summary) | — (tax summary) |
+
+The defaults in the non-Indian profiles are deliberately conservative starting points (e.g. a 0% default rate where medicines are commonly zero-rated or exempt); a pharmacy sets real rates per medicine and can override currency, locale, timezone and fiscal year in **Settings → Region & Tax**.
+
+### 20.2 How a tenant gets its region
+
+`Tenant` has five regional columns — `country`, `currency`, `locale`, `timezone`, `fiscalYearStartMonth` — all **defaulting to India**, so every tenant created before localisation is unchanged. A new pharmacy chooses its country at signup; `regionDefaults(country)` fills the rest. `resolveRegion(tenant)` merges the tenant's overrides onto its country profile, ignoring invalid values (an unknown currency or timezone falls back to the country default rather than breaking formatting).
+
+- **API:** `utils/regional.ts → getTenantRegion(tenantId)` caches the resolved region per tenant for a minute; saving Settings invalidates it immediately.
+- **Web:** `lib/region.ts → getActiveRegion()` / `useRegion()` read the region from the signed-in profile (refreshed from `/auth/me` on every dashboard load), so `formatCurrency`, `formatDate` and every label follow the pharmacy's settings without any page passing them around.
+
+### 20.3 Tax engines: why the core never says "GST"
+
+`computeInvoiceAmounts(items, taxSetup, specialDiscount, otherCharges)` asks the region's tax engine to split each line's rate into **components**:
+
+```text
+IN_GST     intra-state (or buyer state unknown) → CGST rate/2 + SGST rate/2
+           inter-state (both states known, different) → IGST rate
+VAT        → [VAT rate]            labelled with the country's name for it
+SALES_TAX  → [Sales tax rate]
+NONE       → []
+```
+
+Each invoice line stores `taxAmount` and `taxBreakdown` (`[{code, label, rate, amount}]`); the invoice stores the components grouped by code and rate. For India, the original `cgst / sgst / igst` columns are **still filled**, so GSTR-1 and GSTR-3B keep working unchanged; for other countries those columns are zero and the generic fields carry the tax. Credit and debit notes pro-rate the original line's components (lines written before this change are rebuilt from their GST columns), so a partial return refunds exactly the tax that was charged. The invoice screen, the A4 PDF and the thermal receipt render one column per component actually charged — CGST and SGST for an Indian sale, IGST across states, a single VAT or sales-tax column elsewhere.
+
+**Reports:** GSTR-1/3B are offered only to Indian tenants (the API answers 400 for others). Every country gets `GET /reports/tax-summary?period=YYYY-MM` — output tax on sales net of credit notes, input tax on purchases net of debit notes, by rate and by component — the basis for any VAT, sales-tax or GST return. The controlled-drugs register is served at `/reports/controlled-register` (the original `/reports/schedule-h1-register` path still works) and includes the tiers the tenant's country treats as prescription-only.
+
+### 20.4 Time: the pharmacy's day, not the server's
+
+The API runs on UTC. Before localisation, "today" on the dashboard started at server midnight — 05:30 IST — and monthly GST periods used UTC month boundaries, so a sale at 00:30 IST on the 1st landed in the previous month's return. `time.ts` computes day, month and fiscal-year boundaries **in the tenant's timezone** (including daylight-saving transitions, which are unit-tested for London and New York). The dashboard, accounts, reports and the daily sales chart (`DATE(("createdAt" AT TIME ZONE 'UTC') AT TIME ZONE <tenant zone>)`) all use it. Document numbers follow the tenant's fiscal year: `INV/2026-27/00001` for an April-start year, `INV/2026/00001` for a calendar year.
+
+### 20.5 The medicine catalog by market
+
+Brand names differ by country — "Dolo 650" means nothing in Ohio. `Medicine.country` marks which market a **shared** catalog row belongs to (`NULL` = international, visible everywhere). `catalogWhere(tenantId)` shows a tenant its own private medicines plus shared rows for its country or international ones; the fuzzy matcher's shared index is filtered the same way. Medicines a pharmacy creates are tagged with its country, default to the country's tax rate, and set "requires prescription" from how that country treats the chosen tier. The pre-existing shared catalog and the demo seed are tagged as the Indian market.
+
+### 20.6 The drug classification tiers
+
+The `DrugSchedule` enum keeps its historical (Indian) value names, but each value has a **country-neutral meaning** — sold freely · pharmacy-supervised · prescription-only · prescription + register · controlled substance — and every profile labels the five tiers in local regulatory terms (Schedule H / POM / Rx only …). Data never changes when a label does, and adding a country is a matter of naming its tiers, not migrating medicines.
+
+### 20.7 Language
+
+`lib/i18n.ts` holds message dictionaries keyed by their English text (gettext-style), so any untranslated string falls back to English and pages can be translated one at a time. The app shell — navigation, top bar, loaders, live-sync status — ships in **English, Hindi and Spanish**; the language follows the locale chosen in Settings, and `<html lang>` is kept in sync for screen readers. Page bodies are still English: translating them is incremental work on this foundation, not a redesign.
+
+### 20.8 Adding a country
+
+1. Copy `packages/regional/src/profiles/intl.ts` to `profiles/<code>.ts` and fill in the currency, locale, timezone, fiscal year, tax engine and rates, field labels and validation patterns, drug-tier labels, register name and payment methods.
+2. List it in `REGION_PROFILES` (`registry.ts`).
+3. If it needs a new tax engine (e.g. two-level federal + provincial tax), add it to `tax.ts` — the invoice maths only sees components.
+4. Optionally add a UI dictionary to `lib/i18n.ts` and the locale to the Settings list.
+
+No route, schema or page changes are needed.
+
+### 20.9 Known limits
+
+- **Tax-inclusive pricing** (common for VAT retail prices) isn't modelled — prices are entered net of tax, as in India.
+- **Right-to-left languages** (Arabic) aren't supported yet: the layout uses left/right spacing.
+- The bundled **distributor CSV formats** and **sample catalog** are Indian; other markets start with the generic CSV column mapper.
+- Regional defaults are starting points, not legal advice — rates and register formats should be checked against local rules.
+
+#### 💬 Interview Questions — Section 20
+
+**Beginner**
+- *Why store a `country` on the tenant rather than detecting it from the browser?* Tax law follows where the business is registered, not where the person signing in happens to be; a pharmacy owner travelling abroad must still issue Indian GST invoices.
+
+**Intermediate**
+- *Why keep the CGST/SGST/IGST columns instead of migrating everything to the generic breakdown?* Indian statutory reports (GSTR-1/3B) and every invoice issued before the change read those columns. Writing both for Indian invoices preserved existing behaviour exactly while new code reads only the generic fields — a migration with zero risk to existing tax documents.
+
+**Advanced**
+- *Why compute "today" with Intl rather than a date library, and what could go wrong?* `Intl.DateTimeFormat` with an IANA zone gives a timestamp's wall-clock parts in any timezone with no dependency; the subtle part is converting a wall-clock time back to an instant across a daylight-saving change, where the zone's offset differs between the guess and the answer. `zonedTimeToUtc` re-checks the offset at the computed instant, and the unit tests pin London's March transition and the day after New York's spring-forward.
 
 ---
 

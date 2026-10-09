@@ -10,8 +10,9 @@ import {
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { authService } from '@/lib/auth'
-import { cn, formatCurrency, optionalNumber } from '@/lib/utils'
+import { cn, formatCurrency, optionalNumber, moneySymbol } from '@/lib/utils'
 import { AnimatedSection, PageHeader, MetricCard, SectionCard, EmptyState, SkeletonRow } from '@/components/ui'
+import { useRegion } from '@/lib/region'
 
 // Roles permitted to view individual salary figures in lists.
 const SALARY_VIEW_ROLES = ['TENANT_ADMIN', 'SUPER_ADMIN', 'ACCOUNTANT', 'STORE_MANAGER']
@@ -204,9 +205,9 @@ function EmployeeModal({ existing, onClose, onSaved }: { existing?: any; onClose
           </div>
           <div className="grid grid-cols-2 gap-3">
             {salaryType === 'MONTHLY' ? (
-              <div><label className="label">Monthly Salary (₹)</label><input className="input" type="number" {...register('monthlySalary', optionalNumber)} /></div>
+              <div><label className="label">Monthly Salary ({moneySymbol()})</label><input className="input" type="number" {...register('monthlySalary', optionalNumber)} /></div>
             ) : (
-              <div><label className="label">Daily Rate (₹)</label><input className="input" type="number" {...register('dailyRate', optionalNumber)} /></div>
+              <div><label className="label">Daily Rate ({moneySymbol()})</label><input className="input" type="number" {...register('dailyRate', optionalNumber)} /></div>
             )}
           </div>
           <div className="pt-2 border-t border-surface-100">
@@ -416,12 +417,14 @@ function PayrollTab() {
 }
 
 function PayrollRunDetail({ runId, onBack }: { runId: string; onBack: () => void }) {
+  const region = useRegion()
   const queryClient = useQueryClient()
   const { data } = useQuery({ queryKey: ['payroll-run', runId], queryFn: () => api.get(`/hr/payroll/${runId}`).then((r) => r.data) })
   const run = data?.data
 
   const pay = useMutation({
-    mutationFn: (slipId: string) => api.post(`/hr/payroll/payslip/${slipId}/pay`, { method: 'NEFT' }),
+    // Salaries go by bank transfer — NEFT in India, a generic bank transfer elsewhere
+    mutationFn: (slipId: string) => api.post(`/hr/payroll/payslip/${slipId}/pay`, { method: region.paymentMethods.includes('NEFT') ? 'NEFT' : 'BANK_TRANSFER' }),
     onSuccess: () => { toast.success('Marked paid · logged as salary expense'); queryClient.invalidateQueries({ queryKey: ['payroll-run', runId] }); queryClient.invalidateQueries({ queryKey: ['payroll'] }) },
     onError: (e: any) => toast.error(e.response?.data?.error ?? 'Failed'),
   })

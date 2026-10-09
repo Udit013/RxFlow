@@ -1,4 +1,5 @@
 import { api, authApi, setAccessToken, getAccessToken, clearLocalSession } from './api'
+import { notifyRegionChanged } from './region'
 
 export interface LoginCredentials { email: string; password: string }
 export interface AuthUser {
@@ -10,6 +11,8 @@ export interface AuthUser {
     phone?: string | null; email?: string | null
     addressLine1?: string | null; city?: string | null; state?: string | null; pincode?: string | null
     allowNegativeStock?: boolean
+    // Regional settings (see @rxflow/regional); absent on profiles stored before localisation
+    country?: string; currency?: string; locale?: string; timezone?: string; fiscalYearStartMonth?: number
   }
   stores: { id: string; name: string; code: string; isPrimary: boolean }[]
 }
@@ -29,6 +32,7 @@ const USER_KEY = 'rxflow_user'
 
 function storeUser(user: AuthUser) {
   try { localStorage.setItem(USER_KEY, JSON.stringify(user)) } catch { /* storage unavailable */ }
+  notifyRegionChanged()
 }
 
 /** Login-type responses: keep the access token in memory, the (non-secret) profile in storage. */
@@ -45,7 +49,7 @@ export const authService = {
   },
 
   async register(payload: {
-    pharmacyName: string; tenantType?: string; name: string; email: string; password: string; phone: string
+    pharmacyName: string; tenantType?: string; name: string; email: string; password: string; phone: string; country?: string
   }): Promise<AuthUser> {
     const res = await authApi.post('/register', payload)
     return startSession(res.data.data)
@@ -100,6 +104,21 @@ export const authService = {
   /** A signed-in profile exists locally (the cookie decides whether the session is still valid). */
   hasSession(): boolean {
     return !!this.getStoredUser()
+  },
+
+  /**
+   * Pull the latest tenant settings (incl. regional settings) into the stored profile without
+   * dropping fields only the login response carries. Keeps currency/tax/labels in sync after an
+   * admin edits Settings on another device.
+   */
+  async refreshProfile(): Promise<void> {
+    const stored = this.getStoredUser()
+    if (!stored) return
+    try {
+      const res = await api.get('/auth/me')
+      const me = res.data.data as Partial<AuthUser>
+      storeUser({ ...stored, name: me.name ?? stored.name, role: me.role ?? stored.role, tenant: { ...stored.tenant, ...(me.tenant ?? {}) } })
+    } catch { /* offline — keep the stored profile */ }
   },
 
   async fetchCurrentUser(): Promise<AuthUser> {

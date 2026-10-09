@@ -6,8 +6,11 @@ import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, TrendingUp, TrendingDown, Package, Pill, Award } from 'lucide-react'
 import { api } from '@/lib/api'
 import { cn, formatCurrency, formatDate } from '@/lib/utils'
+import { useRegion } from '@/lib/region'
+import { scheduleLabel, type DrugScheduleCode } from '@rxflow/regional'
 
 export default function MedicineDetailPage() {
+  const region = useRegion()
   const params = useParams<{ id: string }>()
   const id = params.id
 
@@ -53,10 +56,12 @@ export default function MedicineDetailPage() {
             <div className="flex flex-wrap items-center gap-3 mt-3 text-sm">
               <span className="text-slate-600">By <strong>{m.manufacturerName}</strong></span>
               <span className="text-slate-400">|</span>
-              <span className="text-slate-600">HSN <span className="font-mono">{m.hsn}</span></span>
+              <span className="text-slate-600">{region.fields.productCode.label} <span className="font-mono">{m.hsn}</span></span>
               <span className="text-slate-400">|</span>
-              <span className="text-slate-600">GST {m.gstRate}%</span>
-              {m.schedule === 'OTC' ? <span className="badge-success">OTC</span> : <span className="badge-warning">{m.schedule.replace('SCHEDULE_', 'Sch ')}</span>}
+              <span className="text-slate-600">{region.tax.label} {m.gstRate}%</span>
+              <span className={m.schedule === 'OTC' ? 'badge-success' : 'badge-warning'} title={region.drugSchedules[m.schedule as DrugScheduleCode]?.description}>
+                {scheduleLabel(region, m.schedule)}
+              </span>
             </div>
           </div>
           <div className="text-right">

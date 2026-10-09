@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '@rxflow/db'
 import { authenticate } from '../middleware/auth.js'
+import { paymentMethodSchema } from '../utils/regional.js'
 import { assertMedicinesUsable } from '../utils/medicine-scope.js'
 import { getPaginationParams, buildPaginationMeta } from '../utils/pagination.js'
 import { calculateOrderTotals, computeCommission, applySpecialDiscount } from '../utils/order-math.js'
@@ -26,7 +27,7 @@ const createOrderSchema = z.object({
   supplierId: z.string().optional(),
   prescriptionId: z.string().optional(),
   items: z.array(orderItemSchema).min(1),
-  paymentMethod: z.enum(['CASH','UPI','NEFT','RTGS','CHEQUE','CREDIT','CARD']).optional(),
+  paymentMethod: paymentMethodSchema.optional(),
   notes: z.string().optional(),
   // Salesman commission — optional, supported for both SALE and PURCHASE
   salesRepId: z.string().optional(),
@@ -349,7 +350,7 @@ export async function orderRoutes(app: FastifyInstance) {
       label: z.string().min(1).max(80),
       customerId: z.string().optional(),
       salesRepId: z.string().optional(),
-      paymentMethod: z.enum(['CASH','UPI','NEFT','RTGS','CHEQUE','CREDIT','CARD']).optional(),
+      paymentMethod: paymentMethodSchema.optional(),
       notes: z.string().optional(),
       items: z.array(orderItemSchema).min(1),
     }).parse(request.body)
