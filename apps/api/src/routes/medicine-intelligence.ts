@@ -6,11 +6,21 @@ import { normalizeMedicineName, extractMedicinesFromText } from '@rxflow/medicin
 import { initializeMatcher } from '@rxflow/medicine-intelligence'
 import { env } from '../utils/env.js'
 
-// Cache the matcher in memory
-let matcherReady = false
+// Cache the matcher in memory. One shared promise, so the background warm-up and a request
+// arriving mid-load don't both query and index the catalog.
+let matcherLoad: Promise<void> | null = null
 
-async function ensureMatcherLoaded() {
-  if (matcherReady) return
+function ensureMatcherLoaded(): Promise<void> {
+  if (!matcherLoad) {
+    matcherLoad = loadMatcher().catch((err) => {
+      matcherLoad = null // allow a retry on the next request
+      throw err
+    })
+  }
+  return matcherLoad
+}
+
+async function loadMatcher() {
   // The matcher is one process-wide index shared by all tenants, so it holds only the shared
   // catalog — never any tenant's private medicines.
   const medicines = await prisma.medicine.findMany({
@@ -36,19 +46,18 @@ async function ensureMatcherLoaded() {
       searchTokens: m.searchTokens,
     }))
   )
-
-  matcherReady = true
 }
 
 export async function medicineIntelligenceRoutes(app: FastifyInstance) {
   // Initialize matcher on plugin load
+  // Warm the matcher in the BACKGROUND. Awaiting it here held the server from listening
+  // until the whole catalog had been fetched and indexed — on a cold start that stacked a
+  // database wake-up and a cross-region query on top of the boot. Routes that need the
+  // matcher await the same shared promise.
   app.addHook('onReady', async () => {
-    try {
-      await ensureMatcherLoaded()
-      app.log.info('✅ Medicine Intelligence matcher loaded')
-    } catch (err) {
-      app.log.warn({ err }, '⚠️  Medicine Intelligence matcher failed to initialize')
-    }
+    ensureMatcherLoaded()
+      .then(() => app.log.info('✅ Medicine Intelligence matcher loaded'))
+      .catch((err) => app.log.warn({ err }, '⚠️  Medicine Intelligence matcher failed to initialize'))
   })
 
   // POST /api/v1/medicine-intelligence/search
@@ -152,7 +161,7 @@ export async function medicineIntelligenceRoutes(app: FastifyInstance) {
   // POST /api/v1/medicine-intelligence/reload
   // Reload matcher (call after importing new medicines)
   app.post('/reload', { preHandler: [authenticate] }, async (_request, reply) => {
-    matcherReady = false
+    matcherLoad = null
     await ensureMatcherLoaded()
     return reply.send({ success: true, message: 'Matcher reloaded' })
   })

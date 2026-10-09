@@ -1,0 +1,35 @@
+name: Keep API warm
+
+# Render's free plan puts the API to sleep after 15 minutes without traffic, and the next
+# visitor waits ~30-60s for it to wake. Pinging /health every 10 minutes keeps it awake.
+# One always-on free service uses ~744 of Render's 750 free instance-hours a month.
+# /health does not touch the database, so Neon still auto-suspends and stays in its free tier.
+#
+# Override the target with a repository variable named API_HEALTH_URL if the API moves.
+# Note: GitHub pauses scheduled workflows after 60 days without repository activity, and
+# scheduled runs can be delayed under load; an UptimeRobot monitor on the same URL is a
+# good second line (see DEPLOYMENT.md).
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Ping /health
+        env:
+          URL: ${{ vars.API_HEALTH_URL || 'https://rxflow-api.onrender.com/health' }}
+        run: |
+          for attempt in 1 2 3; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 75 "$URL") || code=000
+            echo "attempt $attempt → HTTP $code"
+            [ "$code" = "200" ] && exit 0
+            sleep 10
+          done
+          echo "::warning::API did not answer 200 after 3 attempts"

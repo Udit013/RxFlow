@@ -6,7 +6,7 @@
 
 **Live demo:** [rx-flow-web.vercel.app](https://rx-flow-web.vercel.app) — click **Create account** to spin up your own pharmacy workspace.
 
-> ⏳ The API runs on a free tier that sleeps after inactivity, so the **first** request after a while can take ~50s to wake. Subsequent requests are instant.
+> ⏳ The API runs on a free tier that sleeps after inactivity. A scheduled keep-warm ping normally keeps it awake; if it has slept, the first request can take up to ~50s (the app starts the wake-up as soon as any page opens and says so on screen). Subsequent requests are instant.
 
 ---
 

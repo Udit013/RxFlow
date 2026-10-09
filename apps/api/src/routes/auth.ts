@@ -26,8 +26,10 @@ function slugify(name: string): string {
 }
 
 // Compared against when no user matches, so a miss costs the same bcrypt time as a wrong
-// password — response timing can't reveal which emails are registered.
-const DUMMY_PASSWORD_HASH = bcrypt.hashSync('rxflow-timing-equaliser', 12)
+// password — response timing can't reveal which emails are registered. A precomputed cost-12
+// hash: computing it at import used to block server start-up for ~0.35s (seconds on a
+// fractional-CPU host).
+const DUMMY_PASSWORD_HASH = '$2a$12$.jXlRifB/7NSBtFuiV40UO0T/eHznEaq/FKpvdPhN1NUNkYFQl1We'
 
 // Body token is accepted only as a one-time migration path for sessions created before the
 // refresh token moved into an httpOnly cookie; the cookie is the normal source.

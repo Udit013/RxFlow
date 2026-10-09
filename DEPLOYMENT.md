@@ -24,7 +24,7 @@ Everything below runs on **free tiers or open-source** software. No card require
 - **Mobile:** Expo (React Native) — share the API client + types from this monorepo.
 - **Desktop:** **Tauri** (open-source, ~10MB) over Electron (~150MB) unless you need deep native printer drivers.
 
-> **Cost honesty:** the only friction in the free path is Render free *sleeping* after 15 min idle. Fine for sharing/demo/low-traffic. When you have a real pharmacy on it daily, ~$7/mo on Render removes the sleep. Everything else stays free indefinitely.
+> **Cost honesty:** the only friction in the free path is Render free *sleeping* after 15 min idle. The repo's **Keep API warm** workflow (`.github/workflows/keep-warm.yml`) pings `/health` every 10 minutes so it normally never sleeps — one always-on free service uses ~744 of Render's 750 free hours a month. When you have a real pharmacy on it daily, ~$7/mo on Render removes the sleep for certain (and gives more CPU). Everything else stays free indefinitely.
 
 ---
 
@@ -134,9 +134,14 @@ cd ../.. && pnpm install --filter @rxflow/web...
 - Free tier: 1M events/mo. Add only once you have real users (it's noise before then).
 - Web: `pnpm --filter @rxflow/web add posthog-js`, init with `NEXT_PUBLIC_POSTHOG_KEY` in a client provider.
 
+### Keeping the API awake (already set up)
+- `.github/workflows/keep-warm.yml` pings `https://rxflow-api.onrender.com/health` every 10 minutes. If your API URL differs, add a repository variable **`API_HEALTH_URL`** (GitHub → Settings → Secrets and variables → Actions → Variables) with the full `/health` URL.
+- `/health` doesn't query the database, so Neon still auto-suspends and stays within its free compute.
+- Limits: GitHub can delay scheduled runs under load, and pauses scheduled workflows after 60 days without repository activity (re-enable it from the Actions tab).
+
 ### Uptime monitoring → UptimeRobot
 - Free: 50 monitors. Add an HTTP(s) monitor pointing at `https://YOUR-API.onrender.com/health`.
-- Bonus: a 5-min uptime ping keeps the Render free instance slightly warmer (fewer cold starts).
+- A 5-minute monitor is also a reliable second keep-warm ping alongside the GitHub workflow.
 - Prefer self-hosted + a public status page? Use **Uptime Kuma** (open-source) instead — but it needs its own host.
 
 ### Scheduled jobs (no Redis needed) → GitHub Actions cron
@@ -150,7 +155,9 @@ Until you add BullMQ/Redis, run periodic tasks (daily backup, expiry sweep) with
 - **In-memory pub/sub = single instance only.** Render free is single-instance, so fine. If you ever scale to multiple API instances, move the pub/sub in `apps/api/src/utils/events.ts` to Upstash Redis (free tier).
 - **`prisma db push --accept-data-loss` runs on every deploy.** On a fresh DB and on no-op deploys it's safe. If you make a schema change that drops a column, it will drop it without asking. Back up first (Admin → Backup & Import → Export) before risky schema changes.
 - **JWT secrets:** Render generates them once and keeps them. If you ever rotate them, all existing sessions log out — expected.
-- **Cold start + POS:** if you demo to a real pharmacy, hit the URL a minute before so the API is awake, or upgrade to the no-sleep plan.
+- **Cold start + POS:** the keep-warm workflow normally prevents sleeping, and the web app starts waking the API the moment any page opens (overlapping the wake-up with sign-in) and tells the user when a wake-up is in progress. For guaranteed no-sleep, use the paid plan.
+- **Put the API and database in the same region.** Every request makes one or more database round trips, and a transaction makes many in sequence. The API runs in Render **Singapore** (`render.yaml`) while the Neon project was created in **AWS us-east-1**, so each round trip crosses the Pacific (~200 ms+). Moving Neon to **AWS Asia Pacific (Singapore)** — the closest region to Indian users and to the API — removes most of that: create a new Neon project there, `pg_dump` the old database and restore into it, then update `DATABASE_URL` / `DIRECT_URL` on Render. (Alternatively move the Render service to Virginia, but that puts the API further from users in India.)
+- **Start command:** Render runs `cd apps/api && node_modules/.bin/tsx src/server.ts` directly — going through `pnpm --filter … start` scanned the whole workspace first and doubled boot time.
 
 ---
 

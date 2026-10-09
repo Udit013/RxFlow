@@ -80,9 +80,19 @@ function SplashContent() {
  * session on a page load, which can take a while when the free-tier API is waking up.
  */
 export function AppLoader() {
+  // A cold start on the free hosting plan can take up to a minute. After a few seconds, say
+  // so — a silent spinner that long reads as "broken".
+  const [slow, setSlow] = useState(false)
+  useEffect(() => {
+    const t = setTimeout(() => setSlow(true), 4000)
+    return () => clearTimeout(t)
+  }, [])
   return (
     <div className="rx-splash" role="status" aria-live="polite" aria-busy="true" style={{ animation: 'none' }}>
       <SplashContent />
+      <p className={slow ? 'rx-splash__note rx-splash__note--shown' : 'rx-splash__note'} aria-hidden={!slow}>
+        Waking up the server — the first visit after a quiet spell can take up to a minute.
+      </p>
     </div>
   )
 }

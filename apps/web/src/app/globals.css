@@ -210,6 +210,21 @@
   animation: rx-splash-sweep 1.1s cubic-bezier(0.45, 0, 0.25, 1) infinite;
 }
 
+.rx-splash__note {
+  position: absolute;
+  left: 50%;
+  bottom: max(2.5rem, env(safe-area-inset-bottom));
+  width: min(32rem, calc(100vw - 2rem));
+  transform: translateX(-50%);
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.5;
+  color: theme('colors.surface.500');
+  opacity: 0;
+  transition: opacity 400ms ease-out;
+}
+.rx-splash__note--shown { opacity: 1; }
+
 @keyframes rx-splash-rise {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: none; }

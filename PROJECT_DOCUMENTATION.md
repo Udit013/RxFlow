@@ -1483,7 +1483,7 @@ Concurrency is configured to **cancel an in-progress run** if a new commit lands
 
 | Trade-off | What it means in practice |
 |---|---|
-| Render sleeps after 15 minutes idle | The first request after a quiet period can take up to ~50 seconds while the service wakes — the README explicitly warns users about this rather than letting it look like a bug |
+| Render sleeps after 15 minutes idle | The first request after a quiet period can take up to ~50 seconds while the service wakes. Mitigated three ways — see Section 15.4 |
 | Neon auto-pauses after 5 minutes idle | Roughly a 1-second wake delay on the database side — much less noticeable than Render's cold start |
 | Local file storage (`STORAGE_PROVIDER=local`) | Uploaded files are **not durable** across a Render redeploy (the filesystem is ephemeral); a real production deployment would swap this for S3/Cloudinary/R2, which the storage abstraction already anticipates via the `STORAGE_PROVIDER` env var |
 | Meilisearch/Redis are optional and not deployed | The app falls back to in-memory alternatives (the fuzzy matcher, a per-process pub/sub map) rather than requiring paid infrastructure |
@@ -1502,6 +1502,21 @@ buildCommand: |
 ```
 
 On a **redeploy** where the schema hasn't changed, `db push` would otherwise fail with errors like "type X already exists" (re-attempting to create enum types that are already present) and — without the `|| echo ...` fallback — that failure would **block the entire deployment**, even though the actual application code changes have nothing to do with the database schema. Making it non-fatal means a redeploy that only changed application logic (a bug fix, a new UI feature) isn't blocked by a schema-sync step that has nothing new to do. The trade-off, and a real failure mode this project hit in practice: if a schema change genuinely *does* need to reach production and `db push` fails for an unrelated reason, that failure is now silent — the deploy "succeeds" while the database is actually out of sync with the code that expects the new columns to exist. The mitigating practice this project follows: every schema change ships as its own idempotent, hand-written SQL file in `manual-migrations/` (`IF NOT EXISTS` guards, constraints added in `DO … EXCEPTION WHEN duplicate_object` blocks). The latest one — medicine ownership columns and backfill, `Invoice.otherCharges`, and the `AuthSession` table — runs **automatically and fatally** in the build: if it fails, the build fails and Render keeps the previous release live, instead of shipping code that expects columns the database doesn't have. It was verified by running it twice in a row against a fresh database.
+
+### 15.4 Cold starts: what was slow, and what changed
+
+A visitor after a quiet spell paid for three things in sequence: Render waking the container (~30–60 s, platform-side), the API booting on the free plan's **0.1 CPU**, and the first database round trips. Measured locally (M-series laptop, local Postgres), the API took **~1.75 s** from process start to answering `/health` the way Render launched it; on a tenth of a CPU that grows roughly tenfold. The changes:
+
+| Change | Effect (local measurement) |
+|---|---|
+| Start `tsx` directly instead of `pnpm --filter @rxflow/api start` (which scans the whole workspace first) | 1.75 s → 0.87 s |
+| The constant-time-login dummy bcrypt hash is a precomputed literal instead of `bcrypt.hashSync(…, 12)` at import | −0.34 s (over a third of the remaining boot) |
+| The medicine matcher warms up **in the background**; it used to run in an awaited `onReady` hook, so the server didn't listen until the whole catalog had been fetched from the database and indexed | Start-up no longer waits on a (possibly cold, cross-region) database query |
+| **Net** | **~1.75 s → ~0.52 s**, about 3.3× faster |
+
+Avoiding the sleep entirely matters more than any boot optimisation: a GitHub Actions workflow (`keep-warm.yml`) pings `/health` every 10 minutes, inside Render's 750 free instance-hours a month. On the client side, every page load fires a fire-and-forget `/health` request (`warmUpApi()` in `lib/api.ts`), so a wake-up overlaps with the user typing their password; and the session loader explains itself after 4 seconds ("Waking up the server…") instead of sitting silently.
+
+**Still open, and the biggest steady-state cost:** the API runs in Render Singapore while the Neon database is in AWS us-east-1, so every query crosses the Pacific (~200 ms+ per round trip, multiplied by the sequential round trips inside a transaction). Moving the Neon project to Singapore is the next step (see `DEPLOYMENT.md`); it needs a dump/restore, so it isn't something to automate blindly.
 
 #### 💬 Interview Questions — Section 15
 

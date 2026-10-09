@@ -23,6 +23,22 @@ const LEGACY_ACCESS_KEY = 'rxflow_access_token'
 const LEGACY_REFRESH_KEY = 'rxflow_refresh_token'
 const USER_KEY = 'rxflow_user'
 
+/**
+ * Start waking the API as early as possible. On the free hosting plan a sleeping API takes
+ * ~30-60s to come back; firing a cheap /health request the moment the app loads overlaps that
+ * wake-up with the user typing their password (or with session restore) instead of making
+ * them wait for it afterwards. Fire-and-forget, `no-cors` (the response isn't needed), once.
+ */
+let warmed = false
+export function warmUpApi() {
+  if (warmed || typeof window === 'undefined') return
+  warmed = true
+  try {
+    const health = new URL('/health', API_BASE).toString()
+    fetch(health, { mode: 'no-cors', cache: 'no-store', keepalive: true }).catch(() => {})
+  } catch { /* malformed API_BASE — nothing to warm */ }
+}
+
 /** Same-origin client for the cookie-bearing auth endpoints. */
 export const authApi = axios.create({
   baseURL: '/api/v1/auth',

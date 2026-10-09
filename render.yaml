@@ -32,7 +32,9 @@ services:
       npm install -g pnpm@9.1.0
       pnpm install --prod=false --frozen-lockfile=false
       cd packages/db && pnpm exec prisma generate && (pnpm exec prisma db push --accept-data-loss || echo "schema already applied, continuing") && pnpm exec prisma db execute --schema prisma/schema.prisma --file prisma/manual-migrations/2026-10-03-ownership-invoice-charges-sessions.sql && (pnpm exec tsx prisma/seed.ts || echo "seed skipped (non-fatal)")
-    startCommand: pnpm --filter @rxflow/api start
+    # Start tsx directly: `pnpm --filter … start` first scans the whole workspace, which
+    # doubled boot time (≈1.75s → 0.5s locally; far more on the free plan's 0.1 CPU).
+    startCommand: cd apps/api && node_modules/.bin/tsx src/server.ts
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
