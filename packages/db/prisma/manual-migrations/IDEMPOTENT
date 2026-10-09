@@ -1,0 +1,3 @@
+# Migrations re-applied on every deploy by scripts/deploy-db.sh, in this order.
+# Only list files that are safe to run repeatedly (IF NOT EXISTS / duplicate_object guards).
+2026-10-03-ownership-invoice-charges-sessions.sql
