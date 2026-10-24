@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   normalizeIngredientName, parseStrengthText, canonicalStrength, parseCompositionText, ingredientsFromGeneric,
   ingredientKey, compositionKey, formatComposition, mapDosageForm, releaseType, compareMedicines, regionalNames, atcLevel4, deriveIngredients,
-} from './composition.js'
+} from './composition.ts'
 
 describe('normalizeIngredientName', () => {
   it('maps regional names to the INN', () => {

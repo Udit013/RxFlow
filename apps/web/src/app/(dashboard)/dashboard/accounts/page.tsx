@@ -122,7 +122,7 @@ function ProfitLossTab({ period }: { period: string }) {
                     <Pie data={d.expenseByCategory} dataKey="amount" nameKey="category" cx="50%" cy="50%" innerRadius={40} outerRadius={70} paddingAngle={2}>
                       {d.expenseByCategory.map((_: any, i: number) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
                     </Pie>
-                    <RTooltip formatter={(v: number) => formatCurrency(v)} />
+                    <RTooltip formatter={(v) => formatCurrency(Number(v ?? 0))} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>

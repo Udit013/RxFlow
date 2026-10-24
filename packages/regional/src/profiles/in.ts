@@ -1,4 +1,4 @@
-import type { RegionProfile } from '../types.js'
+import type { RegionProfile } from '../types.ts'
 
 /** India — RxFlow's primary market. Mirrors the behaviour the app had before localisation. */
 export const IN: RegionProfile = {

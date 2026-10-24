@@ -1,4 +1,4 @@
-import type { RegionProfile } from '../types.js'
+import type { RegionProfile } from '../types.ts'
 
 /**
  * United Kingdom. NHS-dispensed prescription medicines are zero-rated for VAT; most

@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify'
 import { prisma } from '@rxflow/db'
 import { authenticate } from '../middleware/auth.js'
 import { getTenantRegion } from '../utils/regional.js'
-import { startOfZonedDay, addZonedDays, currentZonedMonthRange } from '@rxflow/regional'
+import { startOfZonedDay, addZonedDays, currentZonedMonthRange, lastZonedDateKeys } from '@rxflow/regional'
 
 export async function dashboardRoutes(app: FastifyInstance) {
   // GET /api/v1/dashboard — Main dashboard metrics
@@ -187,19 +187,24 @@ export async function dashboardRoutes(app: FastifyInstance) {
       LIMIT 10
     `
 
-    // Revenue chart (last 7 days)
-    const revenueChart = await prisma.$queryRaw<{ date: string; revenue: number; orders: bigint }[]>`
+    // Revenue chart: the last 7 local days including today, with empty days as zero.
+    const revenueRows = await prisma.$queryRaw<{ date: string; revenue: number; orders: bigint }[]>`
       SELECT
-        DATE(("createdAt" AT TIME ZONE 'UTC') AT TIME ZONE ${timezone}) as date,
+        to_char(("createdAt" AT TIME ZONE 'UTC') AT TIME ZONE ${timezone}, 'YYYY-MM-DD') as date,
         SUM(total) as revenue,
         COUNT(*) as orders
       FROM "Order"
       WHERE "tenantId" = ${tenantId}
         AND type = 'SALE'
-        AND "createdAt" >= ${addZonedDays(now, -7, timezone)}
+        AND "createdAt" >= ${addZonedDays(now, -6, timezone)}
       GROUP BY 1 -- by position: the timezone is a bound parameter, so a repeated expression wouldn't match
       ORDER BY date ASC
     `
+    const revenueByDay = new Map(revenueRows.map((r) => [r.date, r]))
+    const revenueChart = lastZonedDateKeys(now, 7, timezone).map((date) => {
+      const r = revenueByDay.get(date)
+      return { date, revenue: r ? Number(r.revenue) : 0, orders: r ? Number(r.orders) : 0 }
+    })
 
     // ── Today's-Operations extras ───────────────────────────────────────────
     const in30 = new Date(today.getTime() + 30 * 86400000)
@@ -273,11 +278,7 @@ export async function dashboardRoutes(app: FastifyInstance) {
           totalQuantity: Number(m.totalQty),
           totalRevenue: Number(m.totalRevenue),
         })),
-        revenueChart: revenueChart.map((r) => ({
-          date: r.date,
-          revenue: Number(r.revenue),
-          orders: Number(r.orders),
-        })),
+        revenueChart,
         alerts,
       },
     })
@@ -291,14 +292,15 @@ export async function dashboardRoutes(app: FastifyInstance) {
 
     const days = period === '7d' ? 7 : period === '30d' ? 30 : period === '90d' ? 90 : 365
     const { timezone } = await getTenantRegion(tenantId)
-    const from = addZonedDays(new Date(), -days, timezone) // local midnight, N days ago
+    const now = new Date()
+    const from = addZonedDays(now, -(days - 1), timezone) // local midnight; N days including today
 
     const where: Record<string, unknown> = { tenantId, type: 'SALE', createdAt: { gte: from } }
     if (query.storeId) where.storeId = query.storeId
 
-    const salesByDay = await prisma.$queryRaw<{ date: string; revenue: number; count: bigint }[]>`
+    const salesRows = await prisma.$queryRaw<{ date: string; revenue: number; count: bigint }[]>`
       SELECT
-        DATE(("createdAt" AT TIME ZONE 'UTC') AT TIME ZONE ${timezone}) as date,
+        to_char(("createdAt" AT TIME ZONE 'UTC') AT TIME ZONE ${timezone}, 'YYYY-MM-DD') as date,
         SUM(total) as revenue,
         COUNT(*) as count
       FROM "Order"
@@ -308,6 +310,8 @@ export async function dashboardRoutes(app: FastifyInstance) {
       GROUP BY 1 -- by position: the timezone is a bound parameter, so a repeated expression wouldn't match
       ORDER BY date ASC
     `
+
+    const salesByDayMap = new Map(salesRows.map((r) => [r.date, r]))
 
     const summary = await prisma.order.aggregate({
       where,
@@ -326,11 +330,11 @@ export async function dashboardRoutes(app: FastifyInstance) {
           totalDiscount: summary._sum.discountAmount ?? 0,
           totalTax: summary._sum.taxAmount ?? 0,
         },
-        salesByDay: salesByDay.map((d) => ({
-          date: d.date,
-          revenue: Number(d.revenue),
-          orders: Number(d.count),
-        })),
+        // Every day in the period, empty days as zero, so charts keep a true time axis.
+        salesByDay: lastZonedDateKeys(now, days, timezone).map((date) => {
+          const d = salesByDayMap.get(date)
+          return { date, revenue: d ? Number(d.revenue) : 0, orders: d ? Number(d.count) : 0 }
+        }),
       },
     })
   })

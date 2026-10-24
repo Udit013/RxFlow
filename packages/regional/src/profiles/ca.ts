@@ -1,4 +1,4 @@
-import type { RegionProfile } from '../types.js'
+import type { RegionProfile } from '../types.ts'
 
 /**
  * Canada. GST/HST is a value-added tax: prescription drugs are zero-rated, most OTC products

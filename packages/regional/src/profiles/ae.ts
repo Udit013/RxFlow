@@ -1,4 +1,4 @@
-import type { RegionProfile } from '../types.js'
+import type { RegionProfile } from '../types.ts'
 
 /**
  * United Arab Emirates. VAT is 5%, with many medicines zero-rated, so the default rate is 0%.

@@ -1,4 +1,4 @@
-import type { RegionProfile } from '../types.js'
+import type { RegionProfile } from '../types.ts'
 
 /**
  * Generic international profile for countries without a dedicated one yet. Neutral labels, a

@@ -9,6 +9,9 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
+    // Shared packages import their own files as ./x.ts so tsx (API), Turbopack and webpack (web)
+    // all resolve them natively. Every project here is noEmit, which this option requires.
+    "allowImportingTsExtensions": true,
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,

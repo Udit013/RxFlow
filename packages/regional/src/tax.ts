@@ -2,7 +2,7 @@
  * Tax engines. The invoice maths asks "how is a line taxed at rate R?" and gets back a list of
  * components; it never needs to know which country it is in.
  */
-import type { TaxSystemId } from './types.js'
+import type { TaxSystemId } from './types.ts'
 
 export interface TaxContext {
   /** Seller's region (state/province) — only India's GST looks at this. */

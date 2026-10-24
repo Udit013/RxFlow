@@ -1,5 +1,5 @@
-import type { DrugScheduleCode, PaymentMethodCode, RegionProfile } from './types.js'
-import { DRUG_SCHEDULE_CODES } from './types.js'
+import type { DrugScheduleCode, PaymentMethodCode, RegionProfile } from './types.ts'
+import { DRUG_SCHEDULE_CODES } from './types.ts'
 
 export interface MoneyFormat { currency: string; locale: string }
 

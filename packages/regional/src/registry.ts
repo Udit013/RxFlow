@@ -1,11 +1,11 @@
-import type { CountryCode, RegionProfile, ResolvedRegion, TenantRegionSettings } from './types.js'
-import { IN } from './profiles/in.js'
-import { US } from './profiles/us.js'
-import { GB } from './profiles/gb.js'
-import { AE } from './profiles/ae.js'
-import { CA } from './profiles/ca.js'
-import { INTL } from './profiles/intl.js'
-import { isValidTimeZone } from './time.js'
+import type { CountryCode, RegionProfile, ResolvedRegion, TenantRegionSettings } from './types.ts'
+import { IN } from './profiles/in.ts'
+import { US } from './profiles/us.ts'
+import { GB } from './profiles/gb.ts'
+import { AE } from './profiles/ae.ts'
+import { CA } from './profiles/ca.ts'
+import { INTL } from './profiles/intl.ts'
+import { isValidTimeZone } from './time.ts'
 
 /** Every bundled profile. To support a new country, add a file under profiles/ and list it here. */
 export const REGION_PROFILES: Record<string, RegionProfile> = { IN, US, GB, AE, CA, INTL }

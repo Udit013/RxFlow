@@ -1,4 +1,4 @@
-import type { FieldRule, RegionProfile } from './types.js'
+import type { FieldRule, RegionProfile } from './types.ts'
 
 /** null when valid (or empty — emptiness is the caller's concern), else a readable message. */
 export function validateField(rule: FieldRule, value: string | null | undefined): string | null {

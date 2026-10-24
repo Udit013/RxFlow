@@ -633,4 +633,4 @@ export function canAccess(role: string | undefined | null, method: string, path:
   }
   return READ.includes(m) ? true : MANAGER.includes(role as RoleName)
 }
-export * from './composition.js'
+export * from './composition.ts'

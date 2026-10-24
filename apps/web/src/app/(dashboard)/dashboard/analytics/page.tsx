@@ -60,7 +60,7 @@ export default function AnalyticsPage() {
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
               <XAxis dataKey="date" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(v: any) => formatCurrency(Number(v))} />
+              <Tooltip formatter={(v) => formatCurrency(Number(v ?? 0))} />
               <Line type="monotone" dataKey="revenue" stroke="#077ace" strokeWidth={2} dot={false} />
             </LineChart>
           </ResponsiveContainer>

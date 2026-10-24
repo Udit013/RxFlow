@@ -6,7 +6,7 @@ import {
   validateTaxId, validatePostalCode, isPlausiblePhone, phoneHint,
   formatMoney, currencySymbol, paymentMethodLabel, scheduleLabel, registerSchedules,
   IN, US, GB, AE,
-} from './index.js'
+} from './index.ts'
 
 describe('tax engines', () => {
   it('India: CGST+SGST within a state, IGST across states, local when buyer unknown', () => {
@@ -134,6 +134,16 @@ describe('formatting and labels', () => {
     expect(scheduleLabel(GB, 'SCHEDULE_H')).toBe('POM')
     expect(scheduleLabel(IN, 'SCHEDULE_H1')).toBe('Schedule H1')
     expect(registerSchedules(IN)).toEqual(['SCHEDULE_H1', 'SCHEDULE_X'])
+  })
+})
+
+describe('daily series keys', () => {
+  it('lists the last N local dates, oldest first, across a month boundary', async () => {
+    const { lastZonedDateKeys, zonedDateKey } = await import('./time.ts')
+    const now = new Date('2026-11-01T02:00:00Z') // still Oct 31 in New York
+    expect(zonedDateKey(now, 'America/New_York')).toBe('2026-10-31')
+    expect(lastZonedDateKeys(now, 3, 'America/New_York')).toEqual(['2026-10-29', '2026-10-30', '2026-10-31'])
+    expect(lastZonedDateKeys(now, 2, 'Asia/Kolkata')).toEqual(['2026-10-31', '2026-11-01'])
   })
 })
 

@@ -1,4 +1,4 @@
-import type { RegionProfile } from '../types.js'
+import type { RegionProfile } from '../types.ts'
 
 /**
  * United States. Sales tax is set per store's state/locality, and prescription drugs are exempt

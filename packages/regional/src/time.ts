@@ -71,6 +71,21 @@ export function addZonedDays(date: Date, days: number, timeZone: string): Date {
   return zonedTimeToUtc(shifted.getUTCFullYear(), shifted.getUTCMonth() + 1, shifted.getUTCDate(), 0, 0, 0, timeZone)
 }
 
+/** Calendar date of an instant in `timeZone`, as "YYYY-MM-DD". */
+export function zonedDateKey(date: Date, timeZone: string): string {
+  const p = zonedParts(date, timeZone)
+  return `${p.year}-${String(p.month).padStart(2, '0')}-${String(p.day).padStart(2, '0')}`
+}
+
+/** The last `days` calendar dates up to and including today in `timeZone`, oldest first. */
+export function lastZonedDateKeys(now: Date, days: number, timeZone: string): string[] {
+  const p = zonedParts(now, timeZone)
+  return Array.from({ length: days }, (_, i) => {
+    const d = new Date(Date.UTC(p.year, p.month - 1, p.day - (days - 1 - i)))
+    return d.toISOString().slice(0, 10)
+  })
+}
+
 /** [from, to) of a calendar month in the given timezone (month 1–12). */
 export function zonedMonthRange(year: number, month: number, timeZone: string): { from: Date; to: Date } {
   const next = month === 12 ? { y: year + 1, m: 1 } : { y: year, m: month + 1 }
