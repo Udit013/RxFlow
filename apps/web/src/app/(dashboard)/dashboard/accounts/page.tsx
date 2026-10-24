@@ -37,7 +37,7 @@ export default function AccountsPage() {
           actions={
             <div className="flex items-center gap-2 bg-white border border-surface-200 rounded-lg px-3 py-1.5 shadow-xs">
               <Calendar className="w-4 h-4 text-surface-400" />
-              <input type="month" value={period} onChange={(e) => setPeriod(e.target.value)} className="text-sm outline-none bg-transparent" />
+              <input type="month" value={period} onChange={(e) => setPeriod(e.target.value)} className="text-sm outline-hidden bg-transparent" />
             </div>
           }
         />
@@ -196,12 +196,12 @@ function ExpensesTab({ period }: { period: string }) {
 
       <SectionCard
         title="Transactions"
-        action={<button onClick={() => setShowAdd(true)} className="btn-primary !py-1.5 !px-3 text-xs"><Plus className="w-3.5 h-3.5" /> Add</button>}
+        action={<button onClick={() => setShowAdd(true)} className="btn-primary py-1.5! px-3! text-xs"><Plus className="w-3.5 h-3.5" /> Add</button>}
         flush
       >
         <div className="overflow-x-auto"><table className="w-full text-sm">
           <thead>
-            <tr className="bg-surface-50/60 text-[10px] uppercase tracking-[0.1em] text-surface-500">
+            <tr className="bg-surface-50/60 text-[10px] uppercase tracking-widest text-surface-500">
               <th className="text-left px-4 py-2.5">Date</th>
               <th className="text-left px-4 py-2.5">Category</th>
               <th className="text-left px-4 py-2.5">Paid To / Ref</th>
@@ -220,7 +220,7 @@ function ExpensesTab({ period }: { period: string }) {
                 <tr key={r.id} className="hover:bg-surface-50/60">
                   <td className="px-4 py-2.5 text-surface-600 text-xs">{formatDate(r.incurredAt)}</td>
                   <td className="px-4 py-2.5">
-                    <span className={cn('chip', r.direction === 'IN' ? '!bg-success-50 !text-success-700 !border-success-200' : '')}>
+                    <span className={cn('chip', r.direction === 'IN' ? 'bg-success-50! text-success-700! !border-success-200' : '')}>
                       {r.category}
                     </span>
                   </td>
@@ -355,7 +355,7 @@ function CashFlowTab({ period }: { period: string }) {
         ) : (
           <div className="overflow-x-auto"><table className="w-full text-sm">
             <thead>
-              <tr className="bg-surface-50/60 text-[10px] uppercase tracking-[0.1em] text-surface-500">
+              <tr className="bg-surface-50/60 text-[10px] uppercase tracking-widest text-surface-500">
                 <th className="text-left px-4 py-2.5">Method</th>
                 <th className="text-right px-4 py-2.5">In</th>
                 <th className="text-right px-4 py-2.5">Out</th>

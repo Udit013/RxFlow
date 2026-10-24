@@ -72,7 +72,7 @@ export function AlternativesPanel({ medicineId, composition }: { medicineId: str
 
       <div className="px-4 pt-3">
         <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900">
-          <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
           <p>{data?.notice ?? 'Shown for reference only — not a statement that products are interchangeable.'}</p>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-2 mt-3">

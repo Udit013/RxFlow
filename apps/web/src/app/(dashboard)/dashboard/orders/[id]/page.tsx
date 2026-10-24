@@ -231,10 +231,10 @@ function InvoiceRow({ invoice, order }: { invoice: any; order: any }) {
       </div>
       <div className="flex items-center gap-2">
         <span className="font-semibold mr-2">{formatCurrency(invoice.total ?? invoice.grandTotal ?? 0)}</span>
-        <button onClick={downloadPdf} className="btn-secondary !py-1.5 !px-2.5 text-xs">
+        <button onClick={downloadPdf} className="btn-secondary py-1.5! px-2.5! text-xs">
           <Download className="w-3.5 h-3.5" /> PDF
         </button>
-        <button onClick={shareWhatsApp} className="btn-secondary !py-1.5 !px-2.5 text-xs">
+        <button onClick={shareWhatsApp} className="btn-secondary py-1.5! px-2.5! text-xs">
           <MessageCircle className="w-3.5 h-3.5" /> WhatsApp
         </button>
       </div>

@@ -176,7 +176,7 @@ export function CommandPalette() {
   ]
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-[100] flex items-start justify-center pt-[12vh] p-4" onClick={() => setOpen(false)}>
+    <div className="fixed inset-0 bg-black/40 z-100 flex items-start justify-center pt-[12vh] p-4" onClick={() => setOpen(false)}>
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-3 px-4 py-3 border-b">
           <Search className="w-4 h-4 text-slate-400" />
@@ -186,7 +186,7 @@ export function CommandPalette() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search medicines, customers, suppliers, orders, invoices..."
-            className="flex-1 outline-none text-sm placeholder:text-slate-400"
+            className="flex-1 outline-hidden text-sm placeholder:text-slate-400"
           />
           {isFetching && debouncedQuery.length >= 2 && (
             <span className="text-xs text-slate-400">Searching...</span>

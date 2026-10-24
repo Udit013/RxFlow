@@ -123,10 +123,10 @@ export function DataTable<T>({
       {(searchable || toolbar || exportFileName) && (
         <div className="flex flex-wrap items-center gap-2">
           {searchable && (
-            <div className="card !p-2 flex items-center gap-2 flex-1 min-w-[200px]">
+            <div className="card p-2! flex items-center gap-2 flex-1 min-w-[200px]">
               <Search className="w-4 h-4 text-surface-400 ml-1" />
               <input
-                className="flex-1 text-sm bg-transparent outline-none"
+                className="flex-1 text-sm bg-transparent outline-hidden"
                 placeholder={searchPlaceholder}
                 value={query}
                 onChange={(e) => { setQuery(e.target.value); setPage(0) }}
@@ -179,11 +179,11 @@ export function DataTable<T>({
       )}
 
       {/* Table */}
-      <div className="card !p-0 overflow-hidden">
+      <div className="card p-0! overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="sticky top-0 z-10">
-              <tr className="bg-surface-50/80 backdrop-blur text-2xs uppercase tracking-[0.08em] text-surface-500 border-b border-surface-200">
+              <tr className="bg-surface-50/80 backdrop-blur-sm text-2xs uppercase tracking-[0.08em] text-surface-500 border-b border-surface-200">
                 {visibleColumns.map((col) => {
                   const isSorted = sortKey === col.key
                   return (

@@ -233,7 +233,7 @@ function NewTransferModal({ onClose, onCreated }: { onClose: () => void; onCreat
             <div className="flex items-center gap-2 input">
               <Search className="w-4 h-4 text-slate-400" />
               <input
-                className="flex-1 outline-none text-sm"
+                className="flex-1 outline-hidden text-sm"
                 placeholder="Search medicine..."
                 value={medQuery}
                 onChange={(e) => setMedQuery(e.target.value)}

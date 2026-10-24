@@ -99,9 +99,9 @@ function EmployeesTab() {
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
-        <div className="card !p-2 flex-1 flex items-center gap-2">
+        <div className="card p-2! flex-1 flex items-center gap-2">
           <Search className="w-4 h-4 text-surface-400 ml-1" />
-          <input className="flex-1 text-sm bg-transparent outline-none" placeholder="Search by name, phone, designation..." value={search} onChange={(e) => setSearch(e.target.value)} />
+          <input className="flex-1 text-sm bg-transparent outline-hidden" placeholder="Search by name, phone, designation..." value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
         <button onClick={() => setEdit('new')} className="btn-primary"><Plus className="w-4 h-4" /> Add Employee</button>
       </div>
@@ -109,7 +109,7 @@ function EmployeesTab() {
       <SectionCard flush>
         <div className="overflow-x-auto"><table className="w-full text-sm">
           <thead>
-            <tr className="bg-surface-50/60 text-[10px] uppercase tracking-[0.1em] text-surface-500">
+            <tr className="bg-surface-50/60 text-[10px] uppercase tracking-widest text-surface-500">
               <th className="text-left px-4 py-2.5">Name</th>
               <th className="text-left px-4 py-2.5">Designation</th>
               <th className="text-left px-4 py-2.5">Contact</th>
@@ -281,15 +281,15 @@ function AttendanceTab() {
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
-        <div className="card !px-3 !py-1.5 flex items-center gap-2 shadow-xs">
+        <div className="card px-3! py-1.5! flex items-center gap-2 shadow-xs">
           <CalendarCheck className="w-4 h-4 text-surface-400" />
-          <input type="month" value={period} onChange={(e) => setPeriod(e.target.value)} className="text-sm outline-none bg-transparent" />
+          <input type="month" value={period} onChange={(e) => setPeriod(e.target.value)} className="text-sm outline-hidden bg-transparent" />
         </div>
         <div className="flex items-center gap-2 text-xs text-surface-500">Quick-mark today:</div>
         <div className="flex gap-2">
-          <button onClick={() => bulk.mutate('PRESENT')} disabled={bulk.isPending} className="btn-secondary !py-1.5 !px-3 text-xs">All Present</button>
-          <button onClick={() => bulk.mutate('WEEK_OFF')} disabled={bulk.isPending} className="btn-secondary !py-1.5 !px-3 text-xs">Week Off</button>
-          <button onClick={() => bulk.mutate('HOLIDAY')} disabled={bulk.isPending} className="btn-secondary !py-1.5 !px-3 text-xs">Holiday</button>
+          <button onClick={() => bulk.mutate('PRESENT')} disabled={bulk.isPending} className="btn-secondary py-1.5! px-3! text-xs">All Present</button>
+          <button onClick={() => bulk.mutate('WEEK_OFF')} disabled={bulk.isPending} className="btn-secondary py-1.5! px-3! text-xs">Week Off</button>
+          <button onClick={() => bulk.mutate('HOLIDAY')} disabled={bulk.isPending} className="btn-secondary py-1.5! px-3! text-xs">Holiday</button>
         </div>
       </div>
 
@@ -379,7 +379,7 @@ function PayrollTab() {
       <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
         <p className="text-sm text-surface-600">{runs.length} payroll run(s)</p>
         <div className="flex items-center gap-2">
-          <div className="card !px-3 !py-1.5 flex items-center gap-2 shadow-xs"><Wallet className="w-4 h-4 text-surface-400" /><input type="month" value={period} onChange={(e) => setPeriod(e.target.value)} className="text-sm outline-none bg-transparent" /></div>
+          <div className="card px-3! py-1.5! flex items-center gap-2 shadow-xs"><Wallet className="w-4 h-4 text-surface-400" /><input type="month" value={period} onChange={(e) => setPeriod(e.target.value)} className="text-sm outline-hidden bg-transparent" /></div>
           <button onClick={() => generate.mutate()} disabled={generate.isPending} className="btn-primary"><Plus className="w-4 h-4" /> {generate.isPending ? 'Generating...' : 'Generate Payroll'}</button>
         </div>
       </div>
@@ -387,7 +387,7 @@ function PayrollTab() {
       <SectionCard flush>
         <div className="overflow-x-auto"><table className="w-full text-sm">
           <thead>
-            <tr className="bg-surface-50/60 text-[10px] uppercase tracking-[0.1em] text-surface-500">
+            <tr className="bg-surface-50/60 text-[10px] uppercase tracking-widest text-surface-500">
               <th className="text-left px-4 py-2.5">Period</th>
               <th className="text-center px-4 py-2.5">Payslips</th>
               <th className="text-center px-4 py-2.5">Paid</th>
@@ -452,7 +452,7 @@ function PayrollRunDetail({ runId, onBack }: { runId: string; onBack: () => void
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-surface-50/60 text-[10px] uppercase tracking-[0.1em] text-surface-500">
+              <tr className="bg-surface-50/60 text-[10px] uppercase tracking-widest text-surface-500">
                 <th className="text-left px-4 py-2.5">Employee</th>
                 <th className="text-center px-4 py-2.5">Days (P / LOP)</th>
                 <th className="text-right px-4 py-2.5">Earned</th>
@@ -482,7 +482,7 @@ function PayrollRunDetail({ runId, onBack }: { runId: string; onBack: () => void
                   <td className="px-4 py-2.5 text-right font-semibold">{formatCurrency(p.netPay)}</td>
                   <td className="px-4 py-2.5 text-center">{p.status === 'PAID' ? <span className="badge-success">Paid</span> : <span className="badge-warning">Pending</span>}</td>
                   <td className="px-4 py-2.5 text-right">
-                    {p.status !== 'PAID' && <button onClick={() => pay.mutate(p.id)} disabled={pay.isPending} className="btn-primary !py-1 !px-2.5 text-xs"><Check className="w-3.5 h-3.5" /> Pay</button>}
+                    {p.status !== 'PAID' && <button onClick={() => pay.mutate(p.id)} disabled={pay.isPending} className="btn-primary py-1! px-2.5! text-xs"><Check className="w-3.5 h-3.5" /> Pay</button>}
                   </td>
                 </tr>
               ))}
@@ -507,15 +507,15 @@ function PerformanceTab() {
 
   return (
     <div className="space-y-4">
-      <div className="card !px-3 !py-1.5 flex items-center gap-2 shadow-xs w-fit">
+      <div className="card px-3! py-1.5! flex items-center gap-2 shadow-xs w-fit">
         <TrendingUp className="w-4 h-4 text-surface-400" />
-        <input type="month" value={period} onChange={(e) => setPeriod(e.target.value)} className="text-sm outline-none bg-transparent" />
+        <input type="month" value={period} onChange={(e) => setPeriod(e.target.value)} className="text-sm outline-hidden bg-transparent" />
       </div>
 
       <SectionCard flush title="Staff Performance" description="Attendance rate + sales attributed to each staff member (requires login link for sales)">
         <div className="overflow-x-auto"><table className="w-full text-sm">
           <thead>
-            <tr className="bg-surface-50/60 text-[10px] uppercase tracking-[0.1em] text-surface-500">
+            <tr className="bg-surface-50/60 text-[10px] uppercase tracking-widest text-surface-500">
               <th className="text-left px-4 py-2.5">Employee</th>
               <th className="text-center px-4 py-2.5">Days Marked</th>
               <th className="text-left px-4 py-2.5">Attendance</th>

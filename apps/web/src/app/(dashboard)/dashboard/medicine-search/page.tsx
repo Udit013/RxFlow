@@ -110,7 +110,7 @@ export default function MedicineSearchPage() {
           </div>
           <input
             type="text"
-            className="flex-1 text-lg text-slate-900 placeholder:text-slate-400 outline-none"
+            className="flex-1 text-lg text-slate-900 placeholder:text-slate-400 outline-hidden"
             placeholder="Type medicine name, generic, barcode... (e.g. Dolo650, Pan 40, 8901234567890)"
             value={query}
             onChange={(e) => handleQueryChange(e.target.value)}

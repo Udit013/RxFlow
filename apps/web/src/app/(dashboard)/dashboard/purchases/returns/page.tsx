@@ -148,9 +148,9 @@ function NewReturnFlow({ onClose, onCreated }: { onClose: () => void; onCreated:
         <div className="p-5">
           {step === 1 && (
             <div className="space-y-3">
-              <div className="card !p-2 flex items-center gap-2">
+              <div className="card p-2! flex items-center gap-2">
                 <Search className="w-4 h-4 text-surface-400 ml-1" />
-                <input className="flex-1 text-sm bg-transparent outline-none" placeholder="Search supplier…" value={supplierSearch} onChange={(e) => setSupplierSearch(e.target.value)} autoFocus />
+                <input className="flex-1 text-sm bg-transparent outline-hidden" placeholder="Search supplier…" value={supplierSearch} onChange={(e) => setSupplierSearch(e.target.value)} autoFocus />
               </div>
               <ul className="divide-y divide-surface-100 border border-surface-200 rounded-lg overflow-hidden">
                 {(supRes.data?.data ?? []).map((s: any) => (

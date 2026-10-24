@@ -58,7 +58,7 @@ export default function AlertsPage() {
             </h3>
             <Link href="/dashboard/inventory" className="text-xs text-brand-600 hover:underline">View inventory →</Link>
           </div>
-          <div className="divide-y divide-slate-100 max-h-[28rem] overflow-y-auto">
+          <div className="divide-y divide-slate-100 max-h-112 overflow-y-auto">
             {lowStockItems.length === 0 ? (
               <div className="p-8 text-center text-slate-400 text-sm">All stock levels healthy</div>
             ) : (
@@ -85,7 +85,7 @@ export default function AlertsPage() {
               <Clock className="w-4 h-4 text-orange-500" /> Expiring / Expired
             </h3>
           </div>
-          <div className="divide-y divide-slate-100 max-h-[28rem] overflow-y-auto">
+          <div className="divide-y divide-slate-100 max-h-112 overflow-y-auto">
             {expiryItems.length === 0 ? (
               <div className="p-8 text-center text-slate-400 text-sm">No expiry concerns</div>
             ) : (

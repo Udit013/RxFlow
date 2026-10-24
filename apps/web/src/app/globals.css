@@ -1,6 +1,319 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --color-brand-50: #eef7f3;
+  --color-brand-100: #d8ede4;
+  --color-brand-200: #b0dbc9;
+  --color-brand-300: #7dc2a9;
+  --color-brand-400: #46a186;
+  --color-brand-500: #1d8169;
+  --color-brand-600: #0e5f52;
+  --color-brand-700: #0b4d43;
+  --color-brand-800: #0a3e37;
+  --color-brand-900: #08322d;
+  --color-brand-950: #052220;
+
+  --color-secondary-50: #f1f8ec;
+  --color-secondary-100: #deeed3;
+  --color-secondary-200: #bfdda9;
+  --color-secondary-300: #98c579;
+  --color-secondary-400: #74aa50;
+  --color-secondary-500: #578d38;
+  --color-secondary-600: #43702c;
+  --color-secondary-700: #365825;
+  --color-secondary-800: #2d4721;
+  --color-secondary-900: #263c1e;
+
+  --color-accent-50: #fdf6ec;
+  --color-accent-100: #f9e8cd;
+  --color-accent-400: #e39a3b;
+  --color-accent-500: #d47f16;
+  --color-accent-600: #b4640a;
+  --color-accent-700: #8f4c0b;
+
+  --color-surface-50: #faf9f6;
+  --color-surface-100: #f2f0ea;
+  --color-surface-200: #e5e2d8;
+  --color-surface-300: #cfcbbe;
+  --color-surface-400: #a3a094;
+  --color-surface-500: #77756b;
+  --color-surface-600: #57564e;
+  --color-surface-700: #403f39;
+  --color-surface-800: #2b2b26;
+  --color-surface-900: #1f1f1b;
+  --color-surface-950: #131311;
+
+  --color-slate-50: #faf9f6;
+  --color-slate-100: #f2f0ea;
+  --color-slate-200: #e5e2d8;
+  --color-slate-300: #cfcbbe;
+  --color-slate-400: #a3a094;
+  --color-slate-500: #77756b;
+  --color-slate-600: #57564e;
+  --color-slate-700: #403f39;
+  --color-slate-800: #2b2b26;
+  --color-slate-900: #1f1f1b;
+  --color-slate-950: #131311;
+
+  --color-paper: #fdfcf9;
+  --color-ink: #1f231f;
+
+  --color-success-50: #f1f8ec;
+  --color-success-500: #578d38;
+  --color-success-600: #43702c;
+  --color-success-700: #365825;
+
+  --color-warning-50: #fdf6ec;
+  --color-warning-500: #d47f16;
+  --color-warning-600: #b4640a;
+  --color-warning-700: #8f4c0b;
+
+  --color-danger-50: #fbf0ee;
+  --color-danger-500: #c03b2d;
+  --color-danger-600: #a02c21;
+  --color-danger-700: #82251c;
+
+  --font-sans: var(--font-sans), system-ui, sans-serif;
+  --font-display: var(--font-display), var(--font-sans), sans-serif;
+  --font-mono: var(--font-mono), ui-monospace, monospace;
+
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+
+  /* Tailwind v4 uses unitless line heights, which children with smaller text inherit as a
+     ratio (badges in a text-sm cell shrank from 24px to 18px). Keep v3's absolute values so
+     nested text lays out exactly as before. */
+  --text-xs--line-height: 1rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base--line-height: 1.5rem;
+  --text-lg--line-height: 1.75rem;
+  --text-xl--line-height: 1.75rem;
+  --text-2xl--line-height: 2rem;
+  --text-3xl--line-height: 2.25rem;
+  --text-4xl--line-height: 2.5rem;
+
+  --radius-none: 0;
+  --radius-sm: 2px;
+  --radius: 2px;
+  --radius-md: 3px;
+  --radius-lg: 4px;
+  --radius-xl: 6px;
+  --radius-2xl: 8px;
+  --radius-full: 9999px;
+
+  --shadow-xs: 0 1px 1.5px -0.5px rgb(19 19 17 / 0.05);
+  --shadow-sm:
+    0 1px 2px 0 rgb(19 19 17 / 0.05), 0 1px 3px -1px rgb(19 19 17 / 0.04);
+  --shadow-card:
+    0 1px 2px 0 rgb(19 19 17 / 0.04), 0 2px 5px -2px rgb(19 19 17 / 0.05);
+  --shadow-card-hover:
+    0 3px 6px -2px rgb(19 19 17 / 0.08), 0 8px 18px -6px rgb(19 19 17 / 0.1);
+  --shadow-float:
+    0 10px 30px -10px rgb(19 19 17 / 0.3), 0 3px 10px -5px rgb(19 19 17 / 0.16);
+  --shadow-toolbar: 0 1px 3px -1px rgb(19 19 17 / 0.06);
+  --shadow-elevated: 0 16px 40px -16px rgb(19 19 17 / 0.28);
+  --shadow-dropdown: 0 8px 24px -8px rgb(19 19 17 / 0.22);
+
+  --animate-fade-in: fade-in 0.2s ease-out;
+  --animate-rise: rise 0.22s ease-out;
+
+  @keyframes fade-in {
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+  @keyframes rise {
+    0% {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+
+  /* Tailwind v4 gives buttons the default cursor; keep v3's pointer for anything clickable. */
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+@utility microlabel {
+  /* ── Micro-label: the system's smallest voice ──────────────────────────── */
+  @apply text-[10px] font-semibold uppercase tracking-[0.14em] text-surface-500;
+}
+
+@utility card {
+  /* ── Cards: paper sheets lifted just off the desk ──────────────────────── */
+  @apply bg-paper rounded-sm border border-surface-200 shadow-card;
+}
+
+@utility card-hover {
+  /* Interactive cards (metrics, links): gentle transform-based lift on hover.
+     Only transform + box-shadow animate (compositor-cheap; one element at a time). */
+  @apply card transition-[transform,box-shadow,border-color] duration-150 ease-out
+           hover:-translate-y-0.5 hover:border-surface-300 hover:shadow-card-hover;
+}
+
+@utility card-header {
+  @apply px-4 py-2.5 border-b border-surface-200 flex items-center justify-between;
+}
+
+@utility card-body {
+  @apply px-4 py-3.5;
+}
+
+@utility badge-base {
+  /* ── Badges: stamped tags — square, bordered, smallcaps ────────────────── */
+  @apply inline-flex items-center gap-1 px-1.5 py-px rounded-sm border text-[10px] font-semibold uppercase tracking-[0.08em];
+}
+
+@utility badge-success {
+  @apply badge-base border-success-600/30 bg-success-50 text-success-700;
+}
+
+@utility badge-warning {
+  @apply badge-base border-warning-600/30 bg-warning-50 text-warning-700;
+}
+
+@utility badge-danger {
+  @apply badge-base border-danger-600/30  bg-danger-50  text-danger-700;
+}
+
+@utility badge-info {
+  @apply badge-base border-brand-600/30   bg-brand-50   text-brand-700;
+}
+
+@utility badge-neutral {
+  @apply badge-base border-surface-300    bg-surface-100 text-surface-600;
+}
+
+@utility btn-base {
+  /* ── Buttons: ink for action, viridian for identity, press feedback ────── */
+  @apply inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-sm text-[13px] font-medium
+           transition-[background-color,border-color,box-shadow,transform,color] duration-150
+           active:translate-y-px disabled:opacity-50 disabled:cursor-not-allowed disabled:active:translate-y-0 disabled:shadow-none
+           focus:outline-hidden focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-brand-500;
+}
+
+@utility btn-solid {
+  /* Solid CTAs sit slightly raised and lift a hair on hover; press settles them. */
+  @apply shadow-sm hover:shadow-card-hover hover:-translate-y-px active:translate-y-0 active:shadow-xs;
+}
+
+@utility btn-primary {
+  @apply btn-base btn-solid bg-ink text-paper hover:bg-surface-700;
+}
+
+@utility btn-danger {
+  @apply btn-base btn-solid bg-danger-600 text-paper hover:bg-danger-700;
+}
+
+@utility btn-accent {
+  @apply btn-base btn-solid bg-accent-600 text-paper hover:bg-accent-700;
+}
+
+@utility btn-secondary {
+  /* Utility buttons stay flat — dense toolbars shouldn't shimmer. */
+  @apply btn-base bg-paper border border-surface-300 text-surface-700 shadow-xs hover:border-surface-500 hover:text-surface-900 hover:shadow-sm;
+}
+
+@utility btn-ghost {
+  @apply btn-base bg-transparent text-surface-600 hover:bg-surface-200/60 hover:text-surface-900;
+}
+
+@utility input {
+  /* ── Form fields: flat paper, ink focus, viridian ring ─────────────────── */
+  @apply w-full px-2.5 py-1.5 rounded-sm border border-surface-300 text-[13px] bg-paper shadow-xs
+           placeholder:text-surface-400 transition-colors
+           focus:outline-hidden focus:border-brand-600 focus:ring-2 focus:ring-brand-500/20
+           disabled:bg-surface-100 disabled:text-surface-400 disabled:shadow-none;
+}
+
+@utility label {
+  @apply block text-xs font-medium text-surface-600 mb-1;
+}
+
+@utility help-text {
+  @apply mt-1 text-xs text-surface-500;
+}
+
+@utility page-header {
+  /* ── Page primitives: display voice for titles ─────────────────────────── */
+  @apply flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5;
+}
+
+@utility page-title {
+  @apply font-display text-xl sm:text-[22px] sm:leading-7 font-semibold text-surface-900 tracking-tight;
+}
+
+@utility page-eyebrow {
+  @apply microlabel text-brand-600 mb-1;
+}
+
+@utility metric-card {
+  /* ── Stat block: ledger tick, not icon chip ────────────────────────────── */
+  @apply card-hover p-3.5 flex flex-col gap-1;
+}
+
+@utility skeleton {
+  /* ── Skeleton ──────────────────────────────────────────────────────────── */
+  @apply bg-linear-to-r from-surface-100 via-surface-200 to-surface-100
+           bg-size-[200%_100%] rounded-sm;
+  animation: shimmer 1.4s linear infinite;
+}
+
+@utility section-heading {
+  @apply microlabel;
+}
+
+@utility chip {
+  @apply inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-xs font-medium bg-surface-100 text-surface-600 border border-surface-200;
+}
+
+@utility divider {
+  @apply border-t border-surface-200;
+}
+
+@utility data-table {
+  /* ── Dense data tables: rules, smallcaps heads, tabular numerals ───────── */
+  @apply w-full text-[13px];
+  & thead th {
+    @apply text-left px-3 py-2 text-[10px] font-semibold text-surface-500 uppercase tracking-widest
+           bg-surface-100/80 border-b border-surface-300 sticky top-0 z-10;
+  }
+  & tbody td {
+    @apply px-3 py-2 border-b border-surface-200/70 tabular-nums;
+  }
+  & tbody tr:hover {
+    @apply bg-brand-50/40;
+  }
+}
 
 /*
  * RxFlow — "Dispensary Ledger" component system
@@ -14,8 +327,8 @@
   html, body { max-width: 100vw; overflow-x: hidden; }
 
   body {
-    background-color: theme('colors.surface.100');
-    color: theme('colors.surface.900');
+    background-color: var(--color-surface-100);
+    color: var(--color-surface-900);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
@@ -28,14 +341,14 @@
   ::-webkit-scrollbar { width: 10px; height: 10px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb {
-    background: theme('colors.surface.300');
+    background: var(--color-surface-300);
     border-radius: 6px;
     border: 3px solid transparent;
     background-clip: content-box;
   }
-  ::-webkit-scrollbar-thumb:hover { background: theme('colors.surface.400'); background-clip: content-box; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--color-surface-400); background-clip: content-box; }
 
-  ::selection { background: theme('colors.brand.200'); color: theme('colors.brand.950'); }
+  ::selection { background: var(--color-brand-200); color: var(--color-brand-950); }
 
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
@@ -46,93 +359,10 @@
 }
 
 @layer components {
-  /* ── Micro-label: the system's smallest voice ──────────────────────────── */
-  .microlabel {
-    @apply text-[10px] font-semibold uppercase tracking-[0.14em] text-surface-500;
-  }
-
-  /* ── Cards: paper sheets lifted just off the desk ──────────────────────── */
-  .card {
-    @apply bg-paper rounded-sm border border-surface-200 shadow-card;
-  }
-  /* Interactive cards (metrics, links): gentle transform-based lift on hover.
-     Only transform + box-shadow animate (compositor-cheap; one element at a time). */
-  .card-hover {
-    @apply card transition-[transform,box-shadow,border-color] duration-150 ease-out
-           hover:-translate-y-0.5 hover:border-surface-300 hover:shadow-card-hover;
-  }
-  .card-header {
-    @apply px-4 py-2.5 border-b border-surface-200 flex items-center justify-between;
-  }
-  .card-body { @apply px-4 py-3.5; }
-
-  /* ── Badges: stamped tags — square, bordered, smallcaps ────────────────── */
-  .badge-base {
-    @apply inline-flex items-center gap-1 px-1.5 py-px rounded-sm border text-[10px] font-semibold uppercase tracking-[0.08em];
-  }
-  .badge-success { @apply badge-base border-success-600/30 bg-success-50 text-success-700; }
-  .badge-warning { @apply badge-base border-warning-600/30 bg-warning-50 text-warning-700; }
-  .badge-danger  { @apply badge-base border-danger-600/30  bg-danger-50  text-danger-700; }
-  .badge-info    { @apply badge-base border-brand-600/30   bg-brand-50   text-brand-700; }
-  .badge-neutral { @apply badge-base border-surface-300    bg-surface-100 text-surface-600; }
-
-  /* ── Buttons: ink for action, viridian for identity, press feedback ────── */
-  .btn-base {
-    @apply inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-sm text-[13px] font-medium
-           transition-[background-color,border-color,box-shadow,transform,color] duration-150
-           active:translate-y-px disabled:opacity-50 disabled:cursor-not-allowed disabled:active:translate-y-0 disabled:shadow-none
-           focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-brand-500;
-  }
-  /* Solid CTAs sit slightly raised and lift a hair on hover; press settles them. */
-  .btn-solid     { @apply shadow-sm hover:shadow-card-hover hover:-translate-y-px active:translate-y-0 active:shadow-xs; }
-  .btn-primary   { @apply btn-base btn-solid bg-ink text-paper hover:bg-surface-700; }
-  .btn-danger    { @apply btn-base btn-solid bg-danger-600 text-paper hover:bg-danger-700; }
-  .btn-accent    { @apply btn-base btn-solid bg-accent-600 text-paper hover:bg-accent-700; }
-  /* Utility buttons stay flat — dense toolbars shouldn't shimmer. */
-  .btn-secondary { @apply btn-base bg-paper border border-surface-300 text-surface-700 shadow-xs hover:border-surface-500 hover:text-surface-900 hover:shadow-sm; }
-  .btn-ghost     { @apply btn-base bg-transparent text-surface-600 hover:bg-surface-200/60 hover:text-surface-900; }
-
-  /* ── Form fields: flat paper, ink focus, viridian ring ─────────────────── */
-  .input {
-    @apply w-full px-2.5 py-1.5 rounded-sm border border-surface-300 text-[13px] bg-paper shadow-xs
-           placeholder:text-surface-400 transition-colors
-           focus:outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-500/20
-           disabled:bg-surface-100 disabled:text-surface-400 disabled:shadow-none;
-  }
-  .label { @apply block text-xs font-medium text-surface-600 mb-1; }
-  .help-text { @apply mt-1 text-xs text-surface-500; }
-
-  /* ── Page primitives: display voice for titles ─────────────────────────── */
-  .page-header { @apply flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5; }
-  .page-title { @apply font-display text-xl sm:text-[22px] font-semibold text-surface-900 tracking-tight; }
-  .page-eyebrow { @apply microlabel text-brand-600 mb-1; }
-
-  /* ── Stat block: ledger tick, not icon chip ────────────────────────────── */
-  .metric-card { @apply card-hover p-3.5 flex flex-col gap-1; }
-
-  /* ── Skeleton ──────────────────────────────────────────────────────────── */
-  .skeleton {
-    @apply bg-gradient-to-r from-surface-100 via-surface-200 to-surface-100
-           bg-[length:200%_100%] rounded-sm;
-    animation: shimmer 1.4s linear infinite;
-  }
   @keyframes shimmer {
     0% { background-position: -200% 0; }
     100% { background-position: 200% 0; }
   }
-
-  .section-heading { @apply microlabel; }
-  .chip { @apply inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-xs font-medium bg-surface-100 text-surface-600 border border-surface-200; }
-  .divider { @apply border-t border-surface-200; }
-
-  /* ── Dense data tables: rules, smallcaps heads, tabular numerals ───────── */
-  .data-table { @apply w-full text-[13px]; }
-  .data-table thead th {
-    @apply text-left px-3 py-2 text-[10px] font-semibold text-surface-500 uppercase tracking-[0.1em]
-           bg-surface-100/80 border-b border-surface-300 sticky top-0 z-10;
-  }
-  .data-table tbody td { @apply px-3 py-2 border-b border-surface-200/70 tabular-nums; }
-  .data-table tbody tr:hover { @apply bg-brand-50/40; }
 }
 
 /* GSAP entrance baseline */
@@ -151,9 +381,9 @@
   display: grid;
   place-items: center;
   background:
-    radial-gradient(60rem 30rem at 50% 38%, theme('colors.paper') 0%, transparent 70%),
-    theme('colors.surface.100');
-  color: theme('colors.ink');
+    radial-gradient(60rem 30rem at 50% 38%, var(--color-paper) 0%, transparent 70%),
+    var(--color-surface-100);
+  color: var(--color-ink);
   opacity: 1;
   transition: opacity 280ms ease-out, visibility 0s linear 280ms;
   /* Fail-safe: if hydration never completes, step aside after 12s rather than trap the user. */
@@ -174,9 +404,9 @@
   height: 44px;
   margin-bottom: 14px;
   border-radius: 6px;
-  background: theme('colors.brand.950');
-  color: theme('colors.brand.300');
-  box-shadow: theme('boxShadow.float');
+  background: var(--color-brand-950);
+  color: var(--color-brand-300);
+  box-shadow: var(--shadow-float);
 }
 .rx-splash__word {
   font-family: var(--font-display), var(--font-sans), system-ui, sans-serif;
@@ -191,7 +421,7 @@
   font-weight: 600;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: theme('colors.brand.600');
+  color: var(--color-brand-600);
 }
 .rx-splash__rule {
   position: relative;
@@ -200,13 +430,13 @@
   margin-top: 22px;
   overflow: hidden;
   border-radius: 2px;
-  background: theme('colors.surface.200');
+  background: var(--color-surface-200);
 }
 .rx-splash__rule > span {
   position: absolute;
   inset: 0 auto 0 0;
   width: 40%;
-  background: theme('colors.brand.600');
+  background: var(--color-brand-600);
   animation: rx-splash-sweep 1.1s cubic-bezier(0.45, 0, 0.25, 1) infinite;
 }
 
@@ -219,7 +449,7 @@
   text-align: center;
   font-size: 13px;
   line-height: 1.5;
-  color: theme('colors.surface.500');
+  color: var(--color-surface-500);
   opacity: 0;
   transition: opacity 400ms ease-out;
 }

@@ -47,7 +47,7 @@ export function TopBar() {
       <button
         type="button"
         onClick={() => setMobileNavOpen(!mobileNavOpen)}
-        className="lg:hidden p-1.5 -ml-1 rounded-sm text-surface-600 hover:bg-surface-200/70 hover:text-surface-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+        className="lg:hidden p-1.5 -ml-1 rounded-sm text-surface-600 hover:bg-surface-200/70 hover:text-surface-900 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-500"
         aria-label={t('Open navigation')}
         aria-controls="app-sidebar"
         aria-expanded={mobileNavOpen}
@@ -60,7 +60,7 @@ export function TopBar() {
         type="button"
         onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
         aria-label="Search (⌘K)"
-        className="group flex items-center gap-2 bg-paper border border-surface-300 rounded-sm pl-2.5 pr-1.5 py-1.5 flex-1 min-w-0 max-w-80 text-left hover:border-surface-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+        className="group flex items-center gap-2 bg-paper border border-surface-300 rounded-sm pl-2.5 pr-1.5 py-1.5 flex-1 min-w-0 max-w-80 text-left hover:border-surface-500 transition-colors focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-500"
       >
         <Search className="w-3.5 h-3.5 text-surface-400 shrink-0" aria-hidden="true" />
         <span className="text-[13px] text-surface-500 flex-1 truncate">{t('Find anything…')}</span>
@@ -79,7 +79,7 @@ export function TopBar() {
             aria-haspopup="menu"
             aria-expanded={menuOpen}
             aria-label={t('Account menu')}
-            className="flex items-center gap-2.5 pl-3 ml-1 sm:ml-2 border-l border-surface-300 py-1 rounded-sm hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="flex items-center gap-2.5 pl-3 ml-1 sm:ml-2 border-l border-surface-300 py-1 rounded-sm hover:opacity-80 transition-opacity focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-500"
           >
             <div className="w-7 h-7 bg-ink rounded-sm flex items-center justify-center text-paper text-xs font-semibold font-display">
               <span aria-hidden="true">{user?.name?.[0]?.toUpperCase() ?? 'U'}</span>
@@ -105,7 +105,7 @@ export function TopBar() {
                   href="/dashboard/settings"
                   role="menuitem"
                   onClick={() => setMenuOpen(false)}
-                  className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-surface-700 hover:bg-surface-100 focus:outline-none focus-visible:bg-surface-100"
+                  className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-surface-700 hover:bg-surface-100 focus:outline-hidden focus-visible:bg-surface-100"
                 >
                   <Settings className="w-4 h-4 text-surface-400" aria-hidden="true" /> {t('Settings')}
                 </Link>
@@ -113,7 +113,7 @@ export function TopBar() {
                   type="button"
                   role="menuitem"
                   onClick={handleLogout}
-                  className="w-full flex items-center gap-2.5 px-4 py-2 text-[13px] text-surface-700 hover:bg-surface-100 focus:outline-none focus-visible:bg-surface-100"
+                  className="w-full flex items-center gap-2.5 px-4 py-2 text-[13px] text-surface-700 hover:bg-surface-100 focus:outline-hidden focus-visible:bg-surface-100"
                 >
                   <LogOut className="w-4 h-4 text-surface-400" aria-hidden="true" /> {t('Sign out')}
                 </button>

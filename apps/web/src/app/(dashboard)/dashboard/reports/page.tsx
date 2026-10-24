@@ -134,7 +134,7 @@ export default function ReportsPage() {
                 type="month"
                 value={period}
                 onChange={(e) => setPeriod(e.target.value)}
-                className="text-sm outline-none bg-transparent"
+                className="text-sm outline-hidden bg-transparent"
               />
             </div>
           }

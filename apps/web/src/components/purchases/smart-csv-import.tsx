@@ -342,7 +342,7 @@ export function SmartCsvImport({ onUseGenericMapper }: { onUseGenericMapper?: ()
                           <span className="text-secondary-700 flex items-center gap-1"><Sparkles className="w-3 h-3" /> New product</span>
                         ) : (
                           <select
-                            className="input !py-1 text-xs"
+                            className="input py-1! text-xs"
                             value={r.medicineId ?? ''}
                             onChange={(e) => update(r._id, { medicineId: e.target.value || null })}
                           >
@@ -358,7 +358,7 @@ export function SmartCsvImport({ onUseGenericMapper }: { onUseGenericMapper?: ()
                       <td className="px-2 py-1.5 text-right"><input type="number" step="0.01" className="w-20 text-right border border-surface-200 rounded px-1.5 py-1" value={r.mrp ?? ''} onChange={(e) => update(r._id, { mrp: parseFloat(e.target.value) || 0 })} /></td>
                       <td className="px-2 py-1.5 text-center"><input type="number" step="0.5" className="w-12 text-center border border-surface-200 rounded px-1.5 py-1" value={r.gstRate ?? ''} onChange={(e) => update(r._id, { gstRate: parseFloat(e.target.value) || 0 })} /></td>
                       <td className="px-2 py-1.5">
-                        <select className="input !py-1 text-xs w-24" value={r.action} onChange={(e) => update(r._id, { action: e.target.value as PreviewRow['action'] })}>
+                        <select className="input py-1! text-xs w-24" value={r.action} onChange={(e) => update(r._id, { action: e.target.value as PreviewRow['action'] })}>
                           <option value="map">Map</option>
                           <option value="create">Create</option>
                           <option value="skip">Skip</option>

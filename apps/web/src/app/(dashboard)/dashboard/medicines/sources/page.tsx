@@ -55,7 +55,7 @@ export default function MedicineSourcesPage() {
       </div>
 
       <div className="card p-4 text-sm text-slate-600 flex gap-3">
-        <ShieldCheck className="w-5 h-5 text-brand-600 flex-shrink-0" />
+        <ShieldCheck className="w-5 h-5 text-brand-600 shrink-0" />
         <div className="space-y-1">
           <p><strong>How the data is checked.</strong> Products come only from regulators&apos; official open datasets. Every active-ingredient name is resolved against the U.S. National Library of Medicine&apos;s RxNorm vocabulary, every strength must parse, and the build fails on any contradiction between route and dosage form (an inhaled product shown as a tablet, an injectable shown as a syrup).</p>
           <p>The data is a reference, not a substitute for the product label. Same composition does not mean interchangeable, and prices are not published by these sources — set your own.</p>

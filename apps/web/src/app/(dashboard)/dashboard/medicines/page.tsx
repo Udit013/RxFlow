@@ -221,7 +221,7 @@ export default function MedicinesPage() {
         onRowClick={(m) => setEditing(m)}
         toolbar={
           <div className="flex flex-wrap items-center gap-2 w-full">
-            <div className="relative flex-1 min-w-[14rem]">
+            <div className="relative flex-1 min-w-56">
               <Search className="w-4 h-4 text-surface-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 className="input pl-9"
@@ -266,7 +266,7 @@ const medicineColumns: DataTableColumn<Medicine>[] = [
       <div>
         <p className="font-medium text-surface-900">{m.name}</p>
         <p className="text-xs text-surface-500">{m.strength} • {formLabel(m.dosageForm)}</p>
-        {m.composition && <p className="text-2xs text-surface-400 truncate max-w-[22rem]" title={m.composition}>{m.composition}</p>}
+        {m.composition && <p className="text-2xs text-surface-400 truncate max-w-88" title={m.composition}>{m.composition}</p>}
       </div>
     ),
   },

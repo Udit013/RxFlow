@@ -97,10 +97,10 @@ export default function InvoicesPage() {
             {s || 'All'}
           </button>
         ))}
-        <div className="card !p-2 ml-auto flex items-center gap-2 min-w-[260px]">
+        <div className="card p-2! ml-auto flex items-center gap-2 min-w-[260px]">
           <Search className="w-4 h-4 text-slate-400" />
           <input
-            className="flex-1 text-sm outline-none"
+            className="flex-1 text-sm outline-hidden"
             placeholder="Find by invoice #, customer..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -164,7 +164,7 @@ export default function InvoicesPage() {
                     <span className={STATUS_STYLES[inv.paymentStatus] ?? 'badge-neutral'}>{inv.paymentStatus}</span>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <button onClick={() => downloadPdf(inv.id)} className="btn-secondary !py-1 !px-2 text-xs">
+                    <button onClick={() => downloadPdf(inv.id)} className="btn-secondary py-1! px-2! text-xs">
                       <Download className="w-3.5 h-3.5" /> PDF
                     </button>
                   </td>

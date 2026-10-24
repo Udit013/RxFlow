@@ -395,7 +395,7 @@ function BillingPageInner() {
             <Search className="w-4 h-4 text-slate-400 ml-1" />
             <input
               autoFocus
-              className="flex-1 text-sm outline-none"
+              className="flex-1 text-sm outline-hidden"
               placeholder="Scan barcode or search medicine..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -479,7 +479,7 @@ function BillingPageInner() {
                       <input
                         type="number"
                         step="0.01"
-                        className="w-24 text-right border border-slate-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-brand-500"
+                        className="w-24 text-right border border-slate-200 rounded px-2 py-1 text-sm focus:outline-hidden focus:ring-1 focus:ring-brand-500"
                         value={l.unitPrice}
                         onChange={(e) => updatePrice(l.medicineId, parseFloat(e.target.value) || 0)}
                       />
@@ -487,7 +487,7 @@ function BillingPageInner() {
                         <input
                           type="number" min="0" max="100" step="0.5"
                           className={cn(
-                            'w-16 text-right border rounded px-2 py-0.5 text-xs focus:outline-none focus:ring-1',
+                            'w-16 text-right border rounded px-2 py-0.5 text-xs focus:outline-hidden focus:ring-1',
                             l.discountPercent > l.batchPurchaseDiscount
                               ? 'border-accent-400 text-accent-700 focus:ring-accent-500 bg-accent-50'
                               : 'border-slate-200 focus:ring-brand-500'

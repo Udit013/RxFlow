@@ -120,7 +120,7 @@ export function Sidebar() {
       >
         {/* Wordmark */}
         <div className="px-5 pt-5 pb-4 border-b border-white/10 flex items-start justify-between">
-          <Link href="/dashboard" className="rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-300">
+          <Link href="/dashboard" className="rounded-sm focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-300">
             <span className="flex items-baseline gap-2">
               <Pill className="w-4 h-4 text-brand-300 self-center" aria-hidden="true" />
               <span className="font-display font-bold text-paper text-[19px] tracking-tight">RxFlow</span>
@@ -130,7 +130,7 @@ export function Sidebar() {
           <button
             type="button"
             onClick={() => setOpen(false)}
-            className="lg:hidden -mr-1.5 p-1.5 rounded-sm text-brand-200/70 hover:text-paper hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
+            className="lg:hidden -mr-1.5 p-1.5 rounded-sm text-brand-200/70 hover:text-paper hover:bg-white/10 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-300"
             aria-label={t('Close navigation')}
           >
             <X className="w-4 h-4" />
@@ -157,12 +157,12 @@ export function Sidebar() {
                         aria-current={isActive ? 'page' : undefined}
                         className={cn(
                           'relative flex items-center gap-2.5 pl-5 pr-4 py-[7px] text-[13px] transition-colors',
-                          'focus:outline-none focus-visible:bg-white/[0.08] focus-visible:text-paper',
+                          'focus:outline-hidden focus-visible:bg-white/8 focus-visible:text-paper',
                           // ledger rule: a 2px left marker, not a pill highlight
                           'border-l-2',
                           isActive
-                            ? 'border-brand-300 bg-white/[0.06] text-paper font-medium'
-                            : 'border-transparent text-brand-100/70 hover:text-brand-50 hover:bg-white/[0.03]'
+                            ? 'border-brand-300 bg-white/6 text-paper font-medium'
+                            : 'border-transparent text-brand-100/70 hover:text-brand-50 hover:bg-white/3'
                         )}
                       >
                         <item.icon aria-hidden="true" className={cn('w-4 h-4 shrink-0', isActive ? 'text-brand-300' : 'text-brand-200/50')} />

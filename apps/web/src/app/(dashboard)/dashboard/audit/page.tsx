@@ -204,5 +204,5 @@ function Details({ newValues, oldValues }: { newValues: any; oldValues: any }) {
     }
     if (changes.length > 0) parts.unshift(...changes)
   }
-  return <span className="break-words">{parts.slice(0, 4).join(' · ')}{parts.length > 4 ? ` · +${parts.length - 4}` : ''}</span>
+  return <span className="wrap-break-word">{parts.slice(0, 4).join(' · ')}{parts.length > 4 ? ` · +${parts.length - 4}` : ''}</span>
 }

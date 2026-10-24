@@ -159,7 +159,7 @@ export default function StockTakeDetailPage() {
           <div className="flex items-center gap-2">
             <Search className="w-4 h-4 text-slate-400 ml-1" />
             <input
-              className="flex-1 text-sm outline-none"
+              className="flex-1 text-sm outline-hidden"
               placeholder="Search medicine / batch..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -242,8 +242,8 @@ function LineRow({ line, takeId, editable }: { line: any; takeId: string; editab
   return (
     <tr className={cn(
       line.actualQty != null ? 'bg-blue-50/30' : '',
-      variance && variance > 0 ? '!bg-green-50' : '',
-      variance && variance < 0 ? '!bg-red-50' : '',
+      variance && variance > 0 ? 'bg-green-50!' : '',
+      variance && variance < 0 ? 'bg-red-50!' : '',
     )}>
       <td className="px-3 py-2">
         <p className="font-medium text-slate-900">{line.medicine?.name ?? '—'}</p>
@@ -266,7 +266,7 @@ function LineRow({ line, takeId, editable }: { line: any; takeId: string; editab
             ref={inputRef}
             type="number"
             min="0"
-            className="w-20 text-center border border-slate-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+            className="w-20 text-center border border-slate-200 rounded px-2 py-1 text-sm focus:outline-hidden focus:ring-2 focus:ring-brand-500"
             value={actual}
             onChange={(e) => {
               setActual(e.target.value)

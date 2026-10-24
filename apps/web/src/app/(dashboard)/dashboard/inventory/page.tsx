@@ -187,10 +187,10 @@ export default function InventoryPage() {
               </button>
             ))}
           </div>
-          <div className="card !p-2 flex-1 flex items-center gap-2">
+          <div className="card p-2! flex-1 flex items-center gap-2">
             <Search className="w-4 h-4 text-surface-400 ml-1" />
             <input
-              className="flex-1 text-sm bg-transparent placeholder:text-surface-400 outline-none"
+              className="flex-1 text-sm bg-transparent placeholder:text-surface-400 outline-hidden"
               placeholder="Search by medicine name, generic, manufacturer, barcode..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -205,12 +205,12 @@ export default function InventoryPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-surface-50/60 border-b border-surface-200/70">
-              <th className="text-left px-4 py-3 text-[10px] font-semibold text-surface-500 uppercase tracking-[0.1em]">Medicine</th>
-              <th className="text-center px-4 py-3 text-[10px] font-semibold text-surface-500 uppercase tracking-[0.1em]">Available</th>
-              <th className="text-center px-4 py-3 text-[10px] font-semibold text-surface-500 uppercase tracking-[0.1em]">Batches</th>
-              <th className="text-left px-4 py-3 text-[10px] font-semibold text-surface-500 uppercase tracking-[0.1em]">Nearest Expiry</th>
-              <th className="text-right px-4 py-3 text-[10px] font-semibold text-surface-500 uppercase tracking-[0.1em]">Selling Price</th>
-              <th className="text-center px-4 py-3 text-[10px] font-semibold text-surface-500 uppercase tracking-[0.1em]">Status</th>
+              <th className="text-left px-4 py-3 text-[10px] font-semibold text-surface-500 uppercase tracking-widest">Medicine</th>
+              <th className="text-center px-4 py-3 text-[10px] font-semibold text-surface-500 uppercase tracking-widest">Available</th>
+              <th className="text-center px-4 py-3 text-[10px] font-semibold text-surface-500 uppercase tracking-widest">Batches</th>
+              <th className="text-left px-4 py-3 text-[10px] font-semibold text-surface-500 uppercase tracking-widest">Nearest Expiry</th>
+              <th className="text-right px-4 py-3 text-[10px] font-semibold text-surface-500 uppercase tracking-widest">Selling Price</th>
+              <th className="text-center px-4 py-3 text-[10px] font-semibold text-surface-500 uppercase tracking-widest">Status</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>
@@ -246,7 +246,7 @@ export default function InventoryPage() {
                         <div className="flex items-center gap-2">
                           <p className="font-medium text-slate-900">{item.medicine.name}</p>
                           {(item.rackNumber || item.shelfNumber) && (
-                            <span className="chip text-[10px] !py-0" title="Shelf location">
+                            <span className="chip text-[10px] py-0!" title="Shelf location">
                               <MapPin className="w-3 h-3" /> {[item.rackNumber, item.shelfNumber].filter(Boolean).join(' · ')}
                             </span>
                           )}
