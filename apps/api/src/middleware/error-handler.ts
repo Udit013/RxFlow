@@ -21,7 +21,7 @@ export function errorHandler(
     return reply.status(422).send({
       success: false,
       error: 'Validation Error',
-      details: error.errors.map((e) => ({
+      details: error.issues.map((e) => ({
         field: e.path.join('.'),
         message: e.message,
       })),

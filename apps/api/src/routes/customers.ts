@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '@rxflow/db'
 import { authenticate } from '../middleware/auth.js'
+import { parseUpdate } from '../utils/parse-update.js'
 import { phoneSchema, getTenantRegion, assertTaxId } from '../utils/regional.js'
 import { getPaginationParams, buildPaginationMeta } from '../utils/pagination.js'
 import { audit } from '../utils/audit.js'
@@ -88,7 +89,7 @@ export async function customerRoutes(app: FastifyInstance) {
   app.put('/:id', { preHandler: [authenticate] }, async (request, reply) => {
     const { id } = request.params as { id: string }
     const { tenantId } = request.user
-    const body = customerSchema.partial().parse(request.body)
+    const body = parseUpdate(customerSchema, request.body)
     assertTaxId(await getTenantRegion(tenantId), body.gstin)
     const customer = await prisma.customer.findFirst({ where: { id, tenantId } })
     if (!customer) return reply.status(404).send({ success: false, error: 'Customer not found' })

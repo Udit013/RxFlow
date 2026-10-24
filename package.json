@@ -2,7 +2,7 @@
   "name": "rxflow",
   "version": "0.1.0",
   "private": true,
-  "description": "RxFlow \u2014 Connected Pharma Distribution Network",
+  "description": "RxFlow — Connected Pharma Distribution Network",
   "workspaces": [
     "apps/*",
     "packages/*"
@@ -24,7 +24,7 @@
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
     "eslint": "^8.57.0",
-    "prettier": "^3.2.5",
+    "prettier": "^3.9.10",
     "turbo": "^2.11.10",
     "typescript": "^5.4.5",
     "vite": "^8.3.5",

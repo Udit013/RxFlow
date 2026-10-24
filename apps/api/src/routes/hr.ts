@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '@rxflow/db'
 import { authenticate } from '../middleware/auth.js'
+import { parseUpdate } from '../utils/parse-update.js'
 import { phoneSchema, paymentMethodSchema } from '../utils/regional.js'
 import { getPaginationParams, buildPaginationMeta } from '../utils/pagination.js'
 import { audit } from '../utils/audit.js'
@@ -89,7 +90,7 @@ export async function hrRoutes(app: FastifyInstance) {
   app.put('/employees/:id', { preHandler: [authenticate] }, async (request, reply) => {
     const { id } = request.params as { id: string }
     const { tenantId } = request.user
-    const body = employeeSchema.partial().extend({ isActive: z.boolean().optional() }).parse(request.body)
+    const body = parseUpdate(employeeSchema.extend({ isActive: z.boolean().optional() }), request.body)
     const emp = await prisma.employee.findFirst({ where: { id, tenantId } })
     if (!emp) return reply.status(404).send({ success: false, error: 'Employee not found' })
     const updated = await prisma.employee.update({ where: { id }, data: body })

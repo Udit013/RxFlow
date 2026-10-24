@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '@rxflow/db'
 import { authenticate } from '../middleware/auth.js'
+import { parseUpdate } from '../utils/parse-update.js'
 import { phoneSchema } from '../utils/regional.js'
 import { getPaginationParams, buildPaginationMeta } from '../utils/pagination.js'
 
@@ -91,7 +92,7 @@ export async function salesRepRoutes(app: FastifyInstance) {
   app.put('/:id', { preHandler: [authenticate] }, async (request, reply) => {
     const { id } = request.params as { id: string }
     const { tenantId } = request.user
-    const body = salesRepSchema.partial().extend({ isActive: z.boolean().optional() }).parse(request.body)
+    const body = parseUpdate(salesRepSchema.extend({ isActive: z.boolean().optional() }), request.body)
 
     const rep = await prisma.salesRep.findFirst({ where: { id, tenantId } })
     if (!rep) return reply.status(404).send({ success: false, error: 'Sales rep not found' })

@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { prisma } from '@rxflow/db'
 import { authenticate } from '../middleware/auth.js'
+import { parseUpdate } from '../utils/parse-update.js'
 import { catalogWhere, usableWhere, updateMedicineForTenant } from '../utils/medicine-scope.js'
 import { getTenantRegion } from '../utils/regional.js'
 import { getPaginationParams, buildPaginationMeta } from '../utils/pagination.js'
@@ -159,7 +160,7 @@ export async function medicineRoutes(app: FastifyInstance) {
   // PUT /api/v1/medicines/:id
   app.put('/:id', { preHandler: [authenticate] }, async (request, reply) => {
     const { id } = request.params as { id: string }
-    const body = createMedicineSchema.partial().parse(request.body)
+    const body = parseUpdate(createMedicineSchema, request.body)
     const { tenantId, role } = request.user
 
     // Shared catalog rows are never edited in place by a tenant — the edit lands on that

@@ -115,6 +115,18 @@ code, j, _, _ = req('POST', '/customers', {'name': 'Bad', 'phone': '9876543210',
 check('IN: invalid GSTIN → 422 field error', code == 422 and j['details'][0]['field'] == 'gstin', j)
 code, j, _, _ = req('POST', '/customers', {'name': 'Guj Co', 'phone': '+91 98765 43210', 'state': 'Gujarat', 'gstin': '27aaacr5055k1zv'}, token=A)
 check('IN: valid GSTIN normalised', code == 201 and j['data']['gstin'] == '27AAACR5055K1ZV', (code, j))
+# ── Partial updates must not reset fields that weren't sent ──────────────────
+cust = req('POST', '/customers', {'name': 'Keep Fields', 'phone': '9812345678', 'creditLimit': 5000, 'tags': ['vip'], 'notes': 'n'}, token=A)[1]['data']
+req('PUT', f"/customers/{cust['id']}", {'name': 'Renamed'}, token=A)
+after = req('GET', f"/customers/{cust['id']}", token=A)[1]['data']
+check('customer edit keeps unsent fields', after['name'] == 'Renamed' and after['creditLimit'] == 5000 and after['tags'] == ['vip'], after)
+hm = next(x for x in req('GET', '/medicines?limit=100', token=A)[1]['data'] if x['schedule'] == 'SCHEDULE_H')
+mcopy = req('PUT', f"/medicines/{hm['id']}", {'mrp': 77}, token=A)[1]['data']
+check('medicine edit keeps schedule, form and barcodes', mcopy['mrp'] == 77 and mcopy['schedule'] == 'SCHEDULE_H' and mcopy['dosageForm'] == hm['dosageForm'] and mcopy['barcodes'] == hm['barcodes'], (mcopy.get('schedule'), mcopy.get('dosageForm')))
+sup = req('POST', '/suppliers', {'name': 'S', 'companyName': 'S Co', 'phone': '9812345679', 'creditDays': 45, 'creditLimit': 9000}, token=A)[1]['data']
+req('PUT', f"/suppliers/{sup['id']}", {'name': 'S2'}, token=A)
+sa = req('GET', f"/suppliers/{sup['id']}", token=A)[1]['data']
+check('supplier edit keeps credit terms', sa['creditDays'] == 45 and sa['creditLimit'] == 9000, (sa.get('creditDays'), sa.get('creditLimit')))
 req('PATCH', '/tenant', {'state': 'Maharashtra'}, token=A)
 oid = req('POST', '/orders', {'type': 'SALE', 'storeId': store, 'customerId': j['data']['id'], 'items': [{'medicineId': mid, 'quantity': 1, 'unitPrice': 100, 'taxRate': 12}]}, token=A)[1]['data']['id']
 ij = req('POST', f'/invoices/from-order/{oid}', {}, token=A)[1]['data']
