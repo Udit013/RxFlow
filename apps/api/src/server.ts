@@ -73,6 +73,9 @@ await app.register(cors, {
         cb(null, corsOrigins.includes(stripSlash(origin)))
       },
   credentials: true,
+  // @fastify/cors 10+ only allows the CORS-safelisted GET/HEAD/POST by default, which made
+  // browsers block every edit and delete. List every method the API uses.
+  methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 })
 
 await app.register(rateLimit, {
