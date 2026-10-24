@@ -1269,19 +1269,24 @@ Results deduped by medicine ID, sorted by score descending, sliced to `limit`.
 |---|---|---|---|
 | U.S. FDA National Drug Code Directory (openFDA) | US | Public domain (CC0) | products, labelers, strengths, forms, routes, Rx/OTC/DEA tier, UPC barcodes |
 | Health Canada Drug Product Database (bulk extract) | CA | Open Government Licence – Canada | marketed products, DINs, strengths, forms, routes, schedules, **ATC codes** |
-| NLM RxNorm / RxClass (RxNav APIs) | — | Free (NLM terms) | verifying every ingredient name; naming ATC level-4 groups |
+| Jan Aushadhi Product & MRP List (PMBI, Government of India) | IN | Published publicly; no separate open-data licence stated | 1,784 generic medicines with **official MRPs** and therapeutic groups |
+| NLM RxNorm / RxClass (RxNav APIs) | — | Free (NLM terms) | verifying every ingredient name; ATC groups for ingredients no Canadian product contains |
 
-India has no openly licensed machine-readable drug register, so the ten Indian rows remain clearly labelled demo data (`dataSource = 'DEMO_SEED'`, unverified); Indian pharmacies add or correct their own entries.
+India's rows come from the Jan Aushadhi list the PMBI publishes on janaushadhi.gov.in (the public page loads it with a guest token every visitor receives; the build reads that same list once). Names there follow pharmacopoeia style — "Amoxycillin 500mg and Potassium Clavulanate 125mg Tablets IP", "Labetalol Injection IP 5 mg per ml" — so `catalog/jan-aushadhi.ts` parses the composition from the name: the form phrase, release notes and pharmacopoeia marks are lifted off, a trailing "per 5ml" applies to every ingredient, Indian spellings (Amoxycillin, Sulphamethoxazole) normalise to the INN, and source misspellings (Cetrizine, Tazobactum) are corrected *for matching only* — the official name is kept verbatim. 93% of products parse; the rest keep their official name without a structured composition and are never marked verified. The list publishes no drug schedule, so anything outside vitamins/antiseptics-type groups defaults to Schedule H (prescription) until the pharmacy confirms it; GST defaults to 5%, the rate for most medicines since 22 Sep 2025.
+
+The ten illustrative demo rows this replaced were removed by an idempotent migration: rows nothing referenced were deleted; rows still used by stock, an order, an invoice or a pharmacy's edited copy were retired (hidden) so no history lost its medicine.
+
+Indian *brands* are the next step: **Common Drug Codes for India** (NRCeS / C-DAC for the Ministry of Health & Family Welfare) lists 93,911 branded medicines with generics, substances and suppliers as tab-separated files, but its download sits behind a CAPTCHA, so it must be fetched by a person before an importer can be built.
 
 **How it is built.** `packages/db/catalog/build.ts` is run by a developer (it needs the network), never by production. For ~120 essential ingredients it pulls US and Canadian products, normalises them, keeps a varied handful per ingredient set (brands first, manufacturers before repackagers), and writes a reviewable snapshot to `catalog/snapshot/*.json`, which is committed. Every deploy loads it with `catalog/load.ts` — inserting new rows, refreshing changed ones only when the snapshot version changes, never deleting. Production therefore never depends on a third-party API being up.
 
-**Verification gates in the build.** Every ingredient name must resolve in RxNorm (all 203 do); every strength must parse; and the build *fails* on any route/form contradiction — an inhaled product mapped to an oral form, an intravenous product shown as a syrup. Those gates caught real mapping bugs during development (a nebuliser solution labelled "syrup", a Diskus inhaler labelled "powder").
+**Verification gates in the build.** Every ingredient name is checked against RxNorm (710 of 783 resolve; the rest are mostly India-specific drugs such as cilnidipine or teneligliptin, which stay unverified); every strength must parse; and the build *fails* on any route/form contradiction — an inhaled product mapped to an oral form, an intravenous product shown as a syrup. Those gates caught real mapping bugs during development (a nebuliser solution labelled "syrup", a Diskus inhaler labelled "powder").
 
 **The composition model** (`packages/types/src/composition.ts`, shared by API, importer and web form):
 - Ingredient names are normalised to the WHO INN (`acetaminophen → paracetamol`, `albuterol → salbutamol`), with the **salt kept separately** (`amlodipine` + `besylate`) — esters that change the drug (`fluticasone propionate` vs `furoate`) are never stripped.
 - Strengths are canonicalised (`1 g = 1000 mg`, `250 mg/5 mL = 50 mg/mL`, `10 mg/g = 1%`).
 - Two keys index every product: `ingredientKey` (`amoxicillin+clavulanic acid`) and `compositionKey` (`amoxicillin@500mg+clavulanic acid@125mg`).
-- Therapeutic class comes from the ATC code Health Canada assigns to the same ingredient set (93.7% of rows classified; the rest are combinations no Canadian product contains).
+- Therapeutic class comes from the ATC code Health Canada assigns to the same ingredient set, or — for single ingredients no Canadian product contains — the ATC group NLM RxClass gives.
 
 **Alternatives never claim interchangeability.** `GET /medicines/:id/alternatives` groups products by relation, and every row lists what differs:
 
@@ -1293,6 +1298,8 @@ India has no openly licensed machine-readable drug register, so the ten Indian r
 | Similar use | no shared ingredient, same ATC level-4 group — explicitly *not* interchangeable |
 
 A notice on every response states that substitution follows local law and a pharmacist's or prescriber's judgement, and other countries' products are flagged as "other market".
+
+**Markets.** `GET /medicines?markets=IN,US,CA` shows one, several or all countries' catalogs (the web app's market picker); a pharmacy's own medicines appear whenever its home market is selected.
 
 **Search** (`buildSearchWhere`) accepts brand, generic, ingredient (any regional name), strength (`500mg`, `250mg/5ml`), form words (`tab`, `syrup`), ATC codes and everyday therapeutic terms (`antibiotic`, `statin`, `blood pressure`), every term required. **Manual entry** uses a structured ingredients editor with a "fill from text" quick entry; edits re-key the composition, and editing a shared row still saves the pharmacy's own copy.
 

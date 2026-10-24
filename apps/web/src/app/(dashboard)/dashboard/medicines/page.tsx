@@ -3,17 +3,40 @@
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
-import { Pill, Upload, Sparkles, Download, Plus, Pencil, Search, Database } from 'lucide-react'
+import { Pill, Upload, Download, Plus, Pencil, Search, Database } from 'lucide-react'
 import Papa from 'papaparse'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { formatCurrency } from '@/lib/utils'
 import { DataTable, type DataTableColumn } from '@/components/ui'
 import { MedicineMasterModal } from '@/components/medicines/medicine-master-modal'
-import { SAMPLE_MEDICINES, type SeedMedicine } from '@/data/sample-medicines'
 import { getActiveRegion } from '@/lib/region'
 import { DRUG_SCHEDULE_CODES, scheduleLabel } from '@rxflow/regional'
 import { CountryTag, SourceBadge, formLabel } from '@/components/medicines/catalog-labels'
+import { MarketPicker } from '@/components/medicines/market-picker'
+
+/** A medicine row as uploaded from CSV (bulk-import body). */
+interface CsvMedicine {
+  name?: string
+  genericName?: string
+  brandName?: string
+  manufacturerName?: string
+  dosageForm: string
+  strength?: string
+  packSize?: string
+  packUnit: string
+  mrp: number
+  hsn: string
+  gstRate: number
+  schedule: string
+  requiresPrescription: boolean
+}
+
+/** Example rows for the CSV template — clearly placeholders, not catalog data. */
+const TEMPLATE_EXAMPLES: Record<string, string>[] = [
+  { name: 'Example Paracetamol 500', genericName: 'Paracetamol', brandName: 'Example', manufacturerName: 'Your supplier', dosageForm: 'TABLET', strength: '500mg', packSize: '10 tablets', packUnit: 'tablets', mrp: '20', hsn: '3004', gstRate: '5', schedule: 'OTC', requiresPrescription: 'false' },
+  { name: 'Example Amoxicillin 250', genericName: 'Amoxicillin', brandName: 'Example', manufacturerName: 'Your supplier', dosageForm: 'CAPSULE', strength: '250mg', packSize: '10 capsules', packUnit: 'capsules', mrp: '60', hsn: '3004', gstRate: '5', schedule: 'SCHEDULE_H', requiresPrescription: 'true' },
+]
 
 const FORM_FILTERS = ['TABLET', 'CAPSULE', 'SYRUP', 'SOLUTION', 'SUSPENSION', 'INJECTION', 'DROPS', 'INHALER', 'CREAM', 'OINTMENT', 'GEL', 'LOTION', 'SPRAY', 'POWDER', 'PATCH', 'SUPPOSITORY', 'OTHER']
 
@@ -54,7 +77,23 @@ const CSV_TEMPLATE_HEADERS = [
 export default function MedicinesPage() {
   const [scheduleFilter, setScheduleFilter] = useState<string>('')
   const [formFilter, setFormFilter] = useState<string>('')
-  const [allMarkets, setAllMarkets] = useState(false)
+  const home = getActiveRegion().country
+  const [markets, setMarkets] = useState<string[]>([home])
+  // Which markets have a shared catalog (with counts) — the picker's options.
+  const { data: sourcesData } = useQuery({
+    queryKey: ['medicine-sources'],
+    queryFn: () => api.get('/medicines/sources').then((r) => r.data.data),
+    staleTime: 5 * 60_000,
+  })
+  const marketOptions = (() => {
+    const counts = new Map<string, number>()
+    for (const c of (sourcesData?.catalog ?? []) as { country: string | null; count: number }[]) {
+      const code = c.country ?? 'INTL'
+      counts.set(code, (counts.get(code) ?? 0) + c.count)
+    }
+    if (!counts.has(home)) counts.set(home, 0)
+    return [...counts.entries()].map(([code, count]) => ({ code, count }))
+  })()
   const [searchInput, setSearchInput] = useState('')
   const [search, setSearch] = useState('')
   // Search runs on the server (brand, generic, ingredient, strength, form, therapeutic class).
@@ -68,13 +107,13 @@ export default function MedicinesPage() {
   const queryClient = useQueryClient()
 
   const { data, isLoading } = useQuery({
-    queryKey: ['medicines', scheduleFilter, formFilter, allMarkets, search],
+    queryKey: ['medicines', scheduleFilter, formFilter, markets.join(','), search],
     queryFn: () =>
       api.get('/medicines', {
         params: {
           schedule: scheduleFilter || undefined,
           dosageForm: formFilter || undefined,
-          market: allMarkets ? 'all' : undefined,
+          markets: markets.join(','),
           search: search || undefined,
           limit: 500,
         },
@@ -85,7 +124,7 @@ export default function MedicinesPage() {
   const medicines: Medicine[] = data?.data ?? []
 
   const importMutation = useMutation({
-    mutationFn: (rows: Partial<SeedMedicine>[]) =>
+    mutationFn: (rows: CsvMedicine[]) =>
       api.post('/medicines/bulk-import', { medicines: rows }).then((r) => r.data),
     onSuccess: (res) => {
       const r: ImportResult = res.data
@@ -112,7 +151,7 @@ export default function MedicinesPage() {
           genericName: r.genericName?.trim(),
           brandName: r.brandName?.trim(),
           manufacturerName: r.manufacturerName?.trim(),
-          dosageForm: (r.dosageForm?.trim().toUpperCase() ?? 'TABLET') as SeedMedicine['dosageForm'],
+          dosageForm: (r.dosageForm?.trim().toUpperCase() ?? 'TABLET') ,
           strength: r.strength?.trim(),
           packSize: r.packSize?.trim(),
           packUnit: r.packUnit?.trim() || 'tablets',
@@ -121,7 +160,7 @@ export default function MedicinesPage() {
           // country's default tax rate. A literal 0% is kept — `|| default` used to turn it into 12%.
           hsn: r.hsn?.trim() || (getActiveRegion().code === 'IN' ? '30049099' : '3004'),
           gstRate: Number.isFinite(parseFloat(r.gstRate ?? '')) ? parseFloat(r.gstRate!) : getActiveRegion().tax.defaultRate,
-          schedule: (r.schedule?.trim().toUpperCase() || 'OTC') as SeedMedicine['schedule'],
+          schedule: (r.schedule?.trim().toUpperCase() || 'OTC') ,
           requiresPrescription: ['true', 'yes', '1'].includes((r.requiresPrescription ?? '').toLowerCase()),
         }))
         // Filter out incomplete rows
@@ -130,17 +169,16 @@ export default function MedicinesPage() {
           toast.error('No valid rows found. Check CSV column headers.')
           return
         }
-        importMutation.mutate(valid as Partial<SeedMedicine>[])
+        importMutation.mutate(valid as CsvMedicine[])
       },
     })
     if (fileInputRef.current) fileInputRef.current.value = ''
   }
 
   function downloadTemplate() {
-    const sample = SAMPLE_MEDICINES.slice(0, 3)
     const csv = Papa.unparse({
       fields: CSV_TEMPLATE_HEADERS,
-      data: sample.map((m) => CSV_TEMPLATE_HEADERS.map((k) => (m as any)[k] ?? '')),
+      data: TEMPLATE_EXAMPLES.map((m) => CSV_TEMPLATE_HEADERS.map((k) => m[k] ?? '')),
     })
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
     const link = document.createElement('a')
@@ -173,17 +211,6 @@ export default function MedicinesPage() {
             <Upload className="w-4 h-4" />
             Upload CSV
           </button>
-          {/* The bundled sample catalog is Indian (brands, HSN codes, schedules) — only offer it there */}
-          {getActiveRegion().code === 'IN' && (
-            <button
-              onClick={() => importMutation.mutate(SAMPLE_MEDICINES as Partial<SeedMedicine>[])}
-              disabled={importMutation.isPending}
-              className="btn-secondary"
-            >
-              <Sparkles className="w-4 h-4" />
-              {importMutation.isPending ? 'Loading...' : `Load samples`}
-            </button>
-          )}
           <button onClick={() => setEditing('new')} className="btn-primary">
             <Plus className="w-4 h-4" /> Add Medicine
           </button>
@@ -216,7 +243,7 @@ export default function MedicinesPage() {
         exportFileName="rxflow-medicines"
         emptyIcon={Pill}
         emptyTitle="No medicines found"
-        emptyDescription="Add a medicine, load samples, or import a CSV to populate the catalog."
+        emptyDescription="Add a medicine or import a CSV — or tick other markets to browse the open-data catalogs."
         emptyAction={<button onClick={() => setEditing('new')} className="btn-primary"><Plus className="w-4 h-4" /> Add Medicine</button>}
         onRowClick={(m) => setEditing(m)}
         toolbar={
@@ -241,9 +268,7 @@ export default function MedicinesPage() {
                 <option key={code} value={code}>{scheduleLabel(getActiveRegion(), code)}</option>
               ))}
             </select>
-            <label className="flex items-center gap-2 text-sm text-surface-600 cursor-pointer" title="Include other countries' catalogs for reference">
-              <input type="checkbox" checked={allMarkets} onChange={(e) => setAllMarkets(e.target.checked)} aria-label="All markets" /> All markets
-            </label>
+            <MarketPicker options={marketOptions} value={markets} onChange={setMarkets} home={home} />
           </div>
         }
         columns={medicineColumns}

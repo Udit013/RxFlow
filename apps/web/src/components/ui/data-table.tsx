@@ -1,11 +1,12 @@
 'use client'
 
-import { useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   ArrowUpDown, ArrowUp, ArrowDown, Search, SlidersHorizontal,
   ChevronLeft, ChevronRight, Download, type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useMenuAlign } from '@/hooks/use-menu-align'
 import { EmptyState } from './empty-state'
 import { SkeletonRow } from './skeleton-row'
 
@@ -66,6 +67,18 @@ export function DataTable<T>({
     () => new Set(columns.filter((c) => c.defaultHidden).map((c) => c.key))
   )
   const [colMenuOpen, setColMenuOpen] = useState(false)
+  const colMenuRef = useRef<HTMLDivElement>(null)
+  const colMenuAlign = useMenuAlign(colMenuRef, colMenuOpen, 224)
+  // Close the column menu on an outside click or Escape (not on blur, which fired on every
+  // checkbox click inside it).
+  useEffect(() => {
+    if (!colMenuOpen) return
+    const onDown = (e: MouseEvent) => { if (!colMenuRef.current?.contains(e.target as Node)) setColMenuOpen(false) }
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setColMenuOpen(false) }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => { document.removeEventListener('mousedown', onDown); document.removeEventListener('keydown', onKey) }
+  }, [colMenuOpen])
 
   const visibleColumns = columns.filter((c) => !hidden.has(c.key))
 
@@ -135,17 +148,26 @@ export function DataTable<T>({
           )}
           {toolbar}
           {/* Column visibility */}
-          <div className="relative">
+          <div className="relative" ref={colMenuRef}>
             <button
               onClick={() => setColMenuOpen((o) => !o)}
-              onBlur={() => setTimeout(() => setColMenuOpen(false), 150)}
               className="btn-secondary"
               title="Columns"
+              aria-haspopup="true"
+              aria-expanded={colMenuOpen}
             >
               <SlidersHorizontal className="w-4 h-4" /> Columns
             </button>
             {colMenuOpen && (
-              <div className="absolute right-0 top-full mt-1 w-52 bg-white border border-surface-200 rounded-lg shadow-dropdown z-20 p-1.5 max-h-72 overflow-y-auto">
+              // Opens towards the side with room: when the toolbar wraps this button starts a row,
+              // and a fixed right-aligned menu ran off the left edge under the sidebar.
+              <div
+                role="menu"
+                className={cn(
+                  'absolute top-full mt-1 w-56 max-w-[calc(100vw-2rem)] bg-white border border-surface-200 rounded-lg shadow-dropdown z-30 p-1.5 max-h-72 overflow-y-auto',
+                  colMenuAlign === 'left' ? 'left-0' : 'right-0',
+                )}
+              >
                 {columns.map((c) => (
                   <label
                     key={c.key}

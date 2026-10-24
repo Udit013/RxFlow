@@ -58,6 +58,9 @@ describe('parseCompositionText', () => {
   it('ignores pharmacopoeia and release suffixes', () => {
     expect(parseCompositionText('Pantoprazole 40mg IP, Domperidone 30mg SR').map((i) => i.name)).toEqual(['pantoprazole', 'domperidone'])
   })
+  it('reads per-gram strengths written as "gm"', () => {
+    expect(parseCompositionText('Cholecalciferol 60000 IU / gm')).toEqual([{ name: 'colecalciferol', salt: null, strength: 60000, unit: 'iu/g' }])
+  })
   it('keeps unknown strengths as null', () => {
     expect(parseCompositionText('Pantoprazole + Domperidone')[1]).toEqual({ name: 'domperidone', salt: null, strength: null, unit: null })
   })

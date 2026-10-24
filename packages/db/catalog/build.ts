@@ -3,6 +3,7 @@
  *
  *   US  openFDA NDC Directory (U.S. FDA)                     — public domain (CC0)
  *   CA  Drug Product Database extract (Health Canada)        — Open Government Licence – Canada
+ *   IN  Jan Aushadhi Product & MRP List (PMBI, Govt of India) — published publicly
  *   ATC level-4 group names: NLM RxNav / RxClass             — free NLM API
  *   Ingredient names are cross-checked against NLM RxNorm.
  *
@@ -18,6 +19,7 @@ import {
   formatStrength, mapDosageForm, regionalNames, atcLevel4, displayIngredient, type Ingredient,
 } from '@rxflow/types'
 import { TARGET_INGREDIENTS, REPACKAGER_HINTS } from './ingredients.js'
+import { fetchJanAushadhi, parseJanAushadhi } from './jan-aushadhi.js'
 import { SOURCES, type SnapshotMedicine, type SnapshotClass, type ScheduleCode } from './types.js'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
@@ -326,6 +328,25 @@ async function atcNames(codes: string[]): Promise<Map<string, string>> {
   return out
 }
 
+/** ATC level-4 group for single ingredients from NLM RxClass (tried under INN and regional names). */
+async function atcFromRxClass(keys: string[]): Promise<Map<string, { code: string; name: string }>> {
+  const out = new Map<string, { code: string; name: string }>()
+  for (const key of keys) {
+    for (const candidate of [key, ...regionalNames(key)]) {
+      const data = await getJson(`https://rxnav.nlm.nih.gov/REST/rxclass/class/byDrugName.json?drugName=${encodeURIComponent(candidate)}&relaSource=ATC`)
+      await sleep(80)
+      const hit = (data?.rxclassDrugInfoList?.rxclassDrugInfo ?? []).find(
+        (d: any) => d.minConcept?.tty === 'IN' && String(d.minConcept?.name).toLowerCase() === candidate,
+      )
+      if (hit) {
+        out.set(key, { code: hit.rxclassMinConceptItem.classId, name: hit.rxclassMinConceptItem.className })
+        break
+      }
+    }
+  }
+  return out
+}
+
 /** An ingredient is verified when NLM RxNorm knows it (under its INN or regional name). */
 async function verifyIngredients(names: string[]): Promise<Map<string, string | null>> {
   const out = new Map<string, string | null>()
@@ -350,7 +371,9 @@ async function main() {
     process.exit(1)
   }
   const retrievedAt = new Date().toISOString()
-  const version = retrievedAt.slice(0, 10)
+  // Minute precision: the loader refreshes a source only when this changes, so two builds on
+  // the same day must not share a version.
+  const version = retrievedAt.slice(0, 16)
   const targets = new Set(TARGET_INGREDIENTS)
 
   const ca = buildCa(dpdDir, retrievedAt)
@@ -358,19 +381,25 @@ async function main() {
   const atcByKey = classesFrom(ca.rows)
   const caPicked = pick(ca.rows, targets)
   const usPicked = pick(us, targets)
-  const all = [...usPicked, ...caPicked]
+  // India: the whole official Jan Aushadhi list (medicines with a published MRP).
+  const jaProducts = await fetchJanAushadhi()
+  const inRows = jaProducts.map((p) => parseJanAushadhi(p, retrievedAt)).filter((r): r is SnapshotMedicine => r !== null)
+  console.info(`IN Jan Aushadhi: ${jaProducts.length} listed, ${inRows.length} medicines kept`)
+  const all = [...usPicked, ...caPicked, ...inRows]
 
-  // Classification: every row whose ingredient set Health Canada classifies gets that ATC code.
-  for (const r of all) r.atcCode = r.atcCode ?? atcByKey.get(r.ingredientKey) ?? null
+  // Classification: Health Canada's ATC code for the ingredient set; for single ingredients no
+  // Canadian product contains (common in India, e.g. aceclofenac), the ATC group from NLM RxClass.
+  const missing = [...new Set(all.map((r) => r.ingredientKey).filter((k) => k && !k.includes('+') && !atcByKey.has(k)))].sort()
+  console.info(`Looking up ATC groups for ${missing.length} more ingredients via NLM RxClass…`)
+  const rxclass = await atcFromRxClass(missing)
+  for (const r of all) r.atcCode = r.atcCode ?? atcByKey.get(r.ingredientKey) ?? rxclass.get(r.ingredientKey)?.code ?? null
   const level4 = [...new Set([...atcByKey.values()].map(atcLevel4).filter((x): x is string => !!x))].sort()
   console.info(`Looking up ${level4.length} ATC group names…`)
   const names = await atcNames(level4)
-  const classes: SnapshotClass[] = [...atcByKey.entries()].map(([key, atc]) => ({
-    ingredientKey: key,
-    atcCode: atc,
-    className: names.get(atcLevel4(atc)!) ?? null,
-    source: 'HC_DPD',
-  })).sort((a, b) => a.ingredientKey.localeCompare(b.ingredientKey))
+  const classes: SnapshotClass[] = [
+    ...[...atcByKey.entries()].map(([key, atc]) => ({ ingredientKey: key, atcCode: atc, className: names.get(atcLevel4(atc)!) ?? null, source: 'HC_DPD' })),
+    ...[...rxclass.entries()].map(([key, c]) => ({ ingredientKey: key, atcCode: c.code, className: c.name, source: 'NLM_RXCLASS' })),
+  ].sort((a, b) => a.ingredientKey.localeCompare(b.ingredientKey))
   const classByKey = new Map(classes.map((c) => [c.ingredientKey, c]))
   for (const r of all) r.therapeuticClass = classByKey.get(r.ingredientKey)?.className ?? null
 
@@ -378,13 +407,13 @@ async function main() {
   const moieties = [...new Set(all.flatMap((r) => r.ingredients.map((i) => i.name)))].sort()
   console.info(`Verifying ${moieties.length} ingredient names against RxNorm…`)
   const rx = await verifyIngredients(moieties)
-  for (const r of all) r.verified = r.ingredients.every((i) => rx.get(i.name)) && r.compositionKey !== null
+  for (const r of all) r.verified = r.ingredients.length > 0 && r.ingredients.every((i) => rx.get(i.name)) && r.compositionKey !== null
 
   // Safety gates: a route/form contradiction means the mapping is wrong — fail instead of shipping it.
   const contradictions = all.filter((r) => {
     const route = (r.route ?? '').toLowerCase()
     if (/inhal|respiratory/.test(route) && !['INHALER', 'SOLUTION'].includes(r.dosageForm)) return true
-    if (/intravenous|intramuscular|subcutaneous/.test(route) && !/oral|topical/.test(route) && r.dosageForm !== 'INJECTION') return true
+    if (/intravenous|intramuscular|subcutaneous|parenteral/.test(route) && !/oral|topical/.test(route) && r.dosageForm !== 'INJECTION') return true
     if (r.dosageForm === 'INJECTION' && /^(oral|topical)$/.test(route)) return true
     return false
   })
@@ -401,7 +430,7 @@ async function main() {
     version,
     generatedAt: retrievedAt,
     sources: SOURCES,
-    counts: { US: usPicked.length, CA: caPicked.length, total: all.length, classes: classes.length },
+    counts: { US: usPicked.length, CA: caPicked.length, IN: inRows.length, total: all.length, classes: classes.length },
     verification: {
       ingredientsChecked: moieties.length,
       ingredientsInRxNorm: [...rx.values()].filter(Boolean).length,
@@ -418,6 +447,7 @@ async function main() {
   const write = (file: string, data: unknown) => writeFileSync(join(OUT, file), JSON.stringify(data, null, 1) + '\n')
   write('us-openfda.json', usPicked)
   write('ca-dpd.json', caPicked)
+  write('in-janaushadhi.json', inRows)
   write('classes.json', classes)
   write('manifest.json', manifest)
   console.info(JSON.stringify(manifest, null, 2))

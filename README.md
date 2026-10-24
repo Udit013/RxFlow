@@ -29,7 +29,7 @@ A cloud-native, multi-tenant pharmacy management system. Each signup creates an 
 - **Returns** — customer credit notes *and* dedicated supplier purchase-returns (debit notes), both adjust stock + ledgers
 
 ### Catalog
-- **Multi-country medicine database from official open data** — 2,257 products from the U.S. FDA NDC Directory (openFDA) and Health Canada's Drug Product Database, with ATC therapeutic classes; every ingredient verified against NLM RxNorm. Sources and licences are listed in-app (*Medicines → Data sources*)
+- **Multi-country medicine database from official sources** — 4,041 products: India's Jan Aushadhi Product & MRP List (1,784 medicines with official MRPs), the U.S. FDA NDC Directory (openFDA) and Health Canada's Drug Product Database, with ATC therapeutic classes; ingredients verified against NLM RxNorm. Sources and licences are listed in-app (*Medicines → Data sources*)
 - **Search** by brand, generic, active ingredient (any regional name — acetaminophen finds paracetamol), strength, dosage form, ATC code or therapeutic use ("antibiotic", "statin")
 - **Alternatives & variants** — same composition, variants (strength/form/release/route), combinations and similar-use products, each with the differences spelled out and country availability; nothing is presented as interchangeable
 - **Add or edit any medicine** — structured active ingredients (with a quick-entry parser), form detail, route and ATC class; editing a shared medicine saves your pharmacy's own copy and never changes anyone else's
@@ -53,7 +53,7 @@ A cloud-native, multi-tenant pharmacy management system. Each signup creates an 
 - **Per-country profiles** (`packages/regional`) — currency, locale, timezone, fiscal year, tax engine, field labels & validation (GSTIN / VAT no. / EIN / TRN, PIN / ZIP / postcode), drug-classification labels, controlled-drug register, payment methods
 - **Tax engines** — India GST (CGST+SGST / IGST), VAT, US sales tax, or none; India keeps GSTR-1/3B, every country gets a tax summary report
 - **Local time** — "today", monthly reports and fiscal-year document numbering follow the pharmacy's timezone and fiscal year
-- **Per-market catalogs** — shared medicines are scoped to the pharmacy's country, with an all-markets reference view
+- **Per-market catalogs** — shared medicines are scoped to the pharmacy's country; a market picker shows one, several or all markets side by side
 - **Countries** — India, United States, Canada, United Kingdom, UAE, plus a generic international profile
 - **Languages** — app shell in English, Hindi and Spanish; untranslated text falls back to English
 - **Settings → Region & Tax** with a live preview; existing pharmacies default to India and behave exactly as before
@@ -134,7 +134,7 @@ cp apps/web/.env.local.example apps/web/.env.local
 # Create the schema (the project uses prisma db push, not migrate)
 cd packages/db && pnpm exec prisma generate && pnpm exec prisma db push && cd ../..
 
-# (optional) seed sample medicines + a demo tenant
+# (optional) seed a demo tenant (the medicine catalog loads from catalog/snapshot)
 pnpm --filter @rxflow/api deploy:seed
 
 # Run everything
@@ -205,7 +205,7 @@ Uses in-memory Fuse.js by default; plugs into Meilisearch for typo-tolerant full
 
 ### Open-data catalog
 
-`packages/db/catalog/build.ts` (developer-run) pulls products for ~120 essential ingredients from openFDA and Health Canada, verifies them, and writes a committed snapshot to `packages/db/catalog/snapshot/`; every deploy loads it idempotently (`catalog/load.ts`). To refresh or extend it (add an ingredient to `catalog/ingredients.ts`):
+`packages/db/catalog/build.ts` (developer-run) pulls the Jan Aushadhi list and products for ~120 essential ingredients from openFDA and Health Canada, verifies them, and writes a committed snapshot to `packages/db/catalog/snapshot/`; every deploy loads it idempotently (`catalog/load.ts`). To refresh or extend it (add an ingredient to `catalog/ingredients.ts`):
 
 ```bash
 curl -L -o /tmp/dpd.zip https://www.canada.ca/content/dam/hc-sc/documents/services/drug-product-database/allfiles.zip
@@ -264,7 +264,7 @@ For the complete technical handbook — architecture, data model, auth, business
 - Mobile apps (Expo) + desktop (Tauri)
 - e-Invoicing (IRN) + e-Way bill via NIC APIs
 - Redis-backed pub/sub for multi-instance live sync
-- More markets in the open-data catalog (EU via EMA, Australia via PBS) and an Indian source once an openly licensed register exists
+- Indian branded medicines from Common Drug Codes for India (NRCeS, MoHFW — 93,911 brands; download is CAPTCHA-gated) and more markets (EU via EMA, Australia via PBS)
 
 ---
 

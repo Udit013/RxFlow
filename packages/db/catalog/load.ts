@@ -51,16 +51,16 @@ function medicineData(r: SnapshotMedicine) {
     strengthUnit: first?.unit ?? null,
     packSize: r.packSize ?? '1',
     packUnit: PACK_UNIT[r.dosageForm] ?? 'units',
-    mrp: 0, // neither source publishes prices; pharmacies set their own
+    mrp: r.mrp ?? 0, // only Jan Aushadhi publishes prices; pharmacies set their own elsewhere
     hsn: r.productCode,
-    gstRate: 0,
+    gstRate: r.gstRate ?? 0,
     schedule: r.schedule,
     requiresPrescription: r.schedule !== 'OTC' && r.schedule !== 'SCHEDULE_G',
     composition: formatComposition(r.ingredients),
     category: r.category,
     atcCode: r.atcCode,
     therapeuticClass: r.therapeuticClass ?? null,
-    ingredientKey: r.ingredientKey,
+    ingredientKey: r.ingredientKey || null,
     compositionKey: r.compositionKey,
     aliases: r.aliases,
     barcodes: r.barcodes,
@@ -157,10 +157,10 @@ async function main() {
   const counts: Record<string, number> = {}
   counts.OPENFDA_NDC = await loadSource('OPENFDA_NDC', 'us-openfda.json', manifest.version)
   counts.HC_DPD = await loadSource('HC_DPD', 'ca-dpd.json', manifest.version)
-  counts.DEMO_SEED = await prisma.medicine.count({ where: { dataSource: 'DEMO_SEED' } })
+  counts.JAN_AUSHADHI = await loadSource('JAN_AUSHADHI', 'in-janaushadhi.json', manifest.version)
 
   for (const s of SOURCES) {
-    const snapshotSource = s.id === 'OPENFDA_NDC' || s.id === 'HC_DPD'
+    const snapshotSource = s.id === 'OPENFDA_NDC' || s.id === 'HC_DPD' || s.id === 'JAN_AUSHADHI'
     const data = {
       name: s.name, publisher: s.publisher, country: s.country, url: s.url, license: s.license,
       licenseUrl: s.licenseUrl, attribution: s.attribution, notes: s.notes,

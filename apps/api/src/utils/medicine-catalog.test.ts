@@ -86,3 +86,18 @@ describe('groupAlternatives', () => {
     expect(out.similarUse[0]!.differences[0]).toMatch(/not interchangeable/)
   })
 })
+
+describe('market selection', async () => {
+  const { marketsWhere, parseMarkets } = await import('./medicine-scope.js')
+  it('parses one, several or all markets and drops junk', () => {
+    expect(parseMarkets('in, us,INTL,xx1,us')).toEqual(['IN', 'US', 'INTL'])
+    expect(parseMarkets('')).toBeNull()
+    expect(parseMarkets('???')).toBeNull()
+  })
+  it("includes the pharmacy's own rows only when its home market is chosen", () => {
+    const own = { ownerTenantId: 't1' }
+    expect(marketsWhere('t1', 'IN', ['IN', 'US']).OR).toContainEqual(own)
+    expect(marketsWhere('t1', 'IN', ['US']).OR).not.toContainEqual(own)
+    expect(JSON.stringify(marketsWhere('t1', 'IN', ['US', 'INTL']))).toContain('{"country":null}')
+  })
+})

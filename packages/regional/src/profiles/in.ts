@@ -14,7 +14,8 @@ export const IN: RegionProfile = {
     system: 'IN_GST',
     label: 'GST',
     suggestedRates: [0, 5, 12, 18, 28],
-    defaultRate: 12,
+    // Most medicines moved from 12% to 5% GST on 22 Sep 2025 (36 life-saving drugs are nil).
+    defaultRate: 5,
     invoiceTitle: 'Tax Invoice',
     returns: ['GSTR1', 'GSTR3B'],
   },

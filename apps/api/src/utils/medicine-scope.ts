@@ -47,6 +47,28 @@ export function globalCatalogWhere(tenantId: string): Prisma.MedicineWhereInput 
   }
 }
 
+/**
+ * The shared catalogs of the chosen markets (country codes; 'INTL' = rows with no country), minus
+ * shared rows this tenant replaced with a copy. The tenant's own rows belong to its home market,
+ * so they are included whenever that market is chosen.
+ */
+export function marketsWhere(tenantId: string, homeCountry: string, markets: string[]): Prisma.MedicineWhereInput {
+  const countries = markets.filter((m) => m !== 'INTL')
+  const sharedIn: Prisma.MedicineWhereInput[] = []
+  if (countries.length) sharedIn.push({ country: { in: countries } })
+  if (markets.includes('INTL')) sharedIn.push({ country: null })
+  const or: Prisma.MedicineWhereInput[] = [{ ownerTenantId: null, forks: { none: { ownerTenantId: tenantId } }, OR: sharedIn }]
+  if (markets.includes(homeCountry)) or.push({ ownerTenantId: tenantId })
+  return { OR: or }
+}
+
+/** "in, us,INTL,xx1" → ['IN', 'US', 'INTL'] — anything that isn't a country code or INTL is dropped. */
+export function parseMarkets(raw: string | undefined): string[] | null {
+  if (!raw) return null
+  const list = [...new Set(raw.split(',').map((m) => m.trim().toUpperCase()).filter((m) => /^[A-Z]{2}$/.test(m) || m === 'INTL'))]
+  return list.length ? list : null
+}
+
 /** Looser filter for direct lookups by id: any row this tenant may reference (shared or own). */
 export function usableWhere(tenantId: string): Prisma.MedicineWhereInput {
   return { OR: [{ ownerTenantId: null }, { ownerTenantId: tenantId }] }

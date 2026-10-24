@@ -19,7 +19,9 @@ export function CountryTag({ code }: { code: string | null | undefined }) {
 const SOURCE_LABELS: Record<string, { label: string; title: string; icon: typeof Database; cls: string }> = {
   OPENFDA_NDC: { label: 'US FDA', title: 'U.S. FDA National Drug Code Directory (openFDA)', icon: Database, cls: 'badge-info' },
   HC_DPD: { label: 'Health Canada', title: 'Health Canada Drug Product Database', icon: Database, cls: 'badge-info' },
-  DEMO_SEED: { label: 'Demo data', title: 'Illustrative demo entry — not verified against a register', icon: FlaskConical, cls: 'badge-warning' },
+  JAN_AUSHADHI: { label: 'Jan Aushadhi', title: 'PMBJP Product & MRP List (PMBI, Government of India) — official MRP', icon: Database, cls: 'badge-info' },
+  // Retired demo rows can still appear on old invoices or a pharmacy's edited copy.
+  DEMO_SEED: { label: 'Retired demo', title: 'Illustrative demo entry, no longer in the catalog', icon: FlaskConical, cls: 'badge-warning' },
   MANUAL: { label: 'Added manually', title: 'Entered by a pharmacy', icon: PencilLine, cls: 'badge-neutral' },
   BULK_IMPORT: { label: 'CSV import', title: 'Imported from a CSV by a pharmacy', icon: Upload, cls: 'badge-neutral' },
 }

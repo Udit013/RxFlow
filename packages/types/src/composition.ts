@@ -42,6 +42,8 @@ export const INN_SYNONYMS: Record<string, string> = {
   valproate: 'valproic acid',
   divalproex: 'valproic acid',
   rifampin: 'rifampicin',
+  methylergonovine: 'methylergometrine',
+  'paracetamol acetaminophen': 'paracetamol',
   acyclovir: 'aciclovir',
   valacyclovir: 'valaciclovir',
   chlorthalidone: 'chlortalidone',
@@ -190,6 +192,11 @@ export function canonicalStrength(
     const mg = unit === 'mcg' ? value / 1000 : value
     return { strength: round((mg / perMg) * 100), unit: '%' }
   }
+  if (perUnit === 'g' || perUnit === 'mg') {
+    // Non-mass amount per mass (IU per gram): keep the denominator rather than drop it.
+    const perG = perUnit === 'mg' ? per / 1000 : per
+    return { strength: round(value / perG), unit: `${unit}/g` }
+  }
   if (perUnit && /^(actuation|dose|puff|spray|inhalation|blister|metered)/.test(perUnit)) {
     return { strength: round(value / per), unit: `${unit}/dose` }
   }
@@ -215,7 +222,7 @@ export function formatStrength(strength: number | null | undefined, unit: string
 
 // ── Free-text compositions ───────────────────────────────────────────────────
 
-const AMOUNT_RE = /(\d+(?:[.,]\d+)?)\s*(mg|mcg|µg|ug|gm|g|ml|iu|i\.u\.|units?|%|meq|mmol)(?![a-z])(?:\s*\/\s*(\d+(?:\.\d+)?)?\s*(ml|g|dose|actuation|puff|spray))?/i
+const AMOUNT_RE = /(\d+(?:[.,]\d+)?)\s*(mg|mcg|µg|ug|gm|g|ml|iu|i\.u\.|units?|%|meq|mmol)(?![a-z])(?:\s*\/\s*(\d+(?:\.\d+)?)?\s*(ml|gm|g|dose|actuation|puff|spray)\b)?/i
 
 const FORM_NOISE = /\b(ip|bp|usp|sr|er|xr|cr|ds|forte|tablets?|capsules?|tab|cap|syrup|suspension|injection|cream|ointment|gel|drops?|each|contains|film[- ]coated)\b\.?/gi
 

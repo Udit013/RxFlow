@@ -14,7 +14,7 @@ const importRowSchema = z.object({
   purchasePrice: z.number().positive(),
   mrp: z.number().positive(),
   sellingPrice: z.number().positive().optional(),
-  gstRate: z.number().min(0).max(28).default(12),
+  gstRate: z.number().min(0).max(28).default(5), // medicines' GST since 22 Sep 2025
   discountPercent: z.number().min(0).max(100).default(0),
 })
 

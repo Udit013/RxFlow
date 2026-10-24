@@ -4,7 +4,7 @@ export type ScheduleCode = 'OTC' | 'SCHEDULE_G' | 'SCHEDULE_H' | 'SCHEDULE_H1' |
 
 /** One product in a catalog snapshot (catalog/snapshot/*.json). */
 export interface SnapshotMedicine {
-  source: 'OPENFDA_NDC' | 'HC_DPD'
+  source: 'OPENFDA_NDC' | 'HC_DPD' | 'JAN_AUSHADHI'
   sourceRef: string
   sourceUrl: string
   retrievedAt: string
@@ -29,6 +29,9 @@ export interface SnapshotMedicine {
   therapeuticClass?: string | null
   aliases: string[]
   barcodes: string[]
+  /** Official retail price where the source publishes one (Jan Aushadhi MRP, INR). */
+  mrp?: number
+  gstRate?: number
   /** Every ingredient resolves in NLM RxNorm and every strength parsed. */
   verified: boolean
 }
@@ -87,14 +90,14 @@ export const SOURCES: SourceInfo[] = [
     notes: 'Used to verify ingredient names and to name ATC level-4 groups (ATC classification © WHO Collaborating Centre for Drug Statistics Methodology).',
   },
   {
-    id: 'DEMO_SEED',
-    name: 'RxFlow demo catalog (India)',
-    publisher: 'RxFlow',
+    id: 'JAN_AUSHADHI',
+    name: 'Jan Aushadhi Product & MRP List (PMBJP)',
+    publisher: 'Pharmaceuticals & Medical Devices Bureau of India, Department of Pharmaceuticals, Government of India',
     country: 'IN',
-    url: 'https://github.com/Udit013/RxFlow',
-    license: 'Demo data',
+    url: 'https://janaushadhi.gov.in/product-portfolio/product-mrp-list',
+    license: 'Published publicly by the Government of India; no separate open-data licence stated',
     licenseUrl: null,
-    attribution: 'Illustrative demo entries.',
-    notes: 'Not verified against an Indian register (no openly licensed one is available). Check brand, manufacturer and composition before relying on these rows.',
+    attribution: 'Product names, pack sizes, MRPs and therapeutic groups from the PMBJP Product & MRP List published by PMBI.',
+    notes: 'Generic medicines sold at Jan Aushadhi Kendras, with official MRPs. The list does not state drug schedules: anything outside vitamins, antiseptics and similar groups defaults to Schedule H (prescription) — confirm against the label. GST defaults to 5% (the rate for most medicines from 22 Sep 2025; some life-saving drugs are nil). Products without a published MRP and non-medicines are left out.',
   },
 ]

@@ -42,3 +42,6 @@ packages/db/src/generated/
 .claude/
 .DS_Store
 **/.DS_Store
+
+# Common Drug Codes for India package (CC BY 4.0, redistribution limited to India) — never commit
+CommonDrugCodesForIndia_FlatFilePackage/

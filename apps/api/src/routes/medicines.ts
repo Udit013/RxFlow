@@ -4,7 +4,7 @@ import { prisma, type Prisma } from '@rxflow/db'
 import { atcLevel4 } from '@rxflow/types'
 import { authenticate } from '../middleware/auth.js'
 import { parseUpdate } from '../utils/parse-update.js'
-import { catalogWhere, globalCatalogWhere, usableWhere, updateMedicineForTenant } from '../utils/medicine-scope.js'
+import { catalogWhere, globalCatalogWhere, marketsWhere, parseMarkets, usableWhere, updateMedicineForTenant } from '../utils/medicine-scope.js'
 import {
   buildSearchWhere, ingredientsForCreate, normalizeInputIngredients, compositionFields, compositionRows,
   textDefaults, groupAlternatives, rowIngredients, type CatalogRow,
@@ -103,7 +103,7 @@ export async function medicineRoutes(app: FastifyInstance) {
     const query = request.query as {
       page?: string; limit?: string; search?: string;
       dosageForm?: string; schedule?: string; requiresPrescription?: string; category?: string;
-      ingredient?: string; atc?: string; source?: string; market?: string;
+      ingredient?: string; atc?: string; source?: string; market?: string; markets?: string;
     }
 
     const { page, limit, skip, take } = getPaginationParams({
@@ -111,8 +111,12 @@ export async function medicineRoutes(app: FastifyInstance) {
       limit: Number(query.limit),
     })
 
-    // market=all also shows other countries' shared catalogs (read-only reference).
-    const scope = query.market === 'all' ? globalCatalogWhere(tenantId) : await catalogWhere(tenantId)
+    // markets=IN,US,… picks which countries' shared catalogs to show (one, several or all);
+    // market=all is the older spelling of "every market". Default: the pharmacy's own market.
+    const markets = parseMarkets(query.markets)
+    const scope = markets
+      ? marketsWhere(tenantId, (await getTenantRegion(tenantId)).country, markets)
+      : query.market === 'all' ? globalCatalogWhere(tenantId) : await catalogWhere(tenantId)
     const and: Prisma.MedicineWhereInput[] = [scope]
     const search = query.search ? buildSearchWhere(query.search) : null
     if (search) and.push(search)

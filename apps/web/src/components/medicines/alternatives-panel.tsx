@@ -7,6 +7,8 @@ import { AlertTriangle, ExternalLink, GitCompare, Package } from 'lucide-react'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { CountryTag, SourceBadge, formLabel } from './catalog-labels'
+import { MarketPicker } from './market-picker'
+import { getActiveRegion } from '@/lib/region'
 
 interface Alternative {
   id: string
@@ -39,7 +41,8 @@ const GROUPS: { id: GroupId; label: string; help: string }[] = [
 
 export function AlternativesPanel({ medicineId, composition }: { medicineId: string; composition: string }) {
   const [group, setGroup] = useState<GroupId>('sameComposition')
-  const [marketOnly, setMarketOnly] = useState(false)
+  const home = getActiveRegion().country
+  const [markets, setMarkets] = useState<string[] | null>(null) // null = every market in the results
   const { data, isLoading } = useQuery({
     queryKey: ['medicine-alternatives', medicineId],
     queryFn: () => api.get(`/medicines/${medicineId}/alternatives`).then((r) => r.data.data),
@@ -47,8 +50,19 @@ export function AlternativesPanel({ medicineId, composition }: { medicineId: str
 
   const rows: Alternative[] = useMemo(() => {
     const list: Alternative[] = data?.[group] ?? []
-    return marketOnly ? list.filter((a) => a.inYourMarket) : list
-  }, [data, group, marketOnly])
+    if (!markets) return list
+    return list.filter((a) => markets.includes(a.country ?? 'INTL') || (a.inYourMarket && markets.includes(home)))
+  }, [data, group, markets, home])
+  // Markets present in any group of this response, with how many products each has.
+  const marketOptions = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const g of GROUPS) for (const a of (data?.[g.id] ?? []) as Alternative[]) {
+      const code = a.country ?? 'INTL'
+      counts.set(code, (counts.get(code) ?? 0) + 1)
+    }
+    if (!counts.has(home)) counts.set(home, 0)
+    return [...counts.entries()].map(([code, count]) => ({ code, count }))
+  }, [data, home])
   const active = GROUPS.find((g) => g.id === group)!
 
   return (
@@ -89,9 +103,12 @@ export function AlternativesPanel({ medicineId, composition }: { medicineId: str
               </button>
             ))}
           </div>
-          <label className="flex items-center gap-2 text-xs text-slate-600 cursor-pointer">
-            <input type="checkbox" checked={marketOnly} onChange={(e) => setMarketOnly(e.target.checked)} aria-label="Only my market" /> Only my market
-          </label>
+          <MarketPicker
+            options={marketOptions}
+            value={markets ?? marketOptions.map((o) => o.code)}
+            onChange={(next) => setMarkets(next.length === marketOptions.length ? null : next)}
+            home={home}
+          />
         </div>
         <p className="text-xs text-slate-500 mt-2">{active.help}</p>
       </div>

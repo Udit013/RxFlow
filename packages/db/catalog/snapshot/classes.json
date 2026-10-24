@@ -1,5 +1,47 @@
 [
  {
+  "ingredientKey": "abiraterone",
+  "atcCode": "L02BX",
+  "className": "Other hormone antagonists and related agents",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "acamprosate",
+  "atcCode": "N07BB",
+  "className": "Drugs used in alcohol dependence",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "acarbose",
+  "atcCode": "A10BF",
+  "className": "Alpha glucosidase inhibitors",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "aceclofenac",
+  "atcCode": "M01AB",
+  "className": "Acetic acid derivatives and related substances",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "acenocoumarol",
+  "atcCode": "B01AA",
+  "className": "Vitamin K antagonists",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "acetazolamide",
+  "atcCode": "S01EC",
+  "className": "Carbonic anhydrase inhibitors",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "acetylcysteine",
+  "atcCode": "R05CB",
+  "className": "Mucolytics",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "acetylsalicylic acid",
   "atcCode": "N02BA01",
   "className": "Salicylic acid and derivatives",
@@ -36,10 +78,34 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "acitretin",
+  "atcCode": "D05BB",
+  "className": "Retinoids for treatment of psoriasis",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "adapalene",
+  "atcCode": "D10AD",
+  "className": "Retinoids for topical use in acne",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "adapalene+benzoyl peroxide+clindamycin",
   "atcCode": "D10AF51",
   "className": "Antiinfectives for treatment of acne",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "adenosine",
+  "atcCode": "C01EB",
+  "className": "Other cardiac preparations",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "albendazole",
+  "atcCode": "P02CA",
+  "className": "Benzimidazole derivatives",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "alendronic acid+colecalciferol",
@@ -48,10 +114,28 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "alfacalcidol",
+  "atcCode": "A11CC",
+  "className": "Vitamin D and analogues",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "alfuzosin",
+  "atcCode": "G04CA",
+  "className": "Alpha-adrenoreceptor antagonists",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "allopurinol",
   "atcCode": "M04AA01",
   "className": "Preparations inhibiting uric acid production",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "allylestrenol",
+  "atcCode": "G03DC",
+  "className": "Estren derivatives",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "alogliptin+metformin",
@@ -66,10 +150,34 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "amantadine",
+  "atcCode": "N04BB",
+  "className": "Adamantane derivatives",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "amikacin",
+  "atcCode": "D06AX",
+  "className": "Other antibiotics for topical use",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "amiloride+hydrochlorothiazide",
   "atcCode": "C03EA01",
   "className": "Low-ceiling diuretics and potassium-sparing agents",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "amiodarone",
+  "atcCode": "C01BD",
+  "className": "Antiarrhythmics, class III",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "amisulpride",
+  "atcCode": "N05AL",
+  "className": "Benzamides",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "amitriptyline",
@@ -102,6 +210,18 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "amorolfine",
+  "atcCode": "D01AE",
+  "className": "Other antifungals for topical use",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "amoxapine",
+  "atcCode": "N06AA",
+  "className": "Non-selective monoamine reuptake inhibitors",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "amoxicillin",
   "atcCode": "J01CA04",
   "className": "Penicillins with extended spectrum",
@@ -120,16 +240,46 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "ampicillin",
+  "atcCode": "J01CA",
+  "className": "Penicillins with extended spectrum",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "anastrozole",
+  "atcCode": "L02BG",
+  "className": "Aromatase inhibitors",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "apixaban",
   "atcCode": "B01AF02",
   "className": "Direct factor Xa inhibitors",
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "apremilast",
+  "atcCode": "L04AA",
+  "className": "Selective immunosuppressants",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "aripiprazole",
   "atcCode": "N05AX12",
   "className": "Other antipsychotics",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "armodafinil",
+  "atcCode": "N06BA",
+  "className": "Centrally acting sympathomimetics",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "artesunate",
+  "atcCode": "P01BE",
+  "className": "Artemisinin and derivatives, plain",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "atenolol",
@@ -150,6 +300,24 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "atracurium",
+  "atcCode": "M03AC",
+  "className": "Other quaternary ammonium compounds",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "atropine",
+  "atcCode": "A03BA",
+  "className": "Belladonna alkaloids, tertiary amines",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "azathioprine",
+  "atcCode": "L04AX",
+  "className": "Other immunosuppressants",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "azelastine+fluticasone propionate",
   "atcCode": "R01AD58",
   "className": "Corticosteroids",
@@ -168,16 +336,88 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "baclofen",
+  "atcCode": "M03BX",
+  "className": "Other centrally acting agents",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "bempedoic acid",
+  "atcCode": "C10AX",
+  "className": "Other lipid modifying agents",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "benazepril",
+  "atcCode": "C09AA",
+  "className": "ACE inhibitors, plain",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "benzoyl peroxide",
+  "atcCode": "D10AE",
+  "className": "Peroxides",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "benzoyl peroxide+clindamycin",
   "atcCode": "D10AF51",
   "className": "Antiinfectives for treatment of acne",
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "betahistine",
+  "atcCode": "N07CA",
+  "className": "Antivertigo preparations",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "betamethasone",
+  "atcCode": "A07EA",
+  "className": "Corticosteroids acting locally",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "betamethasone+clotrimazole",
   "atcCode": "D01AC20",
   "className": "Imidazole and triazole derivatives",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "betaxolol",
+  "atcCode": "C07AB",
+  "className": "Beta blocking agents, selective",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "bicalutamide",
+  "atcCode": "L02BB",
+  "className": "Anti-androgens",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "bifonazole",
+  "atcCode": "D01AC",
+  "className": "Imidazole and triazole derivatives",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "bimatoprost",
+  "atcCode": "S01EE",
+  "className": "Prostaglandin analogues",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "biotin",
+  "atcCode": "A11HA",
+  "className": "Other plain vitamin preparations",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "bisacodyl",
+  "atcCode": "A06AB",
+  "className": "Contact laxatives",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "bismuth oxide+metronidazole+tetracycline",
@@ -198,16 +438,64 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "bleomycin",
+  "atcCode": "L01DC",
+  "className": "Other cytotoxic antibiotics",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "bortezomib",
+  "atcCode": "L01XG",
+  "className": "Proteasome inhibitors",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "bosentan",
+  "atcCode": "C02KX",
+  "className": "Antihypertensives for pulmonary arterial hypertension",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "brimonidine",
+  "atcCode": "D11AX",
+  "className": "Other dermatologicals",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "brimonidine+timolol",
   "atcCode": "S01ED51",
   "className": "Beta blocking agents",
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "brinzolamide",
+  "atcCode": "S01EC",
+  "className": "Carbonic anhydrase inhibitors",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "brinzolamide+timolol",
   "atcCode": "S01ED51",
   "className": "Beta blocking agents",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "brivaracetam",
+  "atcCode": "N03AX",
+  "className": "Other antiepileptics",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "bromfenac",
+  "atcCode": "S01BC",
+  "className": "Antiinflammatory agents, non-steroids",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "bromocriptine",
+  "atcCode": "G02CB",
+  "className": "Prolactine inhibitors",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "budesonide",
@@ -228,6 +516,36 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "bupivacaine",
+  "atcCode": "N01BB",
+  "className": "Amides",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "bupropion",
+  "atcCode": "N06AX",
+  "className": "Other antidepressants",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "cabergoline",
+  "atcCode": "G02CB",
+  "className": "Prolactine inhibitors",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "cabozantinib",
+  "atcCode": "L01EX",
+  "className": "Other protein kinase inhibitors",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "caffeine",
+  "atcCode": "D11AX",
+  "className": "Other dermatologicals",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "caffeine+codeine+paracetamol",
   "atcCode": "N02AJ06",
   "className": "Opioids in combination with non-opioid analgesics",
@@ -246,6 +564,24 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "calcitriol",
+  "atcCode": "A11CC",
+  "className": "Vitamin D and analogues",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "calcium acetate",
+  "atcCode": "V03AE",
+  "className": "Drugs for treatment of hyperkalemia and hyperphosphatemia",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "calcium carbonate",
+  "atcCode": "A02AC",
+  "className": "Calcium compounds",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "calcium carbonate+famotidine+magnesium hydroxide",
   "atcCode": "A02BA53",
   "className": "H2-receptor antagonists",
@@ -256,6 +592,18 @@
   "atcCode": "A02AF02",
   "className": "Antacids with antiflatulents",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "calcium gluconate",
+  "atcCode": "A12AA",
+  "className": "Calcium",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "canagliflozin",
+  "atcCode": "A10BK",
+  "className": "Sodium-glucose co-transporter 2 (SGLT2) inhibitors",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "canagliflozin+metformin",
@@ -270,10 +618,40 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "capecitabine",
+  "atcCode": "L01BC",
+  "className": "Pyrimidine analogues",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "carbamazepine",
   "atcCode": "N03AF01",
   "className": "Carboxamide derivatives",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "carbimazole",
+  "atcCode": "H03BB",
+  "className": "Sulfur-containing imidazole derivatives",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "carboplatin",
+  "atcCode": "L01XA",
+  "className": "Platinum compounds",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "carboprost",
+  "atcCode": "G02AD",
+  "className": "Prostaglandins",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "cariprazine",
+  "atcCode": "N05AX",
+  "className": "Other antipsychotics",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "carvedilol",
@@ -282,16 +660,70 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "cefaclor",
+  "atcCode": "J01DC",
+  "className": "Second-generation cephalosporins",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "cefadroxil",
+  "atcCode": "J01DB",
+  "className": "First-generation cephalosporins",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "cefalexin",
   "atcCode": "J01DB01",
   "className": "First-generation cephalosporins",
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "cefdinir",
+  "atcCode": "J01DD",
+  "className": "Third-generation cephalosporins",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "cefixime",
   "atcCode": "J01DD08",
   "className": "Third-generation cephalosporins",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "cefoperazone",
+  "atcCode": "J01DD",
+  "className": "Third-generation cephalosporins",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "cefotaxime",
+  "atcCode": "J01DD",
+  "className": "Third-generation cephalosporins",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "cefpodoxime",
+  "atcCode": "J01DD",
+  "className": "Third-generation cephalosporins",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "cefprozil",
+  "atcCode": "J01DC",
+  "className": "Second-generation cephalosporins",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "ceftazidime",
+  "atcCode": "J01DD",
+  "className": "Third-generation cephalosporins",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "ceftriaxone",
+  "atcCode": "J01DD",
+  "className": "Third-generation cephalosporins",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "cefuroxime",
@@ -318,6 +750,30 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "chloramphenicol",
+  "atcCode": "D06AX",
+  "className": "Other antibiotics for topical use",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "chlordiazepoxide",
+  "atcCode": "N05BA",
+  "className": "Benzodiazepine derivatives",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "chlorhexidine",
+  "atcCode": "A01AB",
+  "className": "Antiinfectives and antiseptics for local oral treatment",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "chloroquine",
+  "atcCode": "P01BA",
+  "className": "Aminoquinolines",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "chlorphenamine+dextromethorphan+paracetamol",
   "atcCode": "N02BE51",
   "className": "Anilides",
@@ -342,16 +798,52 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "chlorpromazine",
+  "atcCode": "N05AA",
+  "className": "Phenothiazines with aliphatic side-chain",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "chlortalidone",
   "atcCode": "C03BA04",
   "className": "Sulfonamides, plain",
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "ciclopirox",
+  "atcCode": "D01AE",
+  "className": "Other antifungals for topical use",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "ciclosporin",
+  "atcCode": "L04AD",
+  "className": "Calcineurin inhibitors",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "cilazapril+hydrochlorothiazide",
   "atcCode": "C09BA08",
   "className": "ACE inhibitors and diuretics",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "cilostazol",
+  "atcCode": "B01AC",
+  "className": "Platelet aggregation inhibitors excl. heparin",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "cinitapride",
+  "atcCode": "A03FA",
+  "className": "Propulsives",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "cinnarizine",
+  "atcCode": "N07CA",
+  "className": "Antivertigo preparations",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "ciprofloxacin",
@@ -372,10 +864,22 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "cisplatin",
+  "atcCode": "L01XA",
+  "className": "Platinum compounds",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "citalopram",
   "atcCode": "N06AB04",
   "className": "Selective serotonin reuptake inhibitors",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "citicoline",
+  "atcCode": "N06BX",
+  "className": "Other psychostimulants and nootropics",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "clarithromycin",
@@ -402,10 +906,34 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "clobazam",
+  "atcCode": "N05BA",
+  "className": "Benzodiazepine derivatives",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "clomiphene",
+  "atcCode": "G03GB",
+  "className": "Ovulation stimulants, synthetic",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "clomipramine",
+  "atcCode": "N06AA",
+  "className": "Non-selective monoamine reuptake inhibitors",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "clonazepam",
   "atcCode": "N03AE01",
   "className": "Benzodiazepine derivatives",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "clonidine",
+  "atcCode": "C02AC",
+  "className": "Imidazoline receptor agonists",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "clopidogrel",
@@ -424,6 +952,12 @@
   "atcCode": "G01AF02",
   "className": "Imidazole derivatives",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "clozapine",
+  "atcCode": "N05AH",
+  "className": "Diazepines, oxazepines, thiazepines and oxepines",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "codeine+doxylamine+paracetamol",
@@ -456,10 +990,46 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "colistin",
+  "atcCode": "A07AA",
+  "className": "Antibiotics",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "cyanocobalamin",
   "atcCode": "B03BA01",
   "className": "Vitamin B12 (cyanocobalamin and analogues)",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "cyclophosphamide",
+  "atcCode": "L01AA",
+  "className": "Nitrogen mustard analogues",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "cyproheptadine",
+  "atcCode": "R06AX",
+  "className": "Other antihistamines for systemic use",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "dabigatran etexilate",
+  "atcCode": "B01AE",
+  "className": "Direct thrombin inhibitors",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "dacarbazine",
+  "atcCode": "L01AX",
+  "className": "Other alkylating agents",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "daclatasvir",
+  "atcCode": "J05AP",
+  "className": "Antivirals for treatment of HCV infections",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "dapagliflozin",
@@ -474,6 +1044,48 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "darifenacin",
+  "atcCode": "G04BD",
+  "className": "Drugs for urinary frequency and incontinence",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "dasatinib",
+  "atcCode": "L01EA",
+  "className": "BCR-ABL tyrosine kinase inhibitors",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "daunorubicin",
+  "atcCode": "L01DB",
+  "className": "Anthracyclines and related substances",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "deferasirox",
+  "atcCode": "V03AC",
+  "className": "Iron chelating agents",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "deferiprone",
+  "atcCode": "V03AC",
+  "className": "Iron chelating agents",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "deflazacort",
+  "atcCode": "H02AB",
+  "className": "Glucocorticoids",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "denosumab",
+  "atcCode": "M05BX",
+  "className": "Other drugs affecting bone structure and mineralization",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "desloratadine",
   "atcCode": "R06AX27",
   "className": "Other antihistamines for systemic use",
@@ -484,6 +1096,12 @@
   "atcCode": "R01BA52",
   "className": "Sympathomimetics",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "desvenlafaxine",
+  "atcCode": "N06AX",
+  "className": "Other antidepressants",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "dexamethasone",
@@ -514,6 +1132,18 @@
   "atcCode": "S01CA01",
   "className": "Corticosteroids and antiinfectives in combination",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "dexlansoprazole",
+  "atcCode": "A02BC",
+  "className": "Proton pump inhibitors",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "dextromethorphan",
+  "atcCode": "R05DA",
+  "className": "Opium alkaloids and derivatives",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "dextromethorphan+diphenhydramine+paracetamol",
@@ -570,10 +1200,34 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "dicycloverine",
+  "atcCode": "A03AA",
+  "className": "Synthetic anticholinergics, esters with tertiary amino group",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "diethylcarbamazine",
+  "atcCode": "P02CB",
+  "className": "Piperazine and derivatives",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "digoxin",
   "atcCode": "C01AA05",
   "className": "Digitalis glycosides",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "diltiazem",
+  "atcCode": "C05AE",
+  "className": "Muscle relaxants",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "dinoprostone",
+  "atcCode": "G02AD",
+  "className": "Prostaglandins",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "diphenhydramine+ibuprofen",
@@ -606,16 +1260,70 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "disulfiram",
+  "atcCode": "N07BB",
+  "className": "Drugs used in alcohol dependence",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "dobutamine",
+  "atcCode": "C01CA",
+  "className": "Adrenergic and dopaminergic agents",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "docetaxel",
+  "atcCode": "L01CD",
+  "className": "Taxanes",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "dolutegravir",
+  "atcCode": "J05AJ",
+  "className": "Integrase inhibitors",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "domperidone",
   "atcCode": "A03FA03",
   "className": "Propulsives",
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "donepezil",
+  "atcCode": "N06DA",
+  "className": "Anticholinesterases",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "dopamine",
+  "atcCode": "C01CA",
+  "className": "Adrenergic and dopaminergic agents",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "dorzolamide",
+  "atcCode": "S01EC",
+  "className": "Carbonic anhydrase inhibitors",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "dorzolamide+timolol",
   "atcCode": "S01ED51",
   "className": "Beta blocking agents",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "doxepin",
+  "atcCode": "D04AX",
+  "className": "Other antipruritics",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "doxorubicin",
+  "atcCode": "L01DB",
+  "className": "Anthracyclines and related substances",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "doxycycline",
@@ -642,10 +1350,40 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "dutasteride",
+  "atcCode": "G04CB",
+  "className": "Testosterone-5-alpha reductase inhibitors",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "dutasteride+tamsulosin",
   "atcCode": "G04CA52",
   "className": "Alpha-adrenoreceptor antagonists",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "dydrogesterone",
+  "atcCode": "G03DB",
+  "className": "Pregnadien derivatives",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "ebastine",
+  "atcCode": "R06AX",
+  "className": "Other antihistamines for systemic use",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "efavirenz",
+  "atcCode": "J05AG",
+  "className": "Non-nucleoside reverse transcriptase inhibitors",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "eltrombopag",
+  "atcCode": "B02BX",
+  "className": "Other systemic hemostatics",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "empagliflozin",
@@ -672,6 +1410,36 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "enoxaparin",
+  "atcCode": "B01AB",
+  "className": "Heparin group",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "entecavir",
+  "atcCode": "J05AF",
+  "className": "Nucleoside and nucleotide reverse transcriptase inhibitors",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "enzalutamide",
+  "atcCode": "L02BB",
+  "className": "Anti-androgens",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "eplerenone",
+  "atcCode": "C03DA",
+  "className": "Aldosterone antagonists",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "erlotinib",
+  "atcCode": "L01EB",
+  "className": "Epidermal growth factor receptor (EGFR) tyrosine kinase inhibitors",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "escitalopram",
   "atcCode": "N06AB10",
   "className": "Selective serotonin reuptake inhibitors",
@@ -690,10 +1458,58 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "estradiol",
+  "atcCode": "G03CA",
+  "className": "Natural and semisynthetic estrogens, plain",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "etodolac",
+  "atcCode": "M01AB",
+  "className": "Acetic acid derivatives and related substances",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "etoposide",
+  "atcCode": "L01CB",
+  "className": "Podophyllotoxin derivatives",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "etoricoxib",
+  "atcCode": "M01AH",
+  "className": "Coxibs",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "everolimus",
+  "atcCode": "L01EG",
+  "className": "Mammalian target of rapamycin (mTOR) kinase inhibitors",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "ezetimibe",
+  "atcCode": "C10AX",
+  "className": "Other lipid modifying agents",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "famotidine",
   "atcCode": "A02BA03",
   "className": "H2-receptor antagonists",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "febuxostat",
+  "atcCode": "M04AA",
+  "className": "Preparations inhibiting uric acid production",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "fenofibrate",
+  "atcCode": "C10AB",
+  "className": "Fibrates",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "fexofenadine",
@@ -714,16 +1530,34 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "flavoxate",
+  "atcCode": "G04BD",
+  "className": "Drugs for urinary frequency and incontinence",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "fluconazole",
   "atcCode": "J02AC01",
   "className": "Triazole and tetrazole derivatives",
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "flunarizine",
+  "atcCode": "N07CA",
+  "className": "Antivertigo preparations",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "fluoxetine",
   "atcCode": "N06AB03",
   "className": "Selective serotonin reuptake inhibitors",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "flupirtine",
+  "atcCode": "N02BG",
+  "className": "Other analgesics and antipyretics",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "fluticasone propionate",
@@ -738,10 +1572,22 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "fluvoxamine",
+  "atcCode": "N06AB",
+  "className": "Selective serotonin reuptake inhibitors",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "folic acid",
   "atcCode": "B03BB01",
   "className": "Folic acid and derivatives",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "furazolidone",
+  "atcCode": "G01AX",
+  "className": "Other antiinfectives and antiseptics",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "furosemide",
@@ -762,6 +1608,30 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "gefitinib",
+  "atcCode": "L01EB",
+  "className": "Epidermal growth factor receptor (EGFR) tyrosine kinase inhibitors",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "gemcitabine",
+  "atcCode": "L01BC",
+  "className": "Pyrimidine analogues",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "gentamicin",
+  "atcCode": "D06AX",
+  "className": "Other antibiotics for topical use",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "glibenclamide",
+  "atcCode": "A10BB",
+  "className": "Sulfonylureas",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "gliclazide",
   "atcCode": "A10BB09",
   "className": "Sulfonylureas",
@@ -772,6 +1642,36 @@
   "atcCode": "A10BB12",
   "className": "Sulfonylureas",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "glipizide",
+  "atcCode": "A10BB",
+  "className": "Sulfonylureas",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "glucosamine",
+  "atcCode": "M01AX",
+  "className": "Other antiinflammatory and antirheumatic agents, non-steroids",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "glycerin",
+  "atcCode": "A06AG",
+  "className": "Enemas",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "glyceryl trinitrate",
+  "atcCode": "C01DA",
+  "className": "Organic nitrates",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "griseofulvin",
+  "atcCode": "D01AA",
+  "className": "Antibiotics",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "guaifenesin+menthol+paracetamol",
@@ -790,6 +1690,18 @@
   "atcCode": "N02BE51",
   "className": "Anilides",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "heparin",
+  "atcCode": "B01AB",
+  "className": "Heparin group",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "homatropine",
+  "atcCode": "S01FA",
+  "className": "Anticholinergics",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "hydrochlorothiazide",
@@ -894,6 +1806,18 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "hydroxyurea",
+  "atcCode": "L01XX",
+  "className": "Other antineoplastic agents",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "hydroxyzine",
+  "atcCode": "N05BB",
+  "className": "Diphenylmethane derivatives",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "ibuprofen",
   "atcCode": "M01AE01",
   "className": "Propionic acid derivatives",
@@ -918,6 +1842,48 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "ifosfamide",
+  "atcCode": "L01AA",
+  "className": "Nitrogen mustard analogues",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "imatinib",
+  "atcCode": "L01EA",
+  "className": "BCR-ABL tyrosine kinase inhibitors",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "imipramine",
+  "atcCode": "N06AA",
+  "className": "Non-selective monoamine reuptake inhibitors",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "indapamide",
+  "atcCode": "C03BA",
+  "className": "Sulfonamides, plain",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "indomethacin",
+  "atcCode": "C01EB",
+  "className": "Other cardiac preparations",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "inosine pranobex",
+  "atcCode": "J05AX",
+  "className": "Other antivirals",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "insulin glargine",
+  "atcCode": "A10AE",
+  "className": "Insulins and analogues for injection, long-acting",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "ipratropium",
   "atcCode": "R03BB01",
   "className": "Anticholinergics",
@@ -928,6 +1894,36 @@
   "atcCode": "R03AL02",
   "className": "Adrenergics in combination with anticholinergics incl. triple combinations with corticosteroids",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "isosorbide dinitrate",
+  "atcCode": "C01DA",
+  "className": "Organic nitrates",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "isotretinoin",
+  "atcCode": "D10AD",
+  "className": "Retinoids for topical use in acne",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "isoxsuprine",
+  "atcCode": "C04AA",
+  "className": "2-amino-1-phenylethanol derivatives",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "itraconazole",
+  "atcCode": "J02AC",
+  "className": "Triazole and tetrazole derivatives",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "ivabradine",
+  "atcCode": "C01EB",
+  "className": "Other cardiac preparations",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "ivermectin",
@@ -942,6 +1938,36 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "ketorolac",
+  "atcCode": "M01AB",
+  "className": "Acetic acid derivatives and related substances",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "labetalol",
+  "atcCode": "C07AG",
+  "className": "Alpha and beta blocking agents",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "lacosamide",
+  "atcCode": "N03AX",
+  "className": "Other antiepileptics",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "lactulose",
+  "atcCode": "A06AD",
+  "className": "Osmotically acting laxatives",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "lamivudine",
+  "atcCode": "J05AF",
+  "className": "Nucleoside and nucleotide reverse transcriptase inhibitors",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "lamotrigine",
   "atcCode": "N03AX09",
   "className": "Other antiepileptics",
@@ -952,6 +1978,12 @@
   "atcCode": "A02BC03",
   "className": "Proton pump inhibitors",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "lapatinib",
+  "atcCode": "L01EH",
+  "className": "Human epidermal growth factor receptor 2 (HER2) tyrosine kinase inhibitors",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "latanoprost",
@@ -966,10 +1998,52 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "leflunomide",
+  "atcCode": "L04AK",
+  "className": "Dihydroorotate dehydrogenase (DHODH) inhibitors",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "lenalidomide",
+  "atcCode": "L04AX",
+  "className": "Other immunosuppressants",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "lenvatinib",
+  "atcCode": "L01EX",
+  "className": "Other protein kinase inhibitors",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "letrozole",
+  "atcCode": "L02BG",
+  "className": "Aromatase inhibitors",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "leuprolide",
+  "atcCode": "L02AE",
+  "className": "Gonadotropin releasing hormone analogues",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "levetiracetam",
   "atcCode": "N03AX14",
   "className": "Other antiepileptics",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "levocarnitine",
+  "atcCode": "A16AA",
+  "className": "Amino acids and derivatives",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "levocetirizine",
+  "atcCode": "R06AE",
+  "className": "Piperazine derivatives",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "levofloxacin",
@@ -978,10 +2052,22 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "levonorgestrel",
+  "atcCode": "G03AC",
+  "className": "Progestogens",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "levothyroxine",
   "atcCode": "H03AA01",
   "className": "Thyroid hormones",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "lidocaine",
+  "atcCode": "C01BB",
+  "className": "Antiarrhythmics, class Ib",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "lidocaine+methylprednisolone",
@@ -996,10 +2082,28 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "linagliptin",
+  "atcCode": "A10BH",
+  "className": "Dipeptidyl peptidase 4 (DPP-4) inhibitors",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "linagliptin+metformin",
   "atcCode": "A10BD11",
   "className": "Combinations of oral blood glucose lowering drugs",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "lincomycin",
+  "atcCode": "J01FF",
+  "className": "Lincosamides",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "linezolid",
+  "atcCode": "J01XX",
+  "className": "Other antibacterials",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "lisinopril",
@@ -1044,16 +2148,88 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "luliconazole",
+  "atcCode": "D01AC",
+  "className": "Imidazole and triazole derivatives",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "lurasidone",
+  "atcCode": "N05AE",
+  "className": "Indole derivatives",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "macitentan+tadalafil",
   "atcCode": "C02KX54",
   "className": "Antihypertensives for pulmonary arterial hypertension",
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "mannitol",
+  "atcCode": "A06AD",
+  "className": "Osmotically acting laxatives",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "mebendazole",
+  "atcCode": "P02CA",
+  "className": "Benzimidazole derivatives",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "mebeverine",
+  "atcCode": "A03AA",
+  "className": "Synthetic anticholinergics, esters with tertiary amino group",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "mecobalamin",
+  "atcCode": "B03BA",
+  "className": "Vitamin B12 (cyanocobalamin and analogues)",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "medroxyprogesterone",
+  "atcCode": "G03AC",
+  "className": "Progestogens",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "mefloquine",
+  "atcCode": "P01BC",
+  "className": "Methanolquinolines",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "megestrol",
+  "atcCode": "G03AC",
+  "className": "Progestogens",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "memantine",
+  "atcCode": "N06DX",
+  "className": "Other anti-dementia drugs",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "menthol+paracetamol",
   "atcCode": "N02BE51",
   "className": "Anilides",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "meropenem",
+  "atcCode": "J01DH",
+  "className": "Carbapenems",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "mesalazine",
+  "atcCode": "A07EC",
+  "className": "Aminosalicylic acid and similar agents",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "metformin",
@@ -1078,6 +2254,12 @@
   "atcCode": "L04AX03",
   "className": "Other immunosuppressants",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "methylergometrine",
+  "atcCode": "G02AB",
+  "className": "Ergot alkaloids",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "methylprednisolone",
@@ -1110,16 +2292,106 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "miconazole",
+  "atcCode": "A01AB",
+  "className": "Antiinfectives and antiseptics for local oral treatment",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "midazolam",
+  "atcCode": "N05CD",
+  "className": "Benzodiazepine derivatives",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "midodrine",
+  "atcCode": "C01CA",
+  "className": "Adrenergic and dopaminergic agents",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "mifepristone",
+  "atcCode": "G03XB",
+  "className": "Progesterone receptor modulators",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "minoxidil",
+  "atcCode": "C02DC",
+  "className": "Pyrimidine derivatives",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "mirabegron",
+  "atcCode": "G04BD",
+  "className": "Drugs for urinary frequency and incontinence",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "mirtazapine",
+  "atcCode": "N06AX",
+  "className": "Other antidepressants",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "misoprostol",
+  "atcCode": "A02BB",
+  "className": "Prostaglandins",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "modafinil",
+  "atcCode": "N06BA",
+  "className": "Centrally acting sympathomimetics",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "molnupiravir",
+  "atcCode": "J05AB",
+  "className": "Nucleosides and nucleotides excl. reverse transcriptase inhibitors",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "mometasone",
+  "atcCode": "D07AC",
+  "className": "Corticosteroids, potent (group III)",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "montelukast",
   "atcCode": "R03DC03",
   "className": "Leukotriene receptor antagonists",
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "moxifloxacin",
+  "atcCode": "J01MA",
+  "className": "Fluoroquinolones",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "moxonidine",
+  "atcCode": "C02AC",
+  "className": "Imidazoline receptor agonists",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "mupirocin",
   "atcCode": "D06AX09",
   "className": "Other antibiotics for topical use",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "naftifine",
+  "atcCode": "D01AE",
+  "className": "Other antifungals for topical use",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "naltrexone",
+  "atcCode": "N07BB",
+  "className": "Drugs used in alcohol dependence",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "naproxen",
@@ -1134,16 +2406,106 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "natamycin",
+  "atcCode": "A01AB",
+  "className": "Antiinfectives and antiseptics for local oral treatment",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "nebivolol",
+  "atcCode": "C07AB",
+  "className": "Beta blocking agents, selective",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "nepafenac",
+  "atcCode": "S01BC",
+  "className": "Antiinflammatory agents, non-steroids",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "nicorandil",
+  "atcCode": "C01DX",
+  "className": "Other vasodilators used in cardiac diseases",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "nicotine",
+  "atcCode": "N07BA",
+  "className": "Drugs used in nicotine dependence",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "nifedipine",
   "atcCode": "C08CA05",
   "className": "Dihydropyridine derivatives",
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "nimesulide",
+  "atcCode": "M01AX",
+  "className": "Other antiinflammatory and antirheumatic agents, non-steroids",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "nintedanib",
+  "atcCode": "L01EX",
+  "className": "Other protein kinase inhibitors",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "nitazoxanide",
+  "atcCode": "P01AX",
+  "className": "Other agents against amoebiasis and other protozoal diseases",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "nitrazepam",
+  "atcCode": "N05CD",
+  "className": "Benzodiazepine derivatives",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "nitrofurantoin",
   "atcCode": "J01XE01",
   "className": "Nitrofuran derivatives",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "norfloxacin",
+  "atcCode": "J01MA",
+  "className": "Fluoroquinolones",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "nortriptyline",
+  "atcCode": "N06AA",
+  "className": "Non-selective monoamine reuptake inhibitors",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "noscapine",
+  "atcCode": "R05DA",
+  "className": "Opium alkaloids and derivatives",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "obeticholic acid",
+  "atcCode": "A05AA",
+  "className": "Bile acids and derivatives",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "octreotide",
+  "atcCode": "H01CB",
+  "className": "Somatostatin and analogues",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "ofloxacin",
+  "atcCode": "J01MA",
+  "className": "Fluoroquinolones",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "olanzapine",
@@ -1158,6 +2520,12 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "olopatadine",
+  "atcCode": "R01AC",
+  "className": "Antiallergic agents, excl. corticosteroids",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "omeprazole",
   "atcCode": "A02BC01",
   "className": "Proton pump inhibitors",
@@ -1170,16 +2538,64 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "orlistat",
+  "atcCode": "A08AB",
+  "className": "Peripherally acting antiobesity products",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "ornidazole",
+  "atcCode": "G01AF",
+  "className": "Imidazole derivatives",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "oseltamivir",
   "atcCode": "J05AH02",
   "className": "Neuraminidase inhibitors",
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "oxaceprol",
+  "atcCode": "D11AX",
+  "className": "Other dermatologicals",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "oxaliplatin",
+  "atcCode": "L01XA",
+  "className": "Platinum compounds",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "oxcarbazepine",
+  "atcCode": "N03AF",
+  "className": "Carboxamide derivatives",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "oxycodone+paracetamol",
   "atcCode": "N02AJ17",
   "className": "Opioids in combination with non-opioid analgesics",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "oxymetazoline",
+  "atcCode": "D11AX",
+  "className": "Other dermatologicals",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "ozenoxacin",
+  "atcCode": "D06AX",
+  "className": "Other antibiotics for topical use",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "paclitaxel",
+  "atcCode": "L01CD",
+  "className": "Taxanes",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "pamabrom+paracetamol+pyrilamine",
@@ -1230,6 +2646,48 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "pazopanib",
+  "atcCode": "L01EX",
+  "className": "Other protein kinase inhibitors",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "pemetrexed",
+  "atcCode": "L01BA",
+  "className": "Folic acid analogues",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "pentazocine",
+  "atcCode": "N02AD",
+  "className": "Benzomorphan derivatives",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "perindopril",
+  "atcCode": "C09AA",
+  "className": "ACE inhibitors, plain",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "permethrin",
+  "atcCode": "P03AC",
+  "className": "Pyrethrines, incl. synthetic compounds",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "pheniramine",
+  "atcCode": "D04AA",
+  "className": "Antihistamines for topical use",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "phenobarbital",
+  "atcCode": "N03AA",
+  "className": "Barbiturates and derivatives",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "phenytoin",
   "atcCode": "N03AB02",
   "className": "Hydantoin derivatives",
@@ -1240,6 +2698,54 @@
   "atcCode": "A10BG03",
   "className": "Thiazolidinediones",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "piracetam",
+  "atcCode": "N06BX",
+  "className": "Other psychostimulants and nootropics",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "pirfenidone",
+  "atcCode": "L04AX",
+  "className": "Other immunosuppressants",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "piroxicam",
+  "atcCode": "M01AC",
+  "className": "Oxicams",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "pomalidomide",
+  "atcCode": "L04AX",
+  "className": "Other immunosuppressants",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "povidone-iodine",
+  "atcCode": "D08AG",
+  "className": "Iodine products",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "pramipexole",
+  "atcCode": "N04BC",
+  "className": "Dopamine agonists",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "prasugrel",
+  "atcCode": "B01AC",
+  "className": "Platelet aggregation inhibitors excl. heparin",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "prazosin",
+  "atcCode": "C02CA",
+  "className": "Alpha-adrenoreceptor antagonists",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "prednisolone",
@@ -1260,10 +2766,70 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "primaquine",
+  "atcCode": "P01BA",
+  "className": "Aminoquinolines",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "prochlorperazine",
+  "atcCode": "N05AB",
+  "className": "Phenothiazines with piperazine structure",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "procyclidine",
+  "atcCode": "N04AA",
+  "className": "Tertiary amines",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "progesterone",
+  "atcCode": "G03DA",
+  "className": "Pregnen (4) derivatives",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "promethazine",
+  "atcCode": "D04AA",
+  "className": "Antihistamines for topical use",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "propofol",
+  "atcCode": "N01AX",
+  "className": "Other general anesthetics",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "propranolol",
   "atcCode": "C07AA05",
   "className": "Beta blocking agents, non-selective",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "prucalopride",
+  "atcCode": "A06AX",
+  "className": "Other drugs for constipation",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "pyrantel",
+  "atcCode": "P02CC",
+  "className": "Tetrahydropyrimidine derivatives",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "pyridostigmine",
+  "atcCode": "N07AA",
+  "className": "Anticholinesterases",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "pyridoxine",
+  "atcCode": "A11HA",
+  "className": "Other plain vitamin preparations",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "quetiapine",
@@ -1272,10 +2838,22 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "quinine",
+  "atcCode": "P01BC",
+  "className": "Methanolquinolines",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "rabeprazole",
   "atcCode": "A02BC04",
   "className": "Proton pump inhibitors",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "racecadotril",
+  "atcCode": "A07XA",
+  "className": "Other antidiarrheals",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "ramipril",
@@ -1284,10 +2862,46 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "ranitidine",
+  "atcCode": "A02BA",
+  "className": "H2-receptor antagonists",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "ranolazine",
+  "atcCode": "C01EB",
+  "className": "Other cardiac preparations",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "repaglinide",
+  "atcCode": "A10BX",
+  "className": "Other blood glucose lowering drugs, excl. insulins",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "ribavirin",
+  "atcCode": "J05AP",
+  "className": "Antivirals for treatment of HCV infections",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "rifaximin",
+  "atcCode": "A07AA",
+  "className": "Antibiotics",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "risperidone",
   "atcCode": "N05AX08",
   "className": "Other antipsychotics",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "rituximab",
+  "atcCode": "L01FA",
+  "className": "CD20 (Clusters of Differentiation 20) inhibitors",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "rivaroxaban",
@@ -1296,10 +2910,40 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "rivastigmine",
+  "atcCode": "N06DA",
+  "className": "Anticholinesterases",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "rizatriptan",
+  "atcCode": "N02CC",
+  "className": "Selective serotonin (5HT1) agonists",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "ropinirole",
+  "atcCode": "N04BC",
+  "className": "Dopamine agonists",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "rosuvastatin",
   "atcCode": "C10AA07",
   "className": "HMG CoA reductase inhibitors",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "roxithromycin",
+  "atcCode": "J01FA",
+  "className": "Macrolides",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "saccharomyces boulardii",
+  "atcCode": "A07FA",
+  "className": "Antidiarrheal microorganisms",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "sacubitril+valsartan",
@@ -1314,10 +2958,40 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "saxagliptin",
+  "atcCode": "A10BH",
+  "className": "Dipeptidyl peptidase 4 (DPP-4) inhibitors",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "selegiline",
+  "atcCode": "N04BD",
+  "className": "Monoamine oxidase B inhibitors",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "selexipag",
+  "atcCode": "B01AC",
+  "className": "Platelet aggregation inhibitors excl. heparin",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "sertaconazole",
+  "atcCode": "D01AC",
+  "className": "Imidazole and triazole derivatives",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "sertraline",
   "atcCode": "N06AB06",
   "className": "Selective serotonin reuptake inhibitors",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "sevelamer",
+  "atcCode": "V03AE",
+  "className": "Drugs for treatment of hyperkalemia and hyperphosphatemia",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "sildenafil",
@@ -1326,10 +3000,28 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "silodosin",
+  "atcCode": "G04CA",
+  "className": "Alpha-adrenoreceptor antagonists",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "silymarin",
+  "atcCode": "A05BA",
+  "className": "Liver therapy",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "simvastatin",
   "atcCode": "C10AA01",
   "className": "HMG CoA reductase inhibitors",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "sirolimus",
+  "atcCode": "L01EG",
+  "className": "Mammalian target of rapamycin (mTOR) kinase inhibitors",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "sitagliptin",
@@ -1338,10 +3030,46 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "sodium bicarbonate",
+  "atcCode": "B05CB",
+  "className": "Salt solutions",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "sodium chloride",
+  "atcCode": "A12CA",
+  "className": "Sodium",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "sofosbuvir",
+  "atcCode": "J05AP",
+  "className": "Antivirals for treatment of HCV infections",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "solifenacin",
+  "atcCode": "G04BD",
+  "className": "Drugs for urinary frequency and incontinence",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "sorafenib",
+  "atcCode": "L01EX",
+  "className": "Other protein kinase inhibitors",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "spironolactone",
   "atcCode": "C03DA01",
   "className": "Aldosterone antagonists",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "sucralfate",
+  "atcCode": "A02BX",
+  "className": "Other drugs for peptic ulcer and gastro-oesophageal reflux disease (GORD)",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "sulfamethoxazole+trimethoprim",
@@ -1350,10 +3078,40 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "sulfasalazine",
+  "atcCode": "A07EC",
+  "className": "Aminosalicylic acid and similar agents",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "sumatriptan",
+  "atcCode": "N02CC",
+  "className": "Selective serotonin (5HT1) agonists",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "sunitinib",
+  "atcCode": "L01EX",
+  "className": "Other protein kinase inhibitors",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "tacrolimus",
+  "atcCode": "D11AH",
+  "className": "Agents for dermatitis, excluding corticosteroids",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "tadalafil",
   "atcCode": "G04BE08",
   "className": "Drugs used in erectile dysfunction",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "tamoxifen",
+  "atcCode": "L02BA",
+  "className": "Anti-estrogens",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "tamsulosin",
@@ -1362,16 +3120,94 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "tapentadol",
+  "atcCode": "N02AX",
+  "className": "Other opioids",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "teicoplanin",
+  "atcCode": "J01XA",
+  "className": "Glycopeptide antibacterials",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "telmisartan",
   "atcCode": "C09CA07",
   "className": "Angiotensin II receptor blockers (ARBs), plain",
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "temozolomide",
+  "atcCode": "L01AX",
+  "className": "Other alkylating agents",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "tenofovir alafenamide",
+  "atcCode": "J05AF",
+  "className": "Nucleoside and nucleotide reverse transcriptase inhibitors",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "tenofovir disoproxil",
+  "atcCode": "J05AF",
+  "className": "Nucleoside and nucleotide reverse transcriptase inhibitors",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "terbinafine",
   "atcCode": "D01BA02",
   "className": "Antifungals for systemic use",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "terlipressin",
+  "atcCode": "H01BA",
+  "className": "Vasopressin and analogues",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "tetrabenazine",
+  "atcCode": "N07XX",
+  "className": "Other nervous system drugs",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "thalidomide",
+  "atcCode": "L04AX",
+  "className": "Other immunosuppressants",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "theophylline",
+  "atcCode": "R03DA",
+  "className": "Xanthines",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "thiamine",
+  "atcCode": "A11DA",
+  "className": "Vitamin B1, plain",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "thiocolchicoside",
+  "atcCode": "M03BX",
+  "className": "Other centrally acting agents",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "ticagrelor",
+  "atcCode": "B01AC",
+  "className": "Platelet aggregation inhibitors excl. heparin",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "tigecycline",
+  "atcCode": "J01AA",
+  "className": "Tetracyclines",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "timolol",
@@ -1386,16 +3222,136 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "tinidazole",
+  "atcCode": "G01AF",
+  "className": "Imidazole derivatives",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "tizanidine",
+  "atcCode": "M03BX",
+  "className": "Other centrally acting agents",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "tobramycin",
+  "atcCode": "J01GB",
+  "className": "Other aminoglycosides",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "tofacitinib",
+  "atcCode": "L04AF",
+  "className": "Janus-associated kinase (JAK) inhibitors",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "tolperisone",
+  "atcCode": "M02AX",
+  "className": "Other topical products for joint and muscular pain",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "tolterodine",
+  "atcCode": "G04BD",
+  "className": "Drugs for urinary frequency and incontinence",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "tolvaptan",
+  "atcCode": "C03XA",
+  "className": "Vasopressin antagonists",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "topiramate",
+  "atcCode": "N03AX",
+  "className": "Other antiepileptics",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "torasemide",
+  "atcCode": "C03CA",
+  "className": "Sulfonamides, plain",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "tramadol",
   "atcCode": "N02AX02",
   "className": "Other opioids",
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "tranexamic acid",
+  "atcCode": "B02AA",
+  "className": "Amino acids",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "travoprost",
+  "atcCode": "S01EE",
+  "className": "Prostaglandin analogues",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "trazodone",
+  "atcCode": "N06AX",
+  "className": "Other antidepressants",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "triamcinolone",
+  "atcCode": "A01AC",
+  "className": "Corticosteroids for local oral treatment",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "trientine",
+  "atcCode": "A16AX",
+  "className": "Various alimentary tract and metabolism products",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "trihexyphenidyl",
+  "atcCode": "N04AA",
+  "className": "Tertiary amines",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "trimetazidine",
+  "atcCode": "C01EB",
+  "className": "Other cardiac preparations",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "tropicamide",
+  "atcCode": "S01FA",
+  "className": "Anticholinergics",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "ubidecarenone",
+  "atcCode": "C01EB",
+  "className": "Other cardiac preparations",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "ulipristal",
+  "atcCode": "G03AD",
+  "className": "Emergency contraceptives",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "valaciclovir",
   "atcCode": "J05AB11",
   "className": "Nucleosides and nucleotides excl. reverse transcriptase inhibitors",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "valganciclovir",
+  "atcCode": "J05AB",
+  "className": "Nucleosides and nucleotides excl. reverse transcriptase inhibitors",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "valproic acid",
@@ -1410,10 +3366,58 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "vancomycin",
+  "atcCode": "A07AA",
+  "className": "Antibiotics",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "vecuronium",
+  "atcCode": "M03AC",
+  "className": "Other quaternary ammonium compounds",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "venlafaxine",
   "atcCode": "N06AX16",
   "className": "Other antidepressants",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "verapamil",
+  "atcCode": "C08DA",
+  "className": "Phenylalkylamine derivatives",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "vildagliptin",
+  "atcCode": "A10BH",
+  "className": "Dipeptidyl peptidase 4 (DPP-4) inhibitors",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "vitamin a",
+  "atcCode": "A11CA",
+  "className": "Vitamin A, plain",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "vitamin e",
+  "atcCode": "A11HA",
+  "className": "Other plain vitamin preparations",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "voriconazole",
+  "atcCode": "J02AC",
+  "className": "Triazole and tetrazole derivatives",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "vortioxetine",
+  "atcCode": "N06AX",
+  "className": "Other antidepressants",
+  "source": "NLM_RXCLASS"
  },
  {
   "ingredientKey": "warfarin",
@@ -1422,9 +3426,33 @@
   "source": "HC_DPD"
  },
  {
+  "ingredientKey": "xylometazoline",
+  "atcCode": "R01AA",
+  "className": "Sympathomimetics, plain",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "ziprasidone",
+  "atcCode": "N05AE",
+  "className": "Indole derivatives",
+  "source": "NLM_RXCLASS"
+ },
+ {
+  "ingredientKey": "zoledronic acid",
+  "atcCode": "M05BA",
+  "className": "Bisphosphonates",
+  "source": "NLM_RXCLASS"
+ },
+ {
   "ingredientKey": "zolpidem",
   "atcCode": "N05CF02",
   "className": "Benzodiazepine related drugs",
   "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "zonisamide",
+  "atcCode": "N03AX",
+  "className": "Other antiepileptics",
+  "source": "NLM_RXCLASS"
  }
 ]
