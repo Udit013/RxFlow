@@ -1,7 +1,5 @@
-import { PrismaClient, TenantType, UserRole, DrugSchedule, DosageForm, SubscriptionPlan } from '@prisma/client'
+import { prisma, TenantType, UserRole, DrugSchedule, DosageForm, SubscriptionPlan } from '../src/index.js'
 import bcrypt from 'bcryptjs'
-
-const prisma = new PrismaClient()
 
 async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 12)

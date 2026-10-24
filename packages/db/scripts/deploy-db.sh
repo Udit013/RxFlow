@@ -13,13 +13,13 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 pnpm exec prisma generate
-pnpm exec prisma db push --skip-generate \
+pnpm exec prisma db push \
   || echo "db push refused or failed (never destructive) — idempotent migrations below bring it up to date"
 
 while IFS= read -r file || [ -n "$file" ]; do
   case "$file" in ''|'#'*) continue ;; esac
   echo "==> applying manual-migrations/$file"
-  pnpm exec prisma db execute --schema prisma/schema.prisma --file "prisma/manual-migrations/$file"
+  pnpm exec prisma db execute --file "prisma/manual-migrations/$file"
 done < prisma/manual-migrations/IDEMPOTENT
 
-../../apps/api/node_modules/.bin/tsx prisma/seed.ts || echo "seed skipped (non-fatal)"
+pnpm exec tsx prisma/seed.ts || echo "seed skipped (non-fatal)"
