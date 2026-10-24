@@ -1,0 +1,1430 @@
+[
+ {
+  "ingredientKey": "acetylsalicylic acid",
+  "atcCode": "N02BA01",
+  "className": "Salicylic acid and derivatives",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "acetylsalicylic acid+butalbital+caffeine",
+  "atcCode": "N02BA71",
+  "className": "Salicylic acid and derivatives",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "acetylsalicylic acid+methocarbamol",
+  "atcCode": "M03BA53",
+  "className": "Carbamic acid esters",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "acetylsalicylic acid+oxycodone",
+  "atcCode": "N02AJ18",
+  "className": "Opioids in combination with non-opioid analgesics",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "aciclovir",
+  "atcCode": "J05AB01",
+  "className": "Nucleosides and nucleotides excl. reverse transcriptase inhibitors",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "aciclovir+hydrocortisone",
+  "atcCode": "D06BB53",
+  "className": "Antivirals",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "adapalene+benzoyl peroxide+clindamycin",
+  "atcCode": "D10AF51",
+  "className": "Antiinfectives for treatment of acne",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "alendronic acid+colecalciferol",
+  "atcCode": "M05BB03",
+  "className": "Bisphosphonates, combinations",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "allopurinol",
+  "atcCode": "M04AA01",
+  "className": "Preparations inhibiting uric acid production",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "alogliptin+metformin",
+  "atcCode": "A10BD13",
+  "className": "Combinations of oral blood glucose lowering drugs",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "alprazolam",
+  "atcCode": "N05BA12",
+  "className": "Benzodiazepine derivatives",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "amiloride+hydrochlorothiazide",
+  "atcCode": "C03EA01",
+  "className": "Low-ceiling diuretics and potassium-sparing agents",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "amitriptyline",
+  "atcCode": "N06AA09",
+  "className": "Non-selective monoamine reuptake inhibitors",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "amlodipine",
+  "atcCode": "C08CA01",
+  "className": "Dihydropyridine derivatives",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "amlodipine+atorvastatin",
+  "atcCode": "C10BX03",
+  "className": "Lipid modifying agents in combination with other drugs",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "amlodipine+perindopril",
+  "atcCode": "C09BB04",
+  "className": "ACE inhibitors and calcium channel blockers",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "amlodipine+telmisartan",
+  "atcCode": "C09DB04",
+  "className": "Angiotensin II receptor blockers (ARBs) and calcium channel blockers",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "amoxicillin",
+  "atcCode": "J01CA04",
+  "className": "Penicillins with extended spectrum",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "amoxicillin+clarithromycin+lansoprazole",
+  "atcCode": "A02BD07",
+  "className": "Combinations for eradication of Helicobacter pylori",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "amoxicillin+clavulanic acid",
+  "atcCode": "J01CR02",
+  "className": "Combinations of penicillins, incl. beta-lactamase inhibitors",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "apixaban",
+  "atcCode": "B01AF02",
+  "className": "Direct factor Xa inhibitors",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "aripiprazole",
+  "atcCode": "N05AX12",
+  "className": "Other antipsychotics",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "atenolol",
+  "atcCode": "C07AB03",
+  "className": "Beta blocking agents, selective",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "atenolol+chlortalidone",
+  "atcCode": "C07CB03",
+  "className": "Beta blocking agents, selective, and other diuretics",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "atorvastatin",
+  "atcCode": "C10AA05",
+  "className": "HMG CoA reductase inhibitors",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "azelastine+fluticasone propionate",
+  "atcCode": "R01AD58",
+  "className": "Corticosteroids",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "azilsartan+chlortalidone",
+  "atcCode": "C09DA09",
+  "className": "Angiotensin II receptor blockers (ARBs) and diuretics",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "azithromycin",
+  "atcCode": "J01FA10",
+  "className": "Macrolides",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "benzoyl peroxide+clindamycin",
+  "atcCode": "D10AF51",
+  "className": "Antiinfectives for treatment of acne",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "betamethasone+clotrimazole",
+  "atcCode": "D01AC20",
+  "className": "Imidazole and triazole derivatives",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "bismuth oxide+metronidazole+tetracycline",
+  "atcCode": "A02BD08",
+  "className": "Combinations for eradication of Helicobacter pylori",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "bismuth subsalicylate+calcium carbonate",
+  "atcCode": "A02AX",
+  "className": "Antacids, other combinations",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "bisoprolol",
+  "atcCode": "C07AB07",
+  "className": "Beta blocking agents, selective",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "brimonidine+timolol",
+  "atcCode": "S01ED51",
+  "className": "Beta blocking agents",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "brinzolamide+timolol",
+  "atcCode": "S01ED51",
+  "className": "Beta blocking agents",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "budesonide",
+  "atcCode": "R03BA02",
+  "className": "Glucocorticoids",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "budesonide+formoterol",
+  "atcCode": "R03AK07",
+  "className": "Adrenergics in combination with corticosteroids or other drugs, excl. anticholinergics",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "budesonide+formoterol+glycopyrronium",
+  "atcCode": "R03AL11",
+  "className": "Adrenergics in combination with anticholinergics incl. triple combinations with corticosteroids",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "caffeine+codeine+paracetamol",
+  "atcCode": "N02AJ06",
+  "className": "Opioids in combination with non-opioid analgesics",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "caffeine+paracetamol",
+  "atcCode": "N02BE51",
+  "className": "Anilides",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "caffeine+paracetamol+pyrilamine",
+  "atcCode": "N02BE51",
+  "className": "Anilides",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "calcium carbonate+famotidine+magnesium hydroxide",
+  "atcCode": "A02BA53",
+  "className": "H2-receptor antagonists",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "calcium carbonate+simethicone",
+  "atcCode": "A02AF02",
+  "className": "Antacids with antiflatulents",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "canagliflozin+metformin",
+  "atcCode": "A10BD16",
+  "className": "Combinations of oral blood glucose lowering drugs",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "candesartan+hydrochlorothiazide",
+  "atcCode": "C09DA06",
+  "className": "Angiotensin II receptor blockers (ARBs) and diuretics",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "carbamazepine",
+  "atcCode": "N03AF01",
+  "className": "Carboxamide derivatives",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "carvedilol",
+  "atcCode": "C07AG02",
+  "className": "Alpha and beta blocking agents",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "cefalexin",
+  "atcCode": "J01DB01",
+  "className": "First-generation cephalosporins",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "cefixime",
+  "atcCode": "J01DD08",
+  "className": "Third-generation cephalosporins",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "cefuroxime",
+  "atcCode": "J01DC02",
+  "className": "Second-generation cephalosporins",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "celecoxib",
+  "atcCode": "M01AH01",
+  "className": "Coxibs",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "cetirizine",
+  "atcCode": "R06AE07",
+  "className": "Piperazine derivatives",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "cetirizine+pseudoephedrine",
+  "atcCode": "R01BA52",
+  "className": "Sympathomimetics",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "chlorphenamine+dextromethorphan+paracetamol",
+  "atcCode": "N02BE51",
+  "className": "Anilides",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "chlorphenamine+ibuprofen+pseudoephedrine",
+  "atcCode": "M01AE51",
+  "className": "Propionic acid derivatives",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "chlorphenamine+paracetamol+phenylephrine",
+  "atcCode": "N02BE51",
+  "className": "Anilides",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "chlorphenamine+paracetamol+pseudoephedrine",
+  "atcCode": "N02BE51",
+  "className": "Anilides",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "chlortalidone",
+  "atcCode": "C03BA04",
+  "className": "Sulfonamides, plain",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "cilazapril+hydrochlorothiazide",
+  "atcCode": "C09BA08",
+  "className": "ACE inhibitors and diuretics",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "ciprofloxacin",
+  "atcCode": "J01MA02",
+  "className": "Fluoroquinolones",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "ciprofloxacin+dexamethasone",
+  "atcCode": "S02CA06",
+  "className": "Corticosteroids and antiinfectives in combination",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "ciprofloxacin+fluocinolone acetonide",
+  "atcCode": "S02CA05",
+  "className": "Corticosteroids and antiinfectives in combination",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "citalopram",
+  "atcCode": "N06AB04",
+  "className": "Selective serotonin reuptake inhibitors",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "clarithromycin",
+  "atcCode": "J01FA09",
+  "className": "Macrolides",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "clindamycin",
+  "atcCode": "J01FF01",
+  "className": "Lincosamides",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "clindamycin+tretinoin",
+  "atcCode": "D10AF51",
+  "className": "Antiinfectives for treatment of acne",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "clioquinol+hydrocortisone",
+  "atcCode": "D07CA01",
+  "className": "Corticosteroids, weak, combinations with antibiotics",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "clonazepam",
+  "atcCode": "N03AE01",
+  "className": "Benzodiazepine derivatives",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "clopidogrel",
+  "atcCode": "B01AC04",
+  "className": "Platelet aggregation inhibitors excl. heparin",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "clotrimazole",
+  "atcCode": "G01AF02",
+  "className": "Imidazole derivatives",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "clotrimazole+fluconazole",
+  "atcCode": "G01AF02",
+  "className": "Imidazole derivatives",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "codeine+doxylamine+paracetamol",
+  "atcCode": "N02BE51",
+  "className": "Anilides",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "codeine+methocarbamol+paracetamol",
+  "atcCode": "N02AA59",
+  "className": "Natural opium alkaloids",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "codeine+paracetamol",
+  "atcCode": "N02AJ06",
+  "className": "Opioids in combination with non-opioid analgesics",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "colchicine",
+  "atcCode": "M04AC01",
+  "className": "Preparations with no effect on uric acid metabolism",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "colecalciferol",
+  "atcCode": "A11CC05",
+  "className": "Vitamin D and analogues",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "cyanocobalamin",
+  "atcCode": "B03BA01",
+  "className": "Vitamin B12 (cyanocobalamin and analogues)",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "dapagliflozin",
+  "atcCode": "A10BK01",
+  "className": "Sodium-glucose co-transporter 2 (SGLT2) inhibitors",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "dapagliflozin+metformin",
+  "atcCode": "A10BD15",
+  "className": "Combinations of oral blood glucose lowering drugs",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "desloratadine",
+  "atcCode": "R06AX27",
+  "className": "Other antihistamines for systemic use",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "desloratadine+pseudoephedrine",
+  "atcCode": "R01BA52",
+  "className": "Sympathomimetics",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "dexamethasone",
+  "atcCode": "H02AB02",
+  "className": "Glucocorticoids",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "dexamethasone+framycetin+gramicidin",
+  "atcCode": "S03CA01",
+  "className": "Corticosteroids and antiinfectives in combination",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "dexamethasone+levofloxacin",
+  "atcCode": "S01CA01",
+  "className": "Corticosteroids and antiinfectives in combination",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "dexamethasone+neomycin+polymyxin b",
+  "atcCode": "S01CA01",
+  "className": "Corticosteroids and antiinfectives in combination",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "dexamethasone+tobramycin",
+  "atcCode": "S01CA01",
+  "className": "Corticosteroids and antiinfectives in combination",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "dextromethorphan+diphenhydramine+paracetamol",
+  "atcCode": "N02BE51",
+  "className": "Anilides",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "dextromethorphan+doxylamine+paracetamol",
+  "atcCode": "N02BE51",
+  "className": "Anilides",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "dextromethorphan+guaifenesin+paracetamol",
+  "atcCode": "N02BE51",
+  "className": "Anilides",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "dextromethorphan+paracetamol",
+  "atcCode": "N02BE51",
+  "className": "Anilides",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "dextromethorphan+paracetamol+phenylephrine",
+  "atcCode": "N02BE51",
+  "className": "Anilides",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "dextromethorphan+paracetamol+pseudoephedrine",
+  "atcCode": "N02BE51",
+  "className": "Anilides",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "diazepam",
+  "atcCode": "N05BA01",
+  "className": "Benzodiazepine derivatives",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "diclofenac",
+  "atcCode": "M01AB05",
+  "className": "Acetic acid derivatives and related substances",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "diclofenac+misoprostol",
+  "atcCode": "M01AB55",
+  "className": "Acetic acid derivatives and related substances",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "digoxin",
+  "atcCode": "C01AA05",
+  "className": "Digitalis glycosides",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "diphenhydramine+ibuprofen",
+  "atcCode": "M01AE51",
+  "className": "Propionic acid derivatives",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "diphenhydramine+naproxen",
+  "atcCode": "M01AE02",
+  "className": "Propionic acid derivatives",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "diphenhydramine+paracetamol",
+  "atcCode": "N02BE51",
+  "className": "Anilides",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "diphenhydramine+paracetamol+phenylephrine",
+  "atcCode": "N02BE51",
+  "className": "Anilides",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "diphenhydramine+paracetamol+pseudoephedrine",
+  "atcCode": "N02BE51",
+  "className": "Anilides",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "domperidone",
+  "atcCode": "A03FA03",
+  "className": "Propulsives",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "dorzolamide+timolol",
+  "atcCode": "S01ED51",
+  "className": "Beta blocking agents",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "doxycycline",
+  "atcCode": "J01AA02",
+  "className": "Tetracyclines",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "doxylamine+paracetamol+phenylephrine",
+  "atcCode": "N02BE51",
+  "className": "Anilides",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "doxylamine+paracetamol+pseudoephedrine",
+  "atcCode": "N02BE51",
+  "className": "Anilides",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "duloxetine",
+  "atcCode": "N06AX21",
+  "className": "Other antidepressants",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "dutasteride+tamsulosin",
+  "atcCode": "G04CA52",
+  "className": "Alpha-adrenoreceptor antagonists",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "empagliflozin",
+  "atcCode": "A10BK03",
+  "className": "Sodium-glucose co-transporter 2 (SGLT2) inhibitors",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "empagliflozin+metformin",
+  "atcCode": "A10BD20",
+  "className": "Combinations of oral blood glucose lowering drugs",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "enalapril",
+  "atcCode": "C09AA02",
+  "className": "ACE inhibitors, plain",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "enalapril+hydrochlorothiazide",
+  "atcCode": "C09BA02",
+  "className": "ACE inhibitors and diuretics",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "escitalopram",
+  "atcCode": "N06AB10",
+  "className": "Selective serotonin reuptake inhibitors",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "esomeprazole",
+  "atcCode": "A02BC05",
+  "className": "Proton pump inhibitors",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "esomeprazole+naproxen",
+  "atcCode": "M01AE52",
+  "className": "Propionic acid derivatives",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "famotidine",
+  "atcCode": "A02BA03",
+  "className": "H2-receptor antagonists",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "fexofenadine",
+  "atcCode": "R06AX26",
+  "className": "Other antihistamines for systemic use",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "fexofenadine+pseudoephedrine",
+  "atcCode": "R01BA52",
+  "className": "Sympathomimetics",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "finasteride",
+  "atcCode": "G04CB01",
+  "className": "Testosterone-5-alpha reductase inhibitors",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "fluconazole",
+  "atcCode": "J02AC01",
+  "className": "Triazole and tetrazole derivatives",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "fluoxetine",
+  "atcCode": "N06AB03",
+  "className": "Selective serotonin reuptake inhibitors",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "fluticasone propionate",
+  "atcCode": "R03BA05",
+  "className": "Glucocorticoids",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "fluticasone propionate+salmeterol",
+  "atcCode": "R03AK06",
+  "className": "Adrenergics in combination with corticosteroids or other drugs, excl. anticholinergics",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "folic acid",
+  "atcCode": "B03BB01",
+  "className": "Folic acid and derivatives",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "furosemide",
+  "atcCode": "C03CA01",
+  "className": "Sulfonamides, plain",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "fusidic acid+hydrocortisone",
+  "atcCode": "D07CA01",
+  "className": "Corticosteroids, weak, combinations with antibiotics",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "gabapentin",
+  "atcCode": "N02BF01",
+  "className": "Gabapentinoids",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "gliclazide",
+  "atcCode": "A10BB09",
+  "className": "Sulfonylureas",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "glimepiride",
+  "atcCode": "A10BB12",
+  "className": "Sulfonylureas",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "guaifenesin+menthol+paracetamol",
+  "atcCode": "N02BE51",
+  "className": "Anilides",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "guaifenesin+paracetamol",
+  "atcCode": "N02BE51",
+  "className": "Anilides",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "guaifenesin+paracetamol+phenylephrine",
+  "atcCode": "N02BE51",
+  "className": "Anilides",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "hydrochlorothiazide",
+  "atcCode": "C03AA03",
+  "className": "Thiazides, plain",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "hydrochlorothiazide+irbesartan",
+  "atcCode": "C09DA04",
+  "className": "Angiotensin II receptor blockers (ARBs) and diuretics",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "hydrochlorothiazide+lisinopril",
+  "atcCode": "C09BA03",
+  "className": "ACE inhibitors and diuretics",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "hydrochlorothiazide+losartan",
+  "atcCode": "C09DA01",
+  "className": "Angiotensin II receptor blockers (ARBs) and diuretics",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "hydrochlorothiazide+olmesartan",
+  "atcCode": "C09DA08",
+  "className": "Angiotensin II receptor blockers (ARBs) and diuretics",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "hydrochlorothiazide+quinapril",
+  "atcCode": "C09BA06",
+  "className": "ACE inhibitors and diuretics",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "hydrochlorothiazide+ramipril",
+  "atcCode": "C09BA05",
+  "className": "ACE inhibitors and diuretics",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "hydrochlorothiazide+spironolactone",
+  "atcCode": "C03EA01",
+  "className": "Low-ceiling diuretics and potassium-sparing agents",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "hydrochlorothiazide+telmisartan",
+  "atcCode": "C09DA07",
+  "className": "Angiotensin II receptor blockers (ARBs) and diuretics",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "hydrochlorothiazide+triamterene",
+  "atcCode": "C03EA01",
+  "className": "Low-ceiling diuretics and potassium-sparing agents",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "hydrochlorothiazide+valsartan",
+  "atcCode": "C09DA03",
+  "className": "Angiotensin II receptor blockers (ARBs) and diuretics",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "hydrocortisone",
+  "atcCode": "H02AB09",
+  "className": "Glucocorticoids",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "hydrocortisone+pramoxine",
+  "atcCode": "D07XA01",
+  "className": "Corticosteroids, weak, other combinations",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "hydrocortisone+pramoxine+zinc sulfate",
+  "atcCode": "C05AA01",
+  "className": "Corticosteroids",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "hydrocortisone+zinc",
+  "atcCode": "C05AA01",
+  "className": "Corticosteroids",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "hydrocortisone+zinc sulfate",
+  "atcCode": "C05AA01",
+  "className": "Corticosteroids",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "hydroxychloroquine",
+  "atcCode": "P01BA02",
+  "className": "Aminoquinolines",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "ibuprofen",
+  "atcCode": "M01AE01",
+  "className": "Propionic acid derivatives",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "ibuprofen+methocarbamol",
+  "atcCode": "M03BA53",
+  "className": "Carbamic acid esters",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "ibuprofen+paracetamol",
+  "atcCode": "N02BE51",
+  "className": "Anilides",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "ibuprofen+pseudoephedrine",
+  "atcCode": "M01AE51",
+  "className": "Propionic acid derivatives",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "ipratropium",
+  "atcCode": "R03BB01",
+  "className": "Anticholinergics",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "ipratropium+salbutamol",
+  "atcCode": "R03AL02",
+  "className": "Adrenergics in combination with anticholinergics incl. triple combinations with corticosteroids",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "ivermectin",
+  "atcCode": "D11AX22",
+  "className": "Other dermatologicals",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "ketoconazole",
+  "atcCode": "D01AC08",
+  "className": "Imidazole and triazole derivatives",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "lamotrigine",
+  "atcCode": "N03AX09",
+  "className": "Other antiepileptics",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "lansoprazole",
+  "atcCode": "A02BC03",
+  "className": "Proton pump inhibitors",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "latanoprost",
+  "atcCode": "S01EE01",
+  "className": "Prostaglandin analogues",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "latanoprost+timolol",
+  "atcCode": "S01ED51",
+  "className": "Beta blocking agents",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "levetiracetam",
+  "atcCode": "N03AX14",
+  "className": "Other antiepileptics",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "levofloxacin",
+  "atcCode": "J01MA12",
+  "className": "Fluoroquinolones",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "levothyroxine",
+  "atcCode": "H03AA01",
+  "className": "Thyroid hormones",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "lidocaine+methylprednisolone",
+  "atcCode": "H02BX01",
+  "className": "Corticosteroids for systemic use, combinations",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "lidocaine+nifedipine",
+  "atcCode": "C05AD01",
+  "className": "Local anesthetics",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "linagliptin+metformin",
+  "atcCode": "A10BD11",
+  "className": "Combinations of oral blood glucose lowering drugs",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "lisinopril",
+  "atcCode": "C09AA03",
+  "className": "ACE inhibitors, plain",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "loperamide",
+  "atcCode": "A07DA03",
+  "className": "Antipropulsives",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "loperamide+simethicone",
+  "atcCode": "A07DA53",
+  "className": "Antipropulsives",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "loratadine",
+  "atcCode": "R06AX13",
+  "className": "Other antihistamines for systemic use",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "loratadine+pseudoephedrine",
+  "atcCode": "R01BA52",
+  "className": "Sympathomimetics",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "lorazepam",
+  "atcCode": "N05BA06",
+  "className": "Benzodiazepine derivatives",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "losartan",
+  "atcCode": "C09CA01",
+  "className": "Angiotensin II receptor blockers (ARBs), plain",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "macitentan+tadalafil",
+  "atcCode": "C02KX54",
+  "className": "Antihypertensives for pulmonary arterial hypertension",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "menthol+paracetamol",
+  "atcCode": "N02BE51",
+  "className": "Anilides",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "metformin",
+  "atcCode": "A10BA02",
+  "className": "Biguanides",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "metformin+sitagliptin",
+  "atcCode": "A10BD07",
+  "className": "Combinations of oral blood glucose lowering drugs",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "methocarbamol+paracetamol",
+  "atcCode": "M03BA53",
+  "className": "Carbamic acid esters",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "methotrexate",
+  "atcCode": "L04AX03",
+  "className": "Other immunosuppressants",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "methylprednisolone",
+  "atcCode": "H02AB04",
+  "className": "Glucocorticoids",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "metoclopramide",
+  "atcCode": "A03FA01",
+  "className": "Propulsives",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "metoprolol",
+  "atcCode": "C07AB02",
+  "className": "Beta blocking agents, selective",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "metronidazole",
+  "atcCode": "P01AB01",
+  "className": "Nitroimidazole derivatives",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "metronidazole+nystatin",
+  "atcCode": "G01AA51",
+  "className": "Antibiotics",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "montelukast",
+  "atcCode": "R03DC03",
+  "className": "Leukotriene receptor antagonists",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "mupirocin",
+  "atcCode": "D06AX09",
+  "className": "Other antibiotics for topical use",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "naproxen",
+  "atcCode": "M01AE02",
+  "className": "Propionic acid derivatives",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "naproxen+sumatriptan",
+  "atcCode": "N02CC51",
+  "className": "Selective serotonin (5HT1) agonists",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "nifedipine",
+  "atcCode": "C08CA05",
+  "className": "Dihydropyridine derivatives",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "nitrofurantoin",
+  "atcCode": "J01XE01",
+  "className": "Nitrofuran derivatives",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "olanzapine",
+  "atcCode": "N05AH03",
+  "className": "Diazepines, oxazepines, thiazepines and oxepines",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "olmesartan",
+  "atcCode": "C09CA08",
+  "className": "Angiotensin II receptor blockers (ARBs), plain",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "omeprazole",
+  "atcCode": "A02BC01",
+  "className": "Proton pump inhibitors",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "ondansetron",
+  "atcCode": "A04AA01",
+  "className": "Serotonin (5HT3) antagonists",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "oseltamivir",
+  "atcCode": "J05AH02",
+  "className": "Neuraminidase inhibitors",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "oxycodone+paracetamol",
+  "atcCode": "N02AJ17",
+  "className": "Opioids in combination with non-opioid analgesics",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "pamabrom+paracetamol+pyrilamine",
+  "atcCode": "N02BE51",
+  "className": "Anilides",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "pantoprazole",
+  "atcCode": "A02BC02",
+  "className": "Proton pump inhibitors",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "paracetamol",
+  "atcCode": "N02BE01",
+  "className": "Anilides",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "paracetamol+pheniramine+phenylephrine",
+  "atcCode": "N02BE51",
+  "className": "Anilides",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "paracetamol+phenylephrine",
+  "atcCode": "N02BE51",
+  "className": "Anilides",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "paracetamol+pseudoephedrine",
+  "atcCode": "N02BE51",
+  "className": "Anilides",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "paracetamol+tramadol",
+  "atcCode": "N02AJ13",
+  "className": "Opioids in combination with non-opioid analgesics",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "paroxetine",
+  "atcCode": "N06AB05",
+  "className": "Selective serotonin reuptake inhibitors",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "phenytoin",
+  "atcCode": "N03AB02",
+  "className": "Hydantoin derivatives",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "pioglitazone",
+  "atcCode": "A10BG03",
+  "className": "Thiazolidinediones",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "prednisolone",
+  "atcCode": "S01BA04",
+  "className": "Corticosteroids, plain",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "prednisone",
+  "atcCode": "H02AB07",
+  "className": "Glucocorticoids",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "pregabalin",
+  "atcCode": "N02BF02",
+  "className": "Gabapentinoids",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "propranolol",
+  "atcCode": "C07AA05",
+  "className": "Beta blocking agents, non-selective",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "quetiapine",
+  "atcCode": "N05AH04",
+  "className": "Diazepines, oxazepines, thiazepines and oxepines",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "rabeprazole",
+  "atcCode": "A02BC04",
+  "className": "Proton pump inhibitors",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "ramipril",
+  "atcCode": "C09AA05",
+  "className": "ACE inhibitors, plain",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "risperidone",
+  "atcCode": "N05AX08",
+  "className": "Other antipsychotics",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "rivaroxaban",
+  "atcCode": "B01AF01",
+  "className": "Direct factor Xa inhibitors",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "rosuvastatin",
+  "atcCode": "C10AA07",
+  "className": "HMG CoA reductase inhibitors",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "sacubitril+valsartan",
+  "atcCode": "C09DX04",
+  "className": "Angiotensin II receptor blockers (ARBs), other combinations",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "salbutamol",
+  "atcCode": "R03AC02",
+  "className": "Selective beta-2-adrenoreceptor agonists",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "sertraline",
+  "atcCode": "N06AB06",
+  "className": "Selective serotonin reuptake inhibitors",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "sildenafil",
+  "atcCode": "G04BE03",
+  "className": "Drugs used in erectile dysfunction",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "simvastatin",
+  "atcCode": "C10AA01",
+  "className": "HMG CoA reductase inhibitors",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "sitagliptin",
+  "atcCode": "A10BH01",
+  "className": "Dipeptidyl peptidase 4 (DPP-4) inhibitors",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "spironolactone",
+  "atcCode": "C03DA01",
+  "className": "Aldosterone antagonists",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "sulfamethoxazole+trimethoprim",
+  "atcCode": "J01EE01",
+  "className": "Combinations of sulfonamides and trimethoprim, incl. derivatives",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "tadalafil",
+  "atcCode": "G04BE08",
+  "className": "Drugs used in erectile dysfunction",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "tamsulosin",
+  "atcCode": "G04CA02",
+  "className": "Alpha-adrenoreceptor antagonists",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "telmisartan",
+  "atcCode": "C09CA07",
+  "className": "Angiotensin II receptor blockers (ARBs), plain",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "terbinafine",
+  "atcCode": "D01BA02",
+  "className": "Antifungals for systemic use",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "timolol",
+  "atcCode": "S01ED01",
+  "className": "Beta blocking agents",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "timolol+travoprost",
+  "atcCode": "S01ED51",
+  "className": "Beta blocking agents",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "tramadol",
+  "atcCode": "N02AX02",
+  "className": "Other opioids",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "valaciclovir",
+  "atcCode": "J05AB11",
+  "className": "Nucleosides and nucleotides excl. reverse transcriptase inhibitors",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "valproic acid",
+  "atcCode": "N03AG01",
+  "className": "Fatty acid derivatives",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "valsartan",
+  "atcCode": "C09CA03",
+  "className": "Angiotensin II receptor blockers (ARBs), plain",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "venlafaxine",
+  "atcCode": "N06AX16",
+  "className": "Other antidepressants",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "warfarin",
+  "atcCode": "B01AA03",
+  "className": "Vitamin K antagonists",
+  "source": "HC_DPD"
+ },
+ {
+  "ingredientKey": "zolpidem",
+  "atcCode": "N05CF02",
+  "className": "Benzodiazepine related drugs",
+  "source": "HC_DPD"
+ }
+]

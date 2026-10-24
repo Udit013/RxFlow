@@ -136,3 +136,16 @@ describe('formatting and labels', () => {
     expect(registerSchedules(IN)).toEqual(['SCHEDULE_H1', 'SCHEDULE_X'])
   })
 })
+
+describe('Canada profile', () => {
+  it('is registered with zero-rated prescriptions and Canadian formats', async () => {
+    const { getRegionProfile } = await import('./registry.js')
+    const ca = getRegionProfile('CA')
+    expect(ca.code).toBe('CA')
+    expect(ca.tax.defaultRate).toBe(0)
+    expect(ca.fields.postalCode.pattern!.test('M5V 3L9')).toBe(true)
+    expect(ca.fields.taxId.pattern!.test('123456789RT0001')).toBe(true)
+    expect(ca.drugSchedules.SCHEDULE_H.requiresPrescription).toBe(true)
+    expect(ca.drugSchedules.SCHEDULE_X.requiresRegister).toBe(true)
+  })
+})

@@ -16,7 +16,7 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 
 // interface translations ship today; other locales format numbers/dates and fall back to English).
 const LOCALES: [string, string][] = [
   ['en-IN', 'English (India)'], ['hi-IN', 'हिन्दी (India)'], ['en-US', 'English (US)'], ['es-US', 'Español (US)'],
-  ['en-GB', 'English (UK)'], ['en-AE', 'English (UAE)'], ['es-ES', 'Español (España)'], ['fr-FR', 'Français'], ['de-DE', 'Deutsch'],
+  ['en-GB', 'English (UK)'], ['en-CA', 'English (Canada)'], ['fr-CA', 'Français (Canada)'], ['en-AE', 'English (UAE)'], ['es-ES', 'Español (España)'], ['fr-FR', 'Français'], ['de-DE', 'Deutsch'],
 ]
 const COMMON_CURRENCIES = ['INR', 'USD', 'GBP', 'EUR', 'AED', 'SAR', 'SGD', 'AUD', 'CAD', 'NPR', 'BDT', 'LKR', 'KES', 'NGN', 'ZAR']
 

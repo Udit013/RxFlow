@@ -45,6 +45,12 @@ def login(email, password):
     code, j, sc, rt = req('POST', '/auth/login', {'email': email, 'password': password})
     return code, j, sc, rt
 
+# ── CORS: browsers must be allowed to edit and delete, not just read ──────────
+pre = urllib.request.Request(B + '/medicines/x', method='OPTIONS', headers={'Origin': 'http://localhost:3002', 'Access-Control-Request-Method': 'PUT', 'Access-Control-Request-Headers': 'authorization,content-type'})
+try: allowed = urllib.request.urlopen(pre).headers.get('access-control-allow-methods', '')
+except urllib.error.HTTPError as e: allowed = e.headers.get('access-control-allow-methods', '')
+check('CORS preflight allows PUT, PATCH and DELETE', all(m in [x.strip() for x in allowed.split(',')] for m in ('PUT', 'PATCH', 'DELETE')), allowed)
+
 # ── Sessions ──────────────────────────────────────────────────────────────────
 code, j, sc, rt = login('ADMIN@rxflow.in', 'admin123')
 check('login (case-insensitive email)', code == 200, code)
@@ -139,7 +145,8 @@ code, j, _, _ = req('POST', '/auth/register', {'pharmacyName': 'Brooklyn Rx', 'n
 check('US: register', code == 201, (code, j))
 U = j['data']['accessToken']; t = j['data']['user']['tenant']; ustore = j['data']['user']['stores'][0]['id']
 check('US: defaults', (t['currency'], t['timezone'], t['fiscalYearStartMonth']) == ('USD', 'America/New_York', 1), t)
-check("US: doesn't see India's catalog", len(req('GET', '/medicines?limit=100', token=U)[1]['data']) == 0)
+us_list = req('GET', '/medicines?limit=100', token=U)[1]['data']
+check("US: sees the US open-data catalog, never India's", us_list and all(m['country'] != 'IN' for m in us_list) and any(m['country'] == 'US' for m in us_list), len(us_list))
 um = req('POST', '/medicines', {'name': 'Tylenol', 'manufacturerName': 'J&J', 'hsn': '3004', 'schedule': 'SCHEDULE_H'}, token=U)[1]['data']
 check('US: medicine is private, 0% default tax, Rx from tier', um['country'] == 'US' and um['gstRate'] == 0 and um['requiresPrescription'] is True, um)
 req('POST', f'/inventory/batches?storeId={ustore}', {'medicineId': um['id'], 'batchNumber': 'L1', 'expiryDate': '2030-01-01', 'quantity': 20, 'purchasePrice': 5, 'mrp': 9}, token=U)
@@ -165,6 +172,58 @@ check('GB: VAT 20%', gi['taxBreakdown'] == [{'code': 'VAT', 'label': 'VAT', 'rat
 check('Settings: change currency', req('PATCH', '/tenant', {'currency': 'EUR'}, token=G)[1]['data']['currency'] == 'EUR')
 check('Settings: invalid timezone rejected', req('PATCH', '/tenant', {'timezone': 'Mars/Olympus'}, token=G)[0] == 422)
 check('Stores: postal code optional', req('POST', '/tenant/stores', {'name': 'Dubai', 'code': 'DXB', 'addressLine1': 'Mall', 'city': 'Dubai', 'state': 'Dubai'}, token=G)[0] == 201)
+
+# ── Multi-country catalog: sources, search, alternatives, manual compositions ─
+src = req('GET', '/medicines/sources', token=A)[1]['data']
+ids = {x['id']: x for x in src['sources']}
+check('sources: openFDA and Health Canada registered with licences', ids.get('OPENFDA_NDC', {}).get('license', '').startswith('Public domain') and 'Open Government Licence' in ids.get('HC_DPD', {}).get('license', ''), list(ids))
+check('sources: per-country catalog counts', {r['country'] for r in src['catalog']} >= {'US', 'CA', 'IN'}, src['catalog'])
+r = req('GET', '/medicines?search=' + urllib.parse.quote('paracetamol 500mg tablet') + '&limit=50', token=U)[1]['data']
+check('search: INN + strength + form finds US acetaminophen tablets', r and all(m['dosageForm'] == 'TABLET' and any(c['ingredient'] == 'paracetamol' and c['strengthNum'] == 500 for c in m['compositions']) for m in r), len(r))
+r = req('GET', '/medicines?search=acetaminophen&limit=5', token=A)[1]['data']
+check('search: regional name finds the Indian paracetamol brands', {m['name'] for m in r} >= {'Dolo 650', 'Crocin 500'}, [m['name'] for m in r])
+r = req('GET', '/medicines?search=statin&limit=50', token=U)[1]['data']
+check('search: therapeutic term finds statins by ATC group or ingredient', r and all((m['atcCode'] or '').startswith('C10') or 'statin' in m['composition'].lower() for m in r) and any((m['atcCode'] or '').startswith('C10AA') for m in r), [m['atcCode'] for m in r][:5])
+r = req('GET', '/medicines?search=lipitor&market=all&limit=10', token=A)[1]['data']
+check('search: market=all shows other countries for reference', any(m['country'] == 'US' for m in r), [m['country'] for m in r])
+check('search: unknown filter values are ignored, not a 500', req('GET', '/medicines?dosageForm=BOGUS&schedule=NOPE', token=A)[0] == 200)
+dolo = req('GET', '/medicines?search=dolo&limit=5', token=A)[1]['data'][0]
+check('demo rows are labelled unverified demo data with composition keys', dolo['dataSource'] == 'DEMO_SEED' and not dolo['isVerified'] and dolo['ingredientKey'] == 'paracetamol' and dolo['atcCode'] == 'N02BE01', (dolo['dataSource'], dolo['isVerified'], dolo['ingredientKey'], dolo['atcCode']))
+alt = req('GET', f"/medicines/{dolo['id']}/alternatives", token=A)[1]['data']
+check('alternatives: variants explain the difference', any(a['name'] == 'Crocin 500' and 'Different strength' in a['differences'] and a['inYourMarket'] for a in alt['variants']))
+check('alternatives: an extended-release 650 mg tablet is a variant, never the same composition', any(a['composition'] == 'Paracetamol 650 mg' and any('release' in d for d in a['differences']) for a in alt['variants']) and all('release' not in ' '.join(a['differences']) for a in alt['sameComposition']))
+crocin = req('GET', '/medicines?search=crocin&limit=5', token=A)[1]['data'][0]
+calt = req('GET', f"/medicines/{crocin['id']}/alternatives", token=A)[1]['data']
+check('alternatives: same composition across countries, flagged outside this market', calt['sameComposition'] and all(a['composition'] == 'Paracetamol 500 mg' and a['dosageForm'] == 'TABLET' for a in calt['sameComposition']) and any(not a['inYourMarket'] and a['country'] in ('US', 'CA') for a in calt['sameComposition']), [(a['name'], a['country']) for a in calt['sameComposition']][:5])
+check('alternatives: country availability and a not-interchangeable notice', {c['country'] for c in alt['countryAvailability']} >= {'IN', 'US', 'CA'} and 'not mean interchangeable' in alt['notice'], alt['countryAvailability'])
+ator = req('GET', '/medicines?search=atorfit&limit=5', token=A)[1]['data'][0]
+sim = req('GET', f"/medicines/{ator['id']}/alternatives", token=A)[1]['data']['similarUse']
+check('alternatives: similar use = same ATC group, no shared ingredient, never interchangeable', sim and all(s['atcCode'].startswith('C10AA') and 'atorvastatin' not in s['composition'].lower() and 'not interchangeable' in s['differences'][0] for s in sim), len(sim))
+combos = calt['combinations']
+check('alternatives: combinations containing paracetamol say what they add', combos and all('paracetamol' in c['composition'].lower() and any(d.startswith('Also contains') or d.startswith('Does not contain') for d in c['differences']) for c in combos) and not any('paracetamol' in s['composition'].lower() for s in calt['similarUse']), len(combos))
+code, j, _, _ = req('POST', '/medicines', {'name': 'Fevastat 500', 'manufacturerName': 'Local Labs', 'hsn': '30049099', 'ingredients': [{'name': 'Acetaminophen', 'strength': 500, 'unit': 'mg'}]}, token=A)
+fm = j.get('data', {})
+check('manual add: structured ingredients normalised and auto-classified', code == 201 and fm['compositions'][0]['ingredient'] == 'paracetamol' and fm['compositionKey'] == 'paracetamol@500mg' and fm['atcCode'] == 'N02BE01' and fm['dataSource'] == 'MANUAL' and fm['composition'] == 'Paracetamol 500 mg' and fm['strength'] == '500 mg' and fm['strengthNumeric'] == 500, (code, {k: fm.get(k) for k in ('compositionKey', 'atcCode', 'dataSource', 'composition', 'strength')}))
+fm2 = req('PUT', f"/medicines/{fm['id']}", {'name': 'Fevastat 650', 'ingredients': [{'name': 'Paracetamol', 'strength': 650, 'unit': 'mg'}]}, token=A)[1]['data']
+check('manual edit: name and dose change, composition re-keyed', fm2['name'] == 'Fevastat 650' and fm2['compositionKey'] == 'paracetamol@650mg' and len(fm2['compositions']) == 1, (fm2.get('name'), fm2.get('compositionKey')))
+check('manual edit: now listed with Dolo 650 as the same composition', any(a['id'] == fm['id'] for a in req('GET', f"/medicines/{dolo['id']}/alternatives", token=A)[1]['data']['sameComposition']))
+fm3 = req('PUT', f"/medicines/{fm['id']}", {'composition': 'Paracetamol 650mg + Caffeine 65mg'}, token=A)[1]['data']
+check('manual edit: composition text becomes a combination', fm3['ingredientKey'] == 'caffeine+paracetamol' and len(fm3['compositions']) == 2, fm3.get('ingredientKey'))
+keep = req('PUT', f"/medicines/{fm['id']}", {'mrp': 12, 'composition': fm3['composition']}, token=A)[1]['data']
+check('manual edit: re-sending the same composition text keeps the structured ingredients', keep['ingredientKey'] == 'caffeine+paracetamol' and len(keep['compositions']) == 2 and keep['mrp'] == 12, keep.get('ingredientKey'))
+check('manual add: invalid ATC code rejected', req('POST', '/medicines', {'name': 'X', 'manufacturerName': 'Y', 'hsn': '1', 'atcCode': 'not-atc'}, token=A)[0] == 422)
+pan = req('GET', '/medicines?search=pan-d&limit=5', token=A)[1]['data'][0]
+forked = req('PUT', f"/medicines/{pan['id']}", {'strength': '40mg + 30mg', 'ingredients': [{'name': 'Pantoprazole', 'strength': 40, 'unit': 'mg'}, {'name': 'Domperidone', 'strength': 30, 'unit': 'mg'}]}, token=A)[1]
+check('editing a shared row: private copy gets the corrected composition, original untouched', forked['forked'] and forked['data']['compositionKey'] == 'domperidone@30mg+pantoprazole@40mg' and req('GET', f"/medicines/{pan['id']}", token=A)[1]['data']['compositionKey'] != forked['data']['compositionKey'], forked.get('data', {}).get('compositionKey'))
+det = req('GET', f"/medicines/{forked['data']['id']}", token=A)[1]['data']
+check('detail: copy links back to its source row', det['forkedFrom'] and det['forkedFrom']['id'] == pan['id'] and det['source']['id'] == 'DEMO_SEED', det.get('forkedFrom'))
+code, j, _, _ = req('POST', '/auth/register', {'pharmacyName': 'Maple Pharmacy', 'name': 'Lee', 'email': 'lee@e2e.test', 'password': 'leepass123', 'phone': '+1 416 555 0100', 'country': 'CA'})
+check('Canada: register with CAD defaults', code == 201 and j['data']['user']['tenant']['currency'] == 'CAD', (code, j.get('data', {}).get('user', {}).get('tenant')))
+C = j['data']['accessToken']
+cl = req('GET', '/medicines?search=salbutamol&limit=50', token=C)[1]['data']
+check('Canada: sees the Health Canada catalog only', cl and all(m['country'] == 'CA' for m in cl), {m['country'] for m in cl})
+inh = [m for m in cl if 'inhalation' in (m['route'] or '').lower()]
+check('Canada: inhaled products are INHALER or nebuliser SOLUTION, never oral forms', inh and all(m['dosageForm'] in ('INHALER', 'SOLUTION') for m in inh) and any(m['dosageForm'] == 'SOLUTION' for m in inh), sorted({m['dosageForm'] for m in inh}))
 
 print(f'\n{ok} passed, {bad} failed')
 sys.exit(1 if bad else 0)

@@ -8,9 +8,18 @@ import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { useRegion } from '@/lib/region'
 import { DRUG_SCHEDULE_CODES, type DrugScheduleCode } from '@rxflow/regional'
+import { formatStrength, parseCompositionText, displayIngredient } from '@rxflow/types'
+import { IngredientsEditor, rowsFromCompositions, rowsToPayload, type IngredientRow } from './ingredients-editor'
 
-// "Type" in the UI = dosage form. Limited to the common set requested.
-const FORMS = ['TABLET', 'CAPSULE', 'SYRUP', 'INJECTION', 'OINTMENT', 'DROPS', 'CREAM', 'POWDER', 'OTHER']
+// "Type" in the UI = dosage form. Every form the catalog stores, so editing never shows the wrong one.
+const FORMS = [
+  { value: 'TABLET', label: 'Tablet' }, { value: 'CAPSULE', label: 'Capsule' }, { value: 'SYRUP', label: 'Syrup' },
+  { value: 'SOLUTION', label: 'Solution (oral / topical / nebuliser)' }, { value: 'SUSPENSION', label: 'Suspension' },
+  { value: 'INJECTION', label: 'Injection' }, { value: 'DROPS', label: 'Drops (eye / ear / oral)' }, { value: 'INHALER', label: 'Inhaler' },
+  { value: 'CREAM', label: 'Cream' }, { value: 'OINTMENT', label: 'Ointment' }, { value: 'GEL', label: 'Gel' }, { value: 'LOTION', label: 'Lotion' },
+  { value: 'SPRAY', label: 'Spray' }, { value: 'POWDER', label: 'Powder / sachet' }, { value: 'PATCH', label: 'Patch' },
+  { value: 'SUPPOSITORY', label: 'Suppository' }, { value: 'OTHER', label: 'Other' },
+]
 const STATUSES = ['CONTINUE', 'DISCONTINUE', 'INACTIVE']
 const MED_TYPES = ['NORMAL', 'CONTROLLED', 'OTC', 'PRESCRIPTION']
 const TAX_TYPES = ['TAXABLE', 'EXEMPT', 'NIL_RATED', 'ZERO_RATED']
@@ -37,7 +46,15 @@ function emptyForm(defaultTaxRate = 12): FormState {
     rateA: '', rateB: '', rateC: '', taxType: 'TAXABLE', cess: 0,
     maxStock: '', negativeAllowed: false, isHidden: false,
     fastSearchName: '', packSize: '', barcodes: '', aliases: '',
+    // classification
+    dosageFormDetail: '', route: '', atcCode: '', therapeuticClass: '',
   }
+}
+
+/** Existing structured composition, else whatever the free-text composition parses to. */
+function initialRows(m: any): IngredientRow[] {
+  if (m?.compositions?.length) return rowsFromCompositions(m.compositions)
+  return parseCompositionText(m?.composition).map((p) => ({ name: displayIngredient(p.name), strength: p.strength === null ? '' : String(p.strength), unit: p.unit ?? 'mg' }))
 }
 
 function fromMedicine(m: any): FormState {
@@ -51,12 +68,18 @@ function fromMedicine(m: any): FormState {
 const numOrUndef = (v: any) => (v === '' || v == null || Number.isNaN(Number(v)) ? undefined : Number(v))
 const splitList = (v: string) => v.split(',').map((s) => s.trim()).filter(Boolean)
 
-export function MedicineMasterModal({ medicine, onClose }: { medicine?: any; onClose: () => void }) {
+export function MedicineMasterModal({ medicine, onClose, onSaved }: { medicine?: any; onClose: () => void; onSaved?: (saved: any, forked: boolean) => void }) {
   const isEdit = !!medicine?.id
   const queryClient = useQueryClient()
   const [tab, setTab] = useState<TabId>('primary')
   const region = useRegion()
   const [form, setForm] = useState<FormState>(() => (isEdit ? fromMedicine(medicine) : emptyForm(region.tax.defaultRate)))
+  const [rows, setRows] = useState<IngredientRow[]>(() => initialRows(medicine))
+  const ingredients = rowsToPayload(rows)
+  // With every strength entered, the strength label follows the ingredients.
+  const derivedStrength = ingredients.length && ingredients.every((i) => i.strength !== null)
+    ? ingredients.map((i) => formatStrength(i.strength, i.unit)).join(' + ')
+    : null
   const scheduleOptions = DRUG_SCHEDULE_CODES.map((code) => ({ value: code, label: `${region.drugSchedules[code].label} — ${region.drugSchedules[code].description}` }))
   const bodyRef = useRef<HTMLDivElement>(null)
 
@@ -102,7 +125,11 @@ export function MedicineMasterModal({ medicine, onClose }: { medicine?: any; onC
         marginPercent: numOrUndef(form.marginPercent),
         barcodes: splitList(form.barcodes),
         aliases: splitList(form.aliases),
+        // The server rebuilds composition text, keys and classification from the ingredients.
+        ingredients,
       }
+      delete payload.composition
+      if (derivedStrength) delete payload.strength
       return isEdit ? api.put(`/medicines/${medicine.id}`, payload) : api.post('/medicines', payload)
     },
     onSuccess: (res) => {
@@ -111,7 +138,10 @@ export function MedicineMasterModal({ medicine, onClose }: { medicine?: any; onC
       if (res?.data?.forked) toast.success('Saved as your pharmacy\'s own copy — the shared catalog entry is unchanged')
       else toast.success(isEdit ? 'Medicine updated' : 'Medicine created')
       queryClient.invalidateQueries({ queryKey: ['medicines'] })
+      queryClient.invalidateQueries({ queryKey: ['medicine'] })
+      queryClient.invalidateQueries({ queryKey: ['medicine-alternatives'] })
       queryClient.invalidateQueries({ queryKey: ['inventory'] })
+      onSaved?.(res?.data?.data, !!res?.data?.forked)
       onClose()
     },
     onError: (e: any) => {
@@ -175,9 +205,10 @@ export function MedicineMasterModal({ medicine, onClose }: { medicine?: any; onC
               <Field label="Type / Form"><Select value={form.dosageForm} onChange={(v) => set({ dosageForm: v })} options={FORMS} /></Field>
               <Field label="Packing"><input className="input" value={form.packing} onChange={(e) => set({ packing: e.target.value })} placeholder="10x10, Strip, Bottle…" /></Field>
               <Field label={`${region.tax.label} %`}><input type="number" step="0.01" className="input" value={form.gstRate} onChange={(e) => set({ gstRate: e.target.value })} /></Field>
-              <Field label="Composition"><input className="input" value={form.composition} onChange={(e) => set({ composition: e.target.value })} placeholder="Paracetamol 500mg…" /></Field>
+
               <Field label="Minimum Stock"><input type="number" className="input" value={form.minStock} onChange={(e) => set({ minStock: e.target.value })} /></Field>
               <Field label="Reorder Level"><input type="number" className="input" value={form.defaultReorderLevel} onChange={(e) => set({ defaultReorderLevel: e.target.value })} /></Field>
+              <Field label="Composition (active ingredients)" full group><IngredientsEditor rows={rows} onChange={setRows} /></Field>
             </Grid>
           )}
 
@@ -186,7 +217,15 @@ export function MedicineMasterModal({ medicine, onClose }: { medicine?: any; onC
               <Field label="Short Name"><input className="input" value={form.shortName} onChange={(e) => set({ shortName: e.target.value })} /></Field>
               <Field label={region.medicine.genericNameLabel}><input className="input" value={form.genericName} onChange={(e) => set({ genericName: e.target.value })} placeholder="Defaults to product name" /></Field>
               <Field label="Brand Name"><input className="input" value={form.brandName} onChange={(e) => set({ brandName: e.target.value })} placeholder="Defaults to product name" /></Field>
-              <Field label="Strength"><input className="input" value={form.strength} onChange={(e) => set({ strength: e.target.value })} placeholder="500mg" /></Field>
+              <Field label="Strength">
+                {derivedStrength
+                  ? <input className="input bg-surface-50" value={derivedStrength} disabled title="Set from the composition" />
+                  : <input className="input" value={form.strength} onChange={(e) => set({ strength: e.target.value })} placeholder="500mg" />}
+              </Field>
+              <Field label="Form detail"><input className="input" value={form.dosageFormDetail} onChange={(e) => set({ dosageFormDetail: e.target.value })} placeholder="Film coated, extended release…" /></Field>
+              <Field label="Route"><input className="input" value={form.route} onChange={(e) => set({ route: e.target.value })} placeholder="Oral, topical, inhalation…" /></Field>
+              <Field label="ATC code"><input className="input font-mono uppercase" value={form.atcCode} onChange={(e) => set({ atcCode: e.target.value.toUpperCase() })} placeholder="Auto-filled from the ingredients" maxLength={7} /></Field>
+              <Field label="Therapeutic class"><input className="input" value={form.therapeuticClass} onChange={(e) => set({ therapeuticClass: e.target.value })} placeholder="Auto-filled from the ATC group" /></Field>
               <Field label="Category"><input className="input" value={form.category} onChange={(e) => set({ category: e.target.value })} placeholder="Antibiotic, Analgesic…" /></Field>
               <Field label="Classification">
                 <Select
@@ -244,12 +283,15 @@ function Grid({ children }: { children: React.ReactNode }) {
   return <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">{children}</div>
 }
 
-function Field({ label, required, full, children }: { label: string; required?: boolean; full?: boolean; children: React.ReactNode }) {
+/** A labelled field. The <label> wraps the control so screen readers announce it; groups of
+ *  several controls (the ingredients editor) use a plain container instead. */
+function Field({ label, required, full, group, children }: { label: string; required?: boolean; full?: boolean; group?: boolean; children: React.ReactNode }) {
+  const Tag = group ? 'div' : 'label'
   return (
-    <div className={cn(full && 'sm:col-span-2')}>
-      <label className="label">{label} {required && <span className="text-red-500">*</span>}</label>
+    <Tag className={cn('block', full && 'sm:col-span-2')}>
+      <span className="label block">{label} {required && <span className="text-red-500">*</span>}</span>
       {children}
-    </div>
+    </Tag>
   )
 }
 

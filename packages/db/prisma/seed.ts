@@ -360,7 +360,9 @@ async function main() {
           aliases: med.aliases,
           barcodes: med.barcodes,
           searchTokens: med.searchTokens,
-          isVerified: true,
+          // Illustrative rows, never checked against an Indian register.
+          dataSource: 'DEMO_SEED',
+          isVerified: false,
         },
       })
     }

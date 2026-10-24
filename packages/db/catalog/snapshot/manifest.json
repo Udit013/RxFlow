@@ -1,0 +1,69 @@
+{
+ "version": "2026-10-24",
+ "generatedAt": "2026-10-24T05:53:41.511Z",
+ "sources": [
+  {
+   "id": "OPENFDA_NDC",
+   "name": "National Drug Code Directory (via openFDA)",
+   "publisher": "U.S. Food and Drug Administration",
+   "country": "US",
+   "url": "https://open.fda.gov/apis/drug/ndc/",
+   "license": "Public domain (CC0 1.0)",
+   "licenseUrl": "https://open.fda.gov/license/",
+   "attribution": "Product data from the U.S. FDA National Drug Code Directory via openFDA.",
+   "notes": "Listing in the NDC Directory does not denote FDA approval. No prices are published."
+  },
+  {
+   "id": "HC_DPD",
+   "name": "Drug Product Database",
+   "publisher": "Health Canada",
+   "country": "CA",
+   "url": "https://www.canada.ca/en/health-canada/services/drugs-health-products/drug-products/drug-product-database.html",
+   "license": "Open Government Licence – Canada",
+   "licenseUrl": "https://open.canada.ca/en/open-government-licence-canada",
+   "attribution": "Contains information licensed under the Open Government Licence – Canada (Health Canada Drug Product Database).",
+   "notes": "Marketed human products only. ATC codes from this database classify ingredients for every market."
+  },
+  {
+   "id": "NLM_RXNAV",
+   "name": "RxNorm and RxClass (RxNav APIs)",
+   "publisher": "U.S. National Library of Medicine",
+   "country": null,
+   "url": "https://lhncbc.nlm.nih.gov/RxNav/",
+   "license": "Free to use; see NLM terms",
+   "licenseUrl": "https://lhncbc.nlm.nih.gov/RxNav/TermsofService.html",
+   "attribution": "This product uses publicly available data from the U.S. National Library of Medicine (NLM), National Institutes of Health; NLM is not responsible for the product and does not endorse or recommend it.",
+   "notes": "Used to verify ingredient names and to name ATC level-4 groups (ATC classification © WHO Collaborating Centre for Drug Statistics Methodology)."
+  },
+  {
+   "id": "DEMO_SEED",
+   "name": "RxFlow demo catalog (India)",
+   "publisher": "RxFlow",
+   "country": "IN",
+   "url": "https://github.com/Udit013/RxFlow",
+   "license": "Demo data",
+   "licenseUrl": null,
+   "attribution": "Illustrative demo entries.",
+   "notes": "Not verified against an Indian register (no openly licensed one is available). Check brand, manufacturer and composition before relying on these rows."
+  }
+ ],
+ "counts": {
+  "US": 1188,
+  "CA": 1069,
+  "total": 2257,
+  "classes": 238
+ },
+ "verification": {
+  "ingredientsChecked": 203,
+  "ingredientsInRxNorm": 203,
+  "ingredientsNotInRxNorm": [],
+  "rowsVerified": 2257,
+  "rowsWithoutParsedStrength": 0,
+  "routeFormContradictions": 0,
+  "ingredientSetsInBothCountries": 157,
+  "targetsWithoutSingleIngredientProducts": [
+   "sulfamethoxazole",
+   "ferrous sulfate"
+  ]
+ }
+}

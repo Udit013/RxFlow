@@ -9,6 +9,7 @@
 #   3. apply every migration listed in prisma/manual-migrations/IDEMPOTENT, in order — each is
 #      safe to re-run, and a failure here FAILS the build so the previous release stays live
 #   4. seed demo data (idempotent, non-fatal)
+#   5. load the open-data medicine catalog snapshot (idempotent, non-fatal — see catalog/load.ts)
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -23,3 +24,4 @@ while IFS= read -r file || [ -n "$file" ]; do
 done < prisma/manual-migrations/IDEMPOTENT
 
 pnpm exec tsx prisma/seed.ts || echo "seed skipped (non-fatal)"
+pnpm exec tsx catalog/load.ts || echo "catalog load failed (non-fatal) — the previous catalog stays in place"

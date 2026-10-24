@@ -117,6 +117,7 @@ enum DosageForm {
   TABLET
   CAPSULE
   SYRUP
+  SOLUTION
   INJECTION
   CREAM
   OINTMENT
@@ -439,6 +440,24 @@ model Medicine {
   // Market this catalog entry belongs to (brand names differ by country). NULL = international,
   // visible everywhere. Shared rows are filtered to the tenant's country; private rows ignore it.
   country              String?
+  // ─── Composition & classification (see @rxflow/types composition.ts) ───
+  // Regulator's exact form wording ("TABLET, EXTENDED RELEASE") — release mechanism matters.
+  dosageFormDetail     String?
+  route                String?
+  // ATC code (WHO Anatomical Therapeutic Chemical) and its level-4 group name.
+  atcCode              String?
+  therapeuticClass     String?
+  // Normalised active moieties ("amoxicillin+clavulanic acid") and the same with strengths
+  // ("amoxicillin@500mg+clavulanic acid@125mg") — lookup keys for variants and alternatives.
+  ingredientKey        String?
+  compositionKey       String?
+  // ─── Provenance ───
+  // MedicineDataSource.id ('OPENFDA_NDC', 'HC_DPD', 'DEMO_SEED') or 'MANUAL' / 'BULK_IMPORT'.
+  dataSource           String?
+  // The record's id at the source (NDC product code, Health Canada DIN).
+  sourceRef            String?
+  sourceUrl            String?
+  sourceRetrievedAt    DateTime?
   // Metadata
   createdAt            DateTime     @default(now())
   updatedAt            DateTime     @updatedAt
@@ -462,12 +481,18 @@ model Medicine {
   @@index([dosageForm])
   @@index([hsn])
   @@index([barcodes])
+  @@index([ingredientKey])
+  @@index([compositionKey])
+  @@index([atcCode])
+  @@unique([dataSource, sourceRef])
 }
 
 model MedicineComposition {
   id           String  @id @default(cuid())
   medicineId   String
+  // Normalised active moiety (lower-case INN), salt kept separately for comparisons.
   ingredient   String
+  salt         String?
   strength     String
   strengthNum  Float?
   unit         String
@@ -1219,4 +1244,32 @@ model MedicineSyncLog {
 
   @@index([source])
   @@index([createdAt])
+}
+
+// Open data sources behind shared catalog rows: licence, attribution and the snapshot loaded.
+model MedicineDataSource {
+  id          String    @id
+  name        String
+  publisher   String
+  country     String?
+  url         String
+  license     String
+  licenseUrl  String?
+  attribution String
+  version     String?
+  retrievedAt DateTime?
+  recordCount Int       @default(0)
+  notes       String?
+  updatedAt   DateTime  @updatedAt
+}
+
+// Therapeutic classification of an active-ingredient set, taken from regulator ATC codes.
+model IngredientClass {
+  ingredientKey String   @id
+  atcCode       String
+  className     String?
+  source        String
+  updatedAt     DateTime @updatedAt
+
+  @@index([atcCode])
 }

@@ -12,11 +12,14 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:reset": "prisma migrate reset --force",
     "db:studio": "prisma studio",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "catalog:build": "tsx catalog/build.ts",
+    "catalog:load": "tsx catalog/load.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.1",
     "@prisma/client": "^7.10.1",
+    "@rxflow/types": "workspace:*",
     "bcryptjs": "^2.4.3"
   },
   "devDependencies": {

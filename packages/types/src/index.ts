@@ -75,6 +75,7 @@ export enum DosageForm {
   GEL = 'GEL',
   LOTION = 'LOTION',
   SPRAY = 'SPRAY',
+  SOLUTION = 'SOLUTION',
 }
 
 export enum InvoiceType {
@@ -632,3 +633,4 @@ export function canAccess(role: string | undefined | null, method: string, path:
   }
   return READ.includes(m) ? true : MANAGER.includes(role as RoleName)
 }
+export * from './composition.js'

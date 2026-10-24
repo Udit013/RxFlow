@@ -1,9 +1,9 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Pill, Upload, Sparkles, Download, Plus, Pencil } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
+import { Pill, Upload, Sparkles, Download, Plus, Pencil, Search, Database } from 'lucide-react'
 import Papa from 'papaparse'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
@@ -13,6 +13,9 @@ import { MedicineMasterModal } from '@/components/medicines/medicine-master-moda
 import { SAMPLE_MEDICINES, type SeedMedicine } from '@/data/sample-medicines'
 import { getActiveRegion } from '@/lib/region'
 import { DRUG_SCHEDULE_CODES, scheduleLabel } from '@rxflow/regional'
+import { CountryTag, SourceBadge, formLabel } from '@/components/medicines/catalog-labels'
+
+const FORM_FILTERS = ['TABLET', 'CAPSULE', 'SYRUP', 'SOLUTION', 'SUSPENSION', 'INJECTION', 'DROPS', 'INHALER', 'CREAM', 'OINTMENT', 'GEL', 'LOTION', 'SPRAY', 'POWDER', 'PATCH', 'SUPPOSITORY', 'OTHER']
 
 interface Medicine {
   id: string
@@ -28,6 +31,11 @@ interface Medicine {
   gstRate: number
   schedule: string
   requiresPrescription: boolean
+  composition: string | null
+  country: string | null
+  dataSource: string | null
+  isVerified: boolean
+  therapeuticClass: string | null
 }
 
 interface ImportResult {
@@ -45,17 +53,33 @@ const CSV_TEMPLATE_HEADERS = [
 
 export default function MedicinesPage() {
   const [scheduleFilter, setScheduleFilter] = useState<string>('')
+  const [formFilter, setFormFilter] = useState<string>('')
+  const [allMarkets, setAllMarkets] = useState(false)
+  const [searchInput, setSearchInput] = useState('')
+  const [search, setSearch] = useState('')
+  // Search runs on the server (brand, generic, ingredient, strength, form, therapeutic class).
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(searchInput.trim()), 300)
+    return () => clearTimeout(t)
+  }, [searchInput])
   const [importResult, setImportResult] = useState<ImportResult | null>(null)
   const [editing, setEditing] = useState<Medicine | 'new' | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const queryClient = useQueryClient()
 
   const { data, isLoading } = useQuery({
-    queryKey: ['medicines', scheduleFilter],
+    queryKey: ['medicines', scheduleFilter, formFilter, allMarkets, search],
     queryFn: () =>
       api.get('/medicines', {
-        params: { schedule: scheduleFilter || undefined, limit: 500 },
+        params: {
+          schedule: scheduleFilter || undefined,
+          dosageForm: formFilter || undefined,
+          market: allMarkets ? 'all' : undefined,
+          search: search || undefined,
+          limit: 500,
+        },
       }).then((r) => r.data),
+    placeholderData: keepPreviousData,
   })
 
   const medicines: Medicine[] = data?.data ?? []
@@ -130,9 +154,16 @@ export default function MedicinesPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Medicines</h1>
-          <p className="text-sm text-slate-500">{data?.meta?.total ?? 0} in master catalog</p>
+          <p className="text-sm text-slate-500">
+            {data?.meta?.total ?? 0} {search ? 'matching' : 'in master catalog'}
+            {(data?.meta?.total ?? 0) > medicines.length && ` · showing the first ${medicines.length} — refine the search to narrow it down`}
+          </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href="/dashboard/medicines/sources" className="btn-secondary">
+            <Database className="w-4 h-4" />
+            Data sources
+          </Link>
           <button onClick={downloadTemplate} className="btn-secondary">
             <Download className="w-4 h-4" />
             CSV Template
@@ -181,7 +212,7 @@ export default function MedicinesPage() {
         data={medicines}
         isLoading={isLoading}
         rowKey={(m) => m.id}
-        searchPlaceholder="Search by name, generic, brand, manufacturer…"
+        searchable={false}
         exportFileName="rxflow-medicines"
         emptyIcon={Pill}
         emptyTitle="No medicines found"
@@ -189,12 +220,31 @@ export default function MedicinesPage() {
         emptyAction={<button onClick={() => setEditing('new')} className="btn-primary"><Plus className="w-4 h-4" /> Add Medicine</button>}
         onRowClick={(m) => setEditing(m)}
         toolbar={
-          <select className="input w-44" value={scheduleFilter} onChange={(e) => setScheduleFilter(e.target.value)}>
-            <option value="">All classifications</option>
-            {DRUG_SCHEDULE_CODES.map((code) => (
-              <option key={code} value={code}>{scheduleLabel(getActiveRegion(), code)}</option>
-            ))}
-          </select>
+          <div className="flex flex-wrap items-center gap-2 w-full">
+            <div className="relative flex-1 min-w-[14rem]">
+              <Search className="w-4 h-4 text-surface-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                className="input pl-9"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="Brand, generic, ingredient, strength, form or use — e.g. “amoxicillin 500mg cap”, “statin”"
+                aria-label="Search medicines"
+              />
+            </div>
+            <select className="input w-40" value={formFilter} onChange={(e) => setFormFilter(e.target.value)} aria-label="Dosage form">
+              <option value="">All forms</option>
+              {FORM_FILTERS.map((f) => <option key={f} value={f}>{formLabel(f)}</option>)}
+            </select>
+            <select className="input w-44" value={scheduleFilter} onChange={(e) => setScheduleFilter(e.target.value)} aria-label="Classification">
+              <option value="">All classifications</option>
+              {DRUG_SCHEDULE_CODES.map((code) => (
+                <option key={code} value={code}>{scheduleLabel(getActiveRegion(), code)}</option>
+              ))}
+            </select>
+            <label className="flex items-center gap-2 text-sm text-surface-600 cursor-pointer" title="Include other countries' catalogs for reference">
+              <input type="checkbox" checked={allMarkets} onChange={(e) => setAllMarkets(e.target.checked)} aria-label="All markets" /> All markets
+            </label>
+          </div>
         }
         columns={medicineColumns}
       />
@@ -215,14 +265,24 @@ const medicineColumns: DataTableColumn<Medicine>[] = [
     render: (m) => (
       <div>
         <p className="font-medium text-surface-900">{m.name}</p>
-        <p className="text-xs text-surface-500">{m.strength} • {m.dosageForm}</p>
+        <p className="text-xs text-surface-500">{m.strength} • {formLabel(m.dosageForm)}</p>
+        {m.composition && <p className="text-2xs text-surface-400 truncate max-w-[22rem]" title={m.composition}>{m.composition}</p>}
       </div>
     ),
   },
   { key: 'genericName', header: 'Generic', accessor: (m) => m.genericName, render: (m) => <span className="text-surface-700">{m.genericName}</span> },
   { key: 'manufacturerName', header: 'Manufacturer', accessor: (m) => m.manufacturerName, render: (m) => <span className="text-xs text-surface-600">{m.manufacturerName}</span> },
   { key: 'packSize', header: 'Pack', align: 'center', accessor: (m) => m.packSize },
-  { key: 'mrp', header: 'MRP', align: 'right', accessor: (m) => m.mrp, render: (m) => <span className="font-medium">{formatCurrency(m.mrp)}</span> },
+  {
+    key: 'dataSource', header: 'Source', accessor: (m) => m.dataSource ?? '',
+    render: (m) => (
+      <div className="space-y-0.5">
+        <SourceBadge source={m.dataSource} verified={m.isVerified} />
+        {m.country && m.country !== getActiveRegion().country && <p className="text-2xs text-surface-500"><CountryTag code={m.country} /></p>}
+      </div>
+    ),
+  },
+  { key: 'mrp', header: 'MRP', align: 'right', accessor: (m) => m.mrp, render: (m) => (m.mrp > 0 ? <span className="font-medium">{formatCurrency(m.mrp)}</span> : <span className="text-2xs text-surface-400">Not set</span>) },
   { key: 'gstRate', get header() { return getActiveRegion().tax.label }, align: 'center', accessor: (m) => m.gstRate, render: (m) => `${m.gstRate}%` },
   {
     key: 'schedule', header: 'Classification', align: 'center', accessor: (m) => m.schedule,

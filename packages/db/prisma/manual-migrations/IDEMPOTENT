@@ -2,3 +2,4 @@
 # Only list files that are safe to run repeatedly (IF NOT EXISTS / duplicate_object guards).
 2026-10-03-ownership-invoice-charges-sessions.sql
 2026-10-09-localization.sql
+2026-10-24-medicine-catalog.sql

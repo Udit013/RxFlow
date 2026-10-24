@@ -3,11 +3,12 @@ import { IN } from './profiles/in.js'
 import { US } from './profiles/us.js'
 import { GB } from './profiles/gb.js'
 import { AE } from './profiles/ae.js'
+import { CA } from './profiles/ca.js'
 import { INTL } from './profiles/intl.js'
 import { isValidTimeZone } from './time.js'
 
 /** Every bundled profile. To support a new country, add a file under profiles/ and list it here. */
-export const REGION_PROFILES: Record<string, RegionProfile> = { IN, US, GB, AE, INTL }
+export const REGION_PROFILES: Record<string, RegionProfile> = { IN, US, GB, AE, CA, INTL }
 
 /** Existing tenants (created before localisation) are Indian. */
 export const DEFAULT_COUNTRY: CountryCode = 'IN'

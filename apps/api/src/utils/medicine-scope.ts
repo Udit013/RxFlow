@@ -34,6 +34,19 @@ export async function catalogWhere(tenantId: string): Promise<Prisma.MedicineWhe
   }
 }
 
+/**
+ * Every market's shared catalog plus the tenant's own rows (minus shared rows it replaced with a
+ * copy). Used for cross-country reference views — other markets' rows stay read-only.
+ */
+export function globalCatalogWhere(tenantId: string): Prisma.MedicineWhereInput {
+  return {
+    OR: [
+      { ownerTenantId: tenantId },
+      { ownerTenantId: null, forks: { none: { ownerTenantId: tenantId } } },
+    ],
+  }
+}
+
 /** Looser filter for direct lookups by id: any row this tenant may reference (shared or own). */
 export function usableWhere(tenantId: string): Prisma.MedicineWhereInput {
   return { OR: [{ ownerTenantId: null }, { ownerTenantId: tenantId }] }
@@ -48,7 +61,8 @@ export async function assertMedicinesUsable(tenantId: string, ids: (string | nul
 }
 
 /** Fields copied when a tenant forks a shared medicine (everything except identity/ownership/timestamps). */
-const NON_COPIED = new Set(['id', 'ownerTenantId', 'forkedFromId', 'createdAt', 'updatedAt', 'isVerified'])
+// sourceRef stays on the original: (dataSource, sourceRef) identifies one open-data record.
+const NON_COPIED = new Set(['id', 'ownerTenantId', 'forkedFromId', 'createdAt', 'updatedAt', 'isVerified', 'sourceRef'])
 
 /**
  * Apply `changes` to medicine `id` on behalf of `tenantId`.
