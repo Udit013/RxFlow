@@ -138,6 +138,8 @@ export function CommandPalette() {
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
+    // navigate only closes over the stable router and state setters
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, results, activeIdx])
 
   function navigate(r: Result) {

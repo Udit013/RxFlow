@@ -14,13 +14,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 9.1.0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           # Same major as production (Render resolves package.json engines to Node 26).
           node-version: 26
@@ -33,14 +33,11 @@ jobs:
       - name: Generate Prisma client
         run: pnpm --filter @rxflow/db exec prisma generate
 
-      - name: Typecheck (web)
-        run: pnpm --filter @rxflow/web exec tsc --noEmit
+      - name: Typecheck (all workspaces)
+        run: pnpm type-check
 
-      - name: Typecheck (api)
-        run: pnpm --filter @rxflow/api exec tsc --noEmit
-
-      - name: Lint (web — includes React rules-of-hooks)
-        run: pnpm --filter @rxflow/web exec next lint
+      - name: Lint (ESLint flat config — includes React rules-of-hooks)
+        run: pnpm lint
 
       - name: Unit tests
         run: pnpm test

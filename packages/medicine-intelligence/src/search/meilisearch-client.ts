@@ -1,3 +1,4 @@
+// eslint-disable-next-line @typescript-eslint/triple-slash-reference -- ambient stub for the optional dependency
 /// <reference path="./meilisearch.d.ts" />
 /**
  * Meilisearch Integration

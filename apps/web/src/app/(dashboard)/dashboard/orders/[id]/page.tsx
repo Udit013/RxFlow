@@ -189,7 +189,7 @@ function InvoiceRow({ invoice, order }: { invoice: any; order: any }) {
         totalTax: full.totalTax ?? 0,
       }
       await downloadInvoicePdf(data, tenantHeader)
-    } catch (e: any) {
+    } catch {
       toast.error('Failed to generate PDF')
     }
   }

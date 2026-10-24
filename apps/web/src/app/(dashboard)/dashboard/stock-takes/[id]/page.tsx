@@ -38,7 +38,7 @@ export default function StockTakeDetailPage() {
   })
 
   const take = data?.data
-  const lines: any[] = take?.lines ?? []
+  const lines: any[] = useMemo(() => take?.lines ?? [], [take?.lines])
   const isEditable = take?.status === 'IN_PROGRESS' || take?.status === 'DRAFT'
 
   const filtered = useMemo(() => {

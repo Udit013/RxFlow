@@ -56,6 +56,7 @@ export function LiveSync() {
     })()
     return () => { cancelled = true }
     // Runs once on mount by design: replay only what was missed before this session opened.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
@@ -130,7 +131,7 @@ export function LiveSync() {
       es?.close()
       if (retryTimer) clearTimeout(retryTimer)
     }
-  }, [queryClient])
+  }, [queryClient, addNotification]) // addNotification is a stable zustand action
 
   return <LiveSyncBadge status={status} lastEventAt={lastEventAt} />
 }

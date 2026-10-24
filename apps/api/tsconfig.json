@@ -6,7 +6,6 @@
     // The API runs via tsx (never emits), so rootDir/outDir would only produce
     // false TS6059 errors for cross-workspace source imports.
     "noEmit": true,
-    "baseUrl": ".",
     "paths": {
       "@rxflow/types": ["../../packages/types/src/index.ts"],
       "@rxflow/db": ["../../packages/db/src/index.ts"]

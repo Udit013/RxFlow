@@ -126,7 +126,7 @@ function BillingPageInner() {
             toast.success(`Prefilled ${newCart.length} item(s) — review and complete the sale`)
           }
         }
-      } catch (e: any) {
+      } catch {
         toast.error('Failed to prefill from URL')
       }
     })()

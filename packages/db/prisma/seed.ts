@@ -369,7 +369,7 @@ async function main() {
   }
 
   // ── Demo Supplier ────────────────────────────────────────────────────────
-  const supplier = await prisma.supplier.upsert({
+  await prisma.supplier.upsert({
     where: { id: 'supplier-demo-001' },
     update: {},
     create: {

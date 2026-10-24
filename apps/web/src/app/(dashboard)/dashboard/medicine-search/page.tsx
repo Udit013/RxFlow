@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useMemo } from 'react'
 import { Search, Pill, Zap, Barcode, CheckCircle } from 'lucide-react'
 import { api } from '@/lib/api'
 import { formatCurrency, cn, debounce } from '@/lib/utils'
@@ -57,8 +57,9 @@ export default function MedicineSearchPage() {
   const [loading, setLoading] = useState(false)
   const [hasSearched, setHasSearched] = useState(false)
 
-  const performSearch = useCallback(
-    debounce(async (q: string) => {
+  // One debounced searcher for the page's lifetime (state setters are stable).
+  const performSearch = useMemo(
+    () => debounce(async (q: string) => {
       if (!q.trim()) {
         setResults([])
         setNormalized(null)

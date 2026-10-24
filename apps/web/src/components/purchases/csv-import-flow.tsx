@@ -75,7 +75,7 @@ function parseExpiryDate(raw: string): Date | null {
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-interface CsvRow extends Record<string, string> {}
+type CsvRow = Record<string, string>
 interface ResolvedRow {
   raw: CsvRow
   medicineId: string | null
