@@ -33,6 +33,10 @@ jobs:
       - name: Generate Prisma client
         run: pnpm --filter @rxflow/db exec prisma generate
 
+      - name: Security audit (production dependencies)
+        # Fails on high or critical advisories; lower ones show up in Dependabot alerts.
+        run: pnpm audit --prod --audit-level=high
+
       - name: Typecheck (all workspaces)
         run: pnpm type-check
 

@@ -7,6 +7,8 @@ import { authenticate } from '../middleware/auth.js'
 import { phoneSchema } from '../utils/regional.js'
 import { regionDefaults } from '@rxflow/regional'
 import { setRefreshCookie, clearRefreshCookie, readRefreshCookie, hashRefreshToken, refreshTokenMatches } from '../utils/session-cookie.js'
+import { createRefreshTokens } from '../utils/refresh-token.js'
+import { env } from '../utils/env.js'
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -46,10 +48,11 @@ export async function authRoutes(app: FastifyInstance) {
   // Build the full auth response (tokens + user) for a given user id.
   // The refresh token is set as an httpOnly cookie on `reply` and never returned in the body.
   const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000
+  const refreshTokens = createRefreshTokens(env.JWT_REFRESH_SECRET, env.JWT_SECRET)
 
   /** Sign a refresh token for session `sid` and store its hash (rotation = call again). */
   async function rotateSession(userId: string, sid: string, reply: FastifyReply) {
-    const token = app.jwt.sign({ userId, sid, jti: randomUUID() }, { expiresIn: '7d' })
+    const token = refreshTokens.sign({ userId, sid, jti: randomUUID() })
     await prisma.authSession.update({
       where: { id: sid },
       data: { tokenHash: hashRefreshToken(token), lastUsedAt: new Date(), expiresAt: new Date(Date.now() + SESSION_TTL_MS) },
@@ -190,13 +193,8 @@ export async function authRoutes(app: FastifyInstance) {
    */
   async function resolveRefreshToken(token: string | null | undefined) {
     if (!token) return null
-    let payload: { userId?: string; sid?: string }
-    try {
-      payload = app.jwt.verify<{ userId?: string; sid?: string }>(token)
-    } catch {
-      return null
-    }
-    if (!payload.userId) return null
+    const payload = refreshTokens.verify(token)
+    if (!payload?.userId) return null
     const user = await prisma.user.findFirst({
       where: { id: payload.userId, isActive: true },
       include: { stores: true, tenant: { select: { isActive: true } } },

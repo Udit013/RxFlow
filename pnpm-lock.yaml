@@ -93,6 +93,9 @@ importers:
       dayjs:
         specifier: ^1.11.23
         version: 1.11.23
+      fast-jwt:
+        specifier: 6.3.5
+        version: 6.3.5
       fastify:
         specifier: ^5.12.7
         version: 5.12.7

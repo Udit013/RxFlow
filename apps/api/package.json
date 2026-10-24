@@ -29,6 +29,7 @@
     "@rxflow/types": "workspace:*",
     "bcryptjs": "^3.0.3",
     "dayjs": "^1.11.23",
+    "fast-jwt": "6.3.5",
     "fastify": "^5.12.7",
     "pino": "^10.4.0",
     "pino-pretty": "^13.2.0",

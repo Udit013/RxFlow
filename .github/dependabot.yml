@@ -1,0 +1,24 @@
+# Weekly dependency update PRs (free on GitHub). Grouped so a week's minor/patch bumps arrive
+# as one PR per ecosystem; majors come individually because they need a migration.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+    # Releases need a week in the wild before they are proposed (supply-chain safety).
+    cooldown:
+      default-days: 7
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      actions:
+        patterns: ['*']
