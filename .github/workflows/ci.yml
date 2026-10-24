@@ -22,11 +22,13 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # Same major as production (Render resolves package.json engines to Node 26).
+          node-version: 26
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile=false
+        # Frozen, like Vercel's install — fails if pnpm-lock.yaml is out of sync with package.json
+        run: pnpm install --frozen-lockfile
 
       - name: Generate Prisma client
         run: pnpm --filter @rxflow/db exec prisma generate
@@ -36,6 +38,9 @@ jobs:
 
       - name: Typecheck (api)
         run: pnpm --filter @rxflow/api exec tsc --noEmit
+
+      - name: Lint (web — includes React rules-of-hooks)
+        run: pnpm --filter @rxflow/web exec next lint
 
       - name: Unit tests
         run: pnpm test

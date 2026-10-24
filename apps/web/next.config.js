@@ -3,8 +3,12 @@ const nextConfig = {
   // The app talks to the Fastify API over HTTP (axios), not Server Actions,
   // so no allowedOrigins config is needed.
   transpilePackages: ['@rxflow/types', '@rxflow/regional'],
+  // `images.domains` is deprecated in Next 15 — same hosts as remotePatterns.
   images: {
-    domains: ['localhost', 'storage.rxflow.in'],
+    remotePatterns: [
+      { protocol: 'http', hostname: 'localhost' },
+      { protocol: 'https', hostname: 'storage.rxflow.in' },
+    ],
   },
   // Don't fail the production build on ESLint findings — we lint/type-check
   // locally (tsc --noEmit is clean). Type errors STILL fail the build.

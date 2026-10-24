@@ -217,7 +217,7 @@ function LineRow({ line, takeId, editable }: { line: any; takeId: string; editab
   const [actual, setActual] = useState<string>(line.actualQty != null ? String(line.actualQty) : '')
   const [notes, setNotes] = useState<string>(line.notes ?? '')
   const inputRef = useRef<HTMLInputElement>(null)
-  const saveTimer = useRef<ReturnType<typeof setTimeout>>()
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   const mutation = useMutation({
     mutationFn: (data: { actualQty: number; notes?: string }) =>

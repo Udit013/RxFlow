@@ -12,9 +12,7 @@
   "dependencies": {
     "@rxflow/db": "workspace:*",
     "@rxflow/types": "workspace:*",
-    "fuse.js": "^7.0.0",
-    "natural": "^6.12.0",
-    "leven": "^4.0.0"
+    "fuse.js": "^7.0.0"
   },
   "devDependencies": {
     "@types/natural": "^5.1.5",

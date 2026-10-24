@@ -6,7 +6,7 @@
 
 **Live demo:** [rx-flow-web.vercel.app](https://rx-flow-web.vercel.app) — click **Create account** to spin up your own pharmacy workspace.
 
-> ⏳ The API runs on a free tier that sleeps after inactivity. A scheduled keep-warm ping normally keeps it awake; if it has slept, the first request can take up to ~50s (the app starts the wake-up as soon as any page opens and says so on screen). Subsequent requests are instant.
+> ⏳ The API runs on a free tier that sleeps after inactivity. Unless an external uptime pinger keeps it awake, the first request after a quiet spell can take ~30–50s (the app starts the wake-up as soon as any page opens and says so on screen). Subsequent requests are instant.
 
 ---
 
@@ -73,7 +73,7 @@ A cloud-native, multi-tenant pharmacy management system. Each signup creates an 
 rxflow/                         ← Monorepo (pnpm workspaces + Turborepo)
 ├── apps/
 │   ├── api/                    ← Fastify backend (Node + TypeScript, run via tsx)
-│   └── web/                    ← Next.js 14 frontend (App Router)
+│   └── web/                    ← Next.js 15 frontend (App Router, React 19)
 ├── packages/
 │   ├── db/                     ← Prisma ORM + PostgreSQL schema
 │   ├── types/                  ← Shared TypeScript types + role matrix
@@ -88,8 +88,8 @@ rxflow/                         ← Monorepo (pnpm workspaces + Turborepo)
 
 | Layer | Technology |
 |-------|-----------|
-| Backend | Fastify + TypeScript (SSE for live sync) |
-| Frontend | Next.js 14 (App Router) + Tailwind + GSAP |
+| Backend | Fastify 5 + TypeScript (SSE for live sync) |
+| Frontend | Next.js 15 (App Router) + React 19 + Tailwind + GSAP |
 | Database | PostgreSQL + Prisma |
 | State | React Query + Zustand |
 | Auth | JWT access token (memory) + rotating refresh token (httpOnly cookie, per-device sessions), bcrypt |
@@ -153,6 +153,12 @@ Create your account from the **Create account** link on the login page.
 ```bash
 pnpm test          # run the unit suite (Vitest)
 pnpm test:watch    # watch mode
+```
+
+End-to-end API smoke test (51 checks across sessions, roles, tenant isolation, billing, GST/VAT/sales tax and localisation) — against a **local** API and throwaway database only; it refuses to run against any other host:
+
+```bash
+python3 scripts/e2e/api_smoke.py
 ```
 
 82 tests covering the money- and security-critical logic: the regional tax engines, timezone/fiscal-year boundaries (incl. daylight saving) and per-country validation, collision-safe document numbering, GST/VAT/sales-tax/discount/commission and invoice arithmetic, the auth middleware and role matrix, medicine copy-on-write, refresh-token hashing, and the multi-distributor CSV parsers — the parser tests are pinned to verbatim rows from real supplier invoices, so a config regression can't silently break an import format.

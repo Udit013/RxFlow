@@ -24,7 +24,7 @@ Everything below runs on **free tiers or open-source** software. No card require
 - **Mobile:** Expo (React Native) — share the API client + types from this monorepo.
 - **Desktop:** **Tauri** (open-source, ~10MB) over Electron (~150MB) unless you need deep native printer drivers.
 
-> **Cost honesty:** the only friction in the free path is Render free *sleeping* after 15 min idle. The repo's **Keep API warm** workflow (`.github/workflows/keep-warm.yml`) pings `/health` every 10 minutes so it normally never sleeps — one always-on free service uses ~744 of Render's 750 free hours a month. When you have a real pharmacy on it daily, ~$7/mo on Render removes the sleep for certain (and gives more CPU). Everything else stays free indefinitely.
+> **Cost honesty:** the only friction in the free path is Render free *sleeping* after 15 min idle. The repo's **Keep API warm** workflow (`.github/workflows/keep-warm.yml`) is scheduled every 5 minutes, but GitHub throttles it to roughly one run every few hours, so on its own it does **not** stop the sleep (see "Keeping the API awake" below). An external pinger does — one always-on free service uses ~744 of Render's 750 free hours a month. When you have a real pharmacy on it daily, ~$7/mo on Render removes the sleep for certain (and gives more CPU). Everything else stays free indefinitely.
 
 ---
 
@@ -135,13 +135,14 @@ cd ../.. && pnpm install --filter @rxflow/web...
 - Web: `pnpm --filter @rxflow/web add posthog-js`, init with `NEXT_PUBLIC_POSTHOG_KEY` in a client provider.
 
 ### Keeping the API awake (already set up)
-- `.github/workflows/keep-warm.yml` pings `https://rxflow-api.onrender.com/health` every 10 minutes. If your API URL differs, add a repository variable **`API_HEALTH_URL`** (GitHub → Settings → Secrets and variables → Actions → Variables) with the full `/health` URL.
+- `.github/workflows/keep-warm.yml` pings the API's `/health` (repository variable **`API_HEALTH_URL`**, currently `https://rxflow-api-us.onrender.com/health`).
+- **Measured reality (Oct 2026):** GitHub throttles frequent schedules — over 83 scheduled runs the median gap was **~4 h** (101 min to 9.4 h), not 5 minutes, so the free API still sleeps between runs and the first request after a quiet spell takes ~30 s. The workflow is harmless to keep, but the reliable free fixes are an external pinger (cron-job.org or UptimeRobot hitting `/health` every 5–10 min) or Render's paid plan.
 - `/health` doesn't query the database, so Neon still auto-suspends and stays within its free compute.
 - Limits: GitHub can delay scheduled runs under load, and pauses scheduled workflows after 60 days without repository activity (re-enable it from the Actions tab).
 
 ### Uptime monitoring → UptimeRobot
 - Free: 50 monitors. Add an HTTP(s) monitor pointing at `https://YOUR-API.onrender.com/health`.
-- A 5-minute monitor is also a reliable second keep-warm ping alongside the GitHub workflow.
+- A 5-minute monitor is the reliable way to keep the free API awake (the GitHub schedule alone is too sparse — see above). cron-job.org is a free alternative.
 - Prefer self-hosted + a public status page? Use **Uptime Kuma** (open-source) instead — but it needs its own host.
 
 ### Scheduled jobs (no Redis needed) → GitHub Actions cron
@@ -155,7 +156,7 @@ Until you add BullMQ/Redis, run periodic tasks (daily backup, expiry sweep) with
 - **In-memory pub/sub = single instance only.** Render free is single-instance, so fine. If you ever scale to multiple API instances, move the pub/sub in `apps/api/src/utils/events.ts` to Upstash Redis (free tier).
 - **`prisma db push --accept-data-loss` runs on every deploy.** On a fresh DB and on no-op deploys it's safe. If you make a schema change that drops a column, it will drop it without asking. Back up first (Admin → Backup & Import → Export) before risky schema changes.
 - **JWT secrets:** Render generates them once and keeps them. If you ever rotate them, all existing sessions log out — expected.
-- **Cold start + POS:** the keep-warm workflow normally prevents sleeping, and the web app starts waking the API the moment any page opens (overlapping the wake-up with sign-in) and tells the user when a wake-up is in progress. For guaranteed no-sleep, use the paid plan.
+- **Cold start + POS:** without an external pinger the free API sleeps; the web app starts waking the API the moment any page opens (overlapping the wake-up with sign-in) and tells the user when a wake-up is in progress. For guaranteed no-sleep, use the paid plan.
 - **Keep the API and database in the same region.** Every request makes one or more database round trips, and a transaction makes many in sequence. The API runs in Render **Virginia** (`rxflow-api-us`, see `render.yaml`) beside the Neon project in **AWS us-east-1**, so queries stay in-region. (It previously ran in Singapore, where every query crossed the Pacific.) If most users later concentrate in Asia, move **both** the API and the database to Singapore together.
 - **Build command:** `npm install -g pnpm@9.1.0 && pnpm install --prod=false --frozen-lockfile=false && bash packages/db/scripts/deploy-db.sh`. The script applies every migration listed in `packages/db/prisma/manual-migrations/IDEMPOTENT`, so schema changes ship with the code — no dashboard edits per migration.
 - **Start command:** Render runs `cd apps/api && node_modules/.bin/tsx src/server.ts` directly — going through `pnpm --filter … start` scanned the whole workspace first and doubled boot time.

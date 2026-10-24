@@ -6,7 +6,15 @@ export function errorHandler(
   request: FastifyRequest,
   reply: FastifyReply
 ) {
-  request.log.error(error)
+  // Expected client errors (validation, 4xx business rules, known Prisma conflicts) are routine:
+  // log them briefly at info level so real failures stand out at error level with a stack.
+  const code = (error as { code?: string }).code
+  const status = error.statusCode ?? 500
+  const expected =
+    error instanceof ZodError || !!error.validation || (status >= 400 && status < 500) ||
+    ['P2002', 'P2025', 'P2003', 'P2011'].includes(code ?? '')
+  if (expected) request.log.info({ statusCode: status, code, msg: error.message.slice(0, 300) }, 'request rejected')
+  else request.log.error(error)
 
   // Zod validation errors
   if (error instanceof ZodError) {

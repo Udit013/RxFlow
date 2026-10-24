@@ -96,7 +96,7 @@ RxFlow is a **monorepo** (one Git repository containing multiple independently-d
 
 | Layer | Technology | Hosted on |
 |---|---|---|
-| Frontend | Next.js 14 (App Router) + TypeScript + Tailwind | Vercel |
+| Frontend | Next.js 15 (App Router) + React 19 + TypeScript + Tailwind | Vercel |
 | Backend API | Fastify (Node.js) + TypeScript, run via `tsx` | Render (free web service) |
 | Database | PostgreSQL, accessed through Prisma ORM | Neon (serverless Postgres) |
 
@@ -116,7 +116,7 @@ RxFlow is a **monorepo** (one Git repository containing multiple independently-d
                                            │  HTTPS
                                            ▼
                        ┌───────────────────────────────────────┐
-                       │     Frontend — Next.js 14 (Vercel)     │
+                       │     Frontend — Next.js 15 (Vercel)     │
                        │  App Router pages, React components,   │
                        │  React Query for server-state caching  │
                        └───────────────┬─────────────┬──────────┘
@@ -197,7 +197,7 @@ RxFlow/
 │   │                             # financial-year.ts, numbering.ts, pagination.ts, email.ts,
 │   │                             # env.ts, http-error.ts, tenant-guard.ts, medicine-scope.ts,
 │   │                             # session-cookie.ts
-│   └── web/                      # Next.js 14 frontend — the "dining room" the user sees
+│   └── web/                      # Next.js 15 / React 19 frontend — the "dining room" the user sees
 │       └── src/
 │           ├── app/               # App Router: every folder here is a URL route
 │           ├── components/        # Reusable UI, grouped by concern (ui/, layout/, purchases/, medicines/)
@@ -1351,7 +1351,7 @@ This was verified against **real invoice files from five actual distributors** a
 
 | Library | Why it's here | What breaks/gets harder without it |
 |---|---|---|
-| **Next.js 14 (App Router)** | File-based routing, React Server/Client Component model, built-in bundling/optimization, one framework for the whole frontend | A bare Vite+React SPA would need a router library (react-router) and separate build tooling wired up by hand |
+| **Next.js 15 (App Router) + React 19** | File-based routing, React Server/Client Component model, built-in bundling/optimization, one framework for the whole frontend | A bare Vite+React SPA would need a router library (react-router) and separate build tooling wired up by hand |
 | **@tanstack/react-query** | Server-state caching, background refetching, and the `invalidateQueries` mechanism that powers real-time sync (Section 9) | Every page would need its own hand-rolled loading/error/caching logic, and there'd be no single, app-wide "please refetch this" signal |
 | **zustand** | The one piece of genuinely global client state (notifications) | Redux would work but is much heavier machinery (actions, reducers, dispatch, middleware) for a single small store |
 | **react-hook-form + @hookform/resolvers + zod** | Form state management with schema-based validation, shared validation schemas with the backend's mental model | Manually tracking every field's value/error/touched state in `useState` for every form is repetitive and error-prone |
@@ -1430,6 +1430,8 @@ The test suite (Vitest, 82 tests across 10 files) targets the code where a subtl
 
 Before the session/RBAC/catalog changes shipped they were also exercised end to end against a throwaway local Postgres: a scripted run of 39 API checks (cookie rotation and reuse rejection, multiple devices and single-device logout, legacy-session upgrade, viewer 403s, catalog forks invisible to other tenants, idempotent invoicing, overpayment rejection, numbering after a deleted parked sale, cross-tenant references) plus a browser pass through login → reload → live sync → sign-out. That run caught an API crash on boot (the shared types package couldn't export runtime values under ESM) that type-checking and unit tests had not.
 
+**End-to-end API suite (`scripts/e2e/api_smoke.py`).** 51 scripted checks against a locally running API on a throwaway Postgres (it refuses to run against any non-localhost host, since it creates data): cookie sessions and rotation, multi-device logout, the role matrix, tenant isolation, catalog copy-on-write, India GST (intra/inter-state), US sales tax, UK VAT, credit notes, overpayment and stock guards, numbering after deletions, reports and settings validation. It is run before every dependency upgrade or release; it caught a boot-time crash and a dashboard SQL error that unit tests and type-checking missed.
+
 ### 14.2 A real bug this test suite caught
 
 While writing the fiscal-year tests, pinning the exact UTC boundary revealed that `getFinancialYear()` computed the year using the server's **local** timezone getters, while the paired `getFinancialYearBounds()` function built its date range using **UTC** getters — two functions meant to agree with each other could silently disagree near the Mar 31/Apr 1 boundary depending on what timezone the server process happened to be running in. The fix was straightforward once found (switch both functions to UTC consistently), but the bug itself was invisible in ordinary manual testing — it only surfaced because a test deliberately pinned the exact boundary moment in UTC and compared it against the function's actual local-time-based output.
@@ -1440,13 +1442,14 @@ Every push to `main` and every pull request runs, in order:
 
 ```text
 1. Checkout code
-2. Install pnpm 9.1.0, Node 20 (with pnpm cache)
-3. pnpm install --frozen-lockfile=false
+2. Install pnpm 9.1.0, Node 26 — the same major production runs (with pnpm cache)
+3. pnpm install --frozen-lockfile   (fails if the lockfile is out of sync, as Vercel's install would)
 4. Generate the Prisma client (packages/db)
 5. Typecheck apps/web (tsc --noEmit)
 6. Typecheck apps/api (tsc --noEmit)
-7. Run the full test suite (pnpm test)
-8. Production build the frontend (pnpm --filter @rxflow/web build)
+7. Lint apps/web — including React's rules-of-hooks (a hook after an early return once crashed the invoice page)
+8. Run the full test suite (pnpm test)
+9. Production build the frontend (pnpm --filter @rxflow/web build)
 ```
 Concurrency is configured to **cancel an in-progress run** if a new commit lands on the same branch/PR before the previous run finished — no point finishing a CI run against code that's already been superseded.
 
@@ -1473,7 +1476,7 @@ Concurrency is configured to **cancel an in-progress run** if a new commit lands
 ┌─────────────┐        ┌──────────────┐        ┌─────────────┐
 │   Vercel     │        │    Render     │        │     Neon     │
 │  (frontend)  │───────▶│   (backend)   │───────▶│  (database)  │
-│  Next.js 14  │  HTTPS │   Fastify     │ Prisma │  PostgreSQL  │
+│  Next.js 15  │  HTTPS │   Fastify 5   │ Prisma │  PostgreSQL  │
 │  push-to-    │        │  persistent   │        │  serverless, │
 │  deploy      │        │  Node process │        │  auto-pause  │
 └─────────────┘        └──────────────┘        └─────────────┘
@@ -1520,7 +1523,7 @@ A visitor after a quiet spell paid for three things in sequence: Render waking t
 | The medicine matcher warms up **in the background**; it used to run in an awaited `onReady` hook, so the server didn't listen until the whole catalog had been fetched from the database and indexed | Start-up no longer waits on a (possibly cold, cross-region) database query |
 | **Net** | **~1.75 s → ~0.52 s**, about 3.3× faster |
 
-Avoiding the sleep entirely matters more than any boot optimisation: a GitHub Actions workflow (`keep-warm.yml`) pings `/health` every 10 minutes, inside Render's 750 free instance-hours a month. On the client side, every page load fires a fire-and-forget `/health` request (`warmUpApi()` in `lib/api.ts`), so a wake-up overlaps with the user typing their password; and the session loader explains itself after 4 seconds ("Waking up the server…") instead of sitting silently.
+Avoiding the sleep entirely matters more than any boot optimisation. A GitHub Actions workflow (`keep-warm.yml`) is scheduled every 5 minutes — but measured over 83 runs, GitHub throttled it to a median gap of ~4 hours, so it does not keep the free instance awake on its own; an external pinger (UptimeRobot / cron-job.org) or the paid plan does. On the client side, every page load fires a fire-and-forget `/health` request (`warmUpApi()` in `lib/api.ts`), so a wake-up overlaps with the user typing their password; and the session loader explains itself after 4 seconds ("Waking up the server…") instead of sitting silently.
 
 **Region alignment (done):** the API used to run in Render Singapore while the Neon database is in AWS us-east-1, so every query crossed the Pacific (~200 ms+ per round trip, multiplied by the sequential round trips in a transaction). The API now runs in Render Virginia beside the database; measured from the US East coast, a single-query request dropped from ~0.6–1.0 s to ~0.2 s.
 
