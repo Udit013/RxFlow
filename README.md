@@ -29,7 +29,10 @@ A cloud-native, multi-tenant pharmacy management system. Each signup creates an 
 - **Returns** — customer credit notes *and* dedicated supplier purchase-returns (debit notes), both adjust stock + ledgers
 
 ### Catalog
-- Medicine master catalog with composition, substitutes, schedules, HSN, GST — a shared catalog with **per-pharmacy copy-on-write**: editing a shared medicine saves your pharmacy's own copy and never changes anyone else's
+- **Multi-country medicine database from official open data** — 2,257 products from the U.S. FDA NDC Directory (openFDA) and Health Canada's Drug Product Database, with ATC therapeutic classes; every ingredient verified against NLM RxNorm. Sources and licences are listed in-app (*Medicines → Data sources*)
+- **Search** by brand, generic, active ingredient (any regional name — acetaminophen finds paracetamol), strength, dosage form, ATC code or therapeutic use ("antibiotic", "statin")
+- **Alternatives & variants** — same composition, variants (strength/form/release/route), combinations and similar-use products, each with the differences spelled out and country availability; nothing is presented as interchangeable
+- **Add or edit any medicine** — structured active ingredients (with a quick-entry parser), form detail, route and ATC class; editing a shared medicine saves your pharmacy's own copy and never changes anyone else's
 - **Category management** and fuzzy medicine search / normalization (Pharmarack-style)
 
 ### Stakeholders
@@ -50,7 +53,8 @@ A cloud-native, multi-tenant pharmacy management system. Each signup creates an 
 - **Per-country profiles** (`packages/regional`) — currency, locale, timezone, fiscal year, tax engine, field labels & validation (GSTIN / VAT no. / EIN / TRN, PIN / ZIP / postcode), drug-classification labels, controlled-drug register, payment methods
 - **Tax engines** — India GST (CGST+SGST / IGST), VAT, US sales tax, or none; India keeps GSTR-1/3B, every country gets a tax summary report
 - **Local time** — "today", monthly reports and fiscal-year document numbering follow the pharmacy's timezone and fiscal year
-- **Per-market catalogs** — shared medicines are scoped to the pharmacy's country
+- **Per-market catalogs** — shared medicines are scoped to the pharmacy's country, with an all-markets reference view
+- **Countries** — India, United States, Canada, United Kingdom, UAE, plus a generic international profile
 - **Languages** — app shell in English, Hindi and Spanish; untranslated text falls back to English
 - **Settings → Region & Tax** with a live preview; existing pharmacies default to India and behave exactly as before
 
@@ -73,7 +77,7 @@ A cloud-native, multi-tenant pharmacy management system. Each signup creates an 
 rxflow/                         ← Monorepo (pnpm workspaces + Turborepo)
 ├── apps/
 │   ├── api/                    ← Fastify backend (Node + TypeScript, run via tsx)
-│   └── web/                    ← Next.js 15 frontend (App Router, React 19)
+│   └── web/                    ← Next.js 16 frontend (App Router, React 19)
 ├── packages/
 │   ├── db/                     ← Prisma ORM + PostgreSQL schema
 │   ├── types/                  ← Shared TypeScript types + role matrix
@@ -89,14 +93,14 @@ rxflow/                         ← Monorepo (pnpm workspaces + Turborepo)
 | Layer | Technology |
 |-------|-----------|
 | Backend | Fastify 5 + TypeScript (SSE for live sync) |
-| Frontend | Next.js 15 (App Router) + React 19 + Tailwind + GSAP |
-| Database | PostgreSQL + Prisma |
+| Frontend | Next.js 16 (App Router, Turbopack) + React 19 + Tailwind CSS 4 + GSAP |
+| Database | PostgreSQL + Prisma 7 (node-postgres driver adapter) |
 | State | React Query + Zustand |
 | Auth | JWT access token (memory) + rotating refresh token (httpOnly cookie, per-device sessions), bcrypt |
 | Search | Fuse.js (in-memory) with optional Meilisearch |
 | Exports | jsPDF (invoices), SheetJS (Excel), papaparse (CSV) |
 | Testing | Vitest — money math, invoice GST, document numbering, auth middleware + role matrix, catalog copy-on-write, session hashing, and distributor CSV parsers (pinned to real invoice rows) |
-| CI | GitHub Actions — typecheck + tests + production build on every push/PR |
+| CI | GitHub Actions — dependency audit, typecheck, lint, tests and production build on every push/PR; Dependabot weekly |
 | Build | Turborepo + pnpm |
 
 ### Production hosting (all free tier)
@@ -114,7 +118,7 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for the complete step-by-step guide, includin
 ## Quick start (local)
 
 ### Prerequisites
-- Node.js 20+ · pnpm 9+ · Docker Desktop
+- Node.js 22.12+ (CI and production run Node 26) · pnpm 9+ · Docker Desktop
 
 ### Setup
 ```bash
@@ -155,13 +159,13 @@ pnpm test          # run the unit suite (Vitest)
 pnpm test:watch    # watch mode
 ```
 
-End-to-end API smoke test (51 checks across sessions, roles, tenant isolation, billing, GST/VAT/sales tax and localisation) — against a **local** API and throwaway database only; it refuses to run against any other host:
+End-to-end API smoke test (80 checks across CORS, sessions, roles, tenant isolation, billing, GST/VAT/sales tax, localisation, partial updates and the medicine catalog — search, alternatives, manual compositions, Canada) — against a **local** API and throwaway database only; it refuses to run against any other host:
 
 ```bash
-python3 scripts/e2e/api_smoke.py
+python3 scripts/e2e/api_smoke.py   # API_URL=http://localhost:3011/api/v1 for another local port
 ```
 
-82 tests covering the money- and security-critical logic: the regional tax engines, timezone/fiscal-year boundaries (incl. daylight saving) and per-country validation, collision-safe document numbering, GST/VAT/sales-tax/discount/commission and invoice arithmetic, the auth middleware and role matrix, medicine copy-on-write, refresh-token hashing, and the multi-distributor CSV parsers — the parser tests are pinned to verbatim rows from real supplier invoices, so a config regression can't silently break an import format.
+131 unit tests covering the money- and security-critical logic: the medicine composition model (INN synonyms, salts, strengths, release/route-aware comparison) and catalog search, the regional tax engines, timezone/fiscal-year boundaries (incl. daylight saving) and per-country validation, collision-safe document numbering, GST/VAT/sales-tax/discount/commission and invoice arithmetic, the auth middleware and role matrix, medicine copy-on-write, refresh-token signing and hashing, and the multi-distributor CSV parsers — the parser tests are pinned to verbatim rows from real supplier invoices, so a config regression can't silently break an import format.
 
 ---
 
@@ -173,7 +177,7 @@ All routes are prefixed with `/api/v1`. Interactive docs at `/docs`. Every prote
 |------|------------------|
 | Auth | `POST /auth/login` · `POST /auth/register` · `POST /auth/refresh` · `POST /auth/logout` · `GET /auth/me` |
 | Dashboard | `GET /dashboard` |
-| Medicines | `GET /medicines` · `POST /medicines` · `GET /medicine-intelligence/search` |
+| Medicines | `GET /medicines?search=&market=all` · `POST /medicines` · `PUT /medicines/:id` · `GET /medicines/:id/alternatives` · `GET /medicines/sources` · `POST /medicine-intelligence/search` |
 | Categories | `GET/POST/PATCH/DELETE /categories` |
 | Inventory | `GET /inventory` · `POST /inventory/batches` · `POST /inventory/batches/:id/write-off` · `GET /inventory/insights` · `GET /inventory/alerts/*` |
 | Orders / Invoices | `POST /orders` · `POST /invoices/from-order/:id` · `POST /invoices/:id/credit-note` · `POST /invoices/:id/purchase-return` |
@@ -199,12 +203,25 @@ A Pharmarack-style normalization + matching engine ([packages/medicine-intellige
 
 Uses in-memory Fuse.js by default; plugs into Meilisearch for typo-tolerant full-text search when available.
 
+### Open-data catalog
+
+`packages/db/catalog/build.ts` (developer-run) pulls products for ~120 essential ingredients from openFDA and Health Canada, verifies them, and writes a committed snapshot to `packages/db/catalog/snapshot/`; every deploy loads it idempotently (`catalog/load.ts`). To refresh or extend it (add an ingredient to `catalog/ingredients.ts`):
+
+```bash
+curl -L -o /tmp/dpd.zip https://www.canada.ca/content/dam/hc-sc/documents/services/drug-product-database/allfiles.zip
+unzip -o /tmp/dpd.zip -d /tmp/dpd && pnpm --filter @rxflow/db catalog:build /tmp/dpd
+```
+
+The build fails on any route/form contradiction and records its checks in `snapshot/manifest.json`. Shared composition logic lives in `packages/types/src/composition.ts`.
+
 ---
 
 ## Security model
 
 - **Tenant isolation** — every query is scoped to the caller's pharmacy, and IDs sent in requests (stores, customers, suppliers, batches, medicines) are verified to belong to it.
-- **Sessions** — the 15-minute access token lives only in memory; the 7-day refresh token is an httpOnly, `SameSite=Strict` cookie, rotated on every use and stored only as a SHA-256 hash. Each device has its own session.
+- **Sessions** — the 15-minute access token lives only in memory; the 7-day refresh token is an httpOnly, `SameSite=Strict` cookie, rotated on every use, signed with its own key (it can never pass as an access token) and stored only as a SHA-256 hash. Each device has its own session.
+- **Browser hardening** — the web app sends `X-Frame-Options`/`frame-ancestors` (no clickjacking), `nosniff`, a strict referrer policy, a locked-down `Permissions-Policy` and COOP; HSTS comes from Vercel.
+- **Supply chain** — CI fails on high/critical production advisories; Dependabot proposes grouped weekly updates and holds back releases younger than seven days.
 - **Authorization** — one role matrix decides who can read or change what; viewers are read-only, and unlisted write endpoints are restricted to managers by default.
 - **Abuse protection** — per-route rate limits on auth endpoints, constant-time login responses, single-use 6-digit OTPs with a 5-attempt cap.
 
@@ -247,6 +264,7 @@ For the complete technical handbook — architecture, data model, auth, business
 - Mobile apps (Expo) + desktop (Tauri)
 - e-Invoicing (IRN) + e-Way bill via NIC APIs
 - Redis-backed pub/sub for multi-instance live sync
+- More markets in the open-data catalog (EU via EMA, Australia via PBS) and an Indian source once an openly licensed register exists
 
 ---
 

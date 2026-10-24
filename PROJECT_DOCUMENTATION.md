@@ -96,7 +96,7 @@ RxFlow is a **monorepo** (one Git repository containing multiple independently-d
 
 | Layer | Technology | Hosted on |
 |---|---|---|
-| Frontend | Next.js 15 (App Router) + React 19 + TypeScript + Tailwind | Vercel |
+| Frontend | Next.js 16 (App Router) + React 19 + TypeScript + Tailwind | Vercel |
 | Backend API | Fastify (Node.js) + TypeScript, run via `tsx` | Render (free web service) |
 | Database | PostgreSQL, accessed through Prisma ORM | Neon (serverless Postgres) |
 
@@ -116,7 +116,7 @@ RxFlow is a **monorepo** (one Git repository containing multiple independently-d
                                            │  HTTPS
                                            ▼
                        ┌───────────────────────────────────────┐
-                       │     Frontend — Next.js 15 (Vercel)     │
+                       │     Frontend — Next.js 16 (Vercel)     │
                        │  App Router pages, React components,   │
                        │  React Query for server-state caching  │
                        └───────────────┬─────────────┬──────────┘
@@ -197,7 +197,7 @@ RxFlow/
 │   │                             # financial-year.ts, numbering.ts, pagination.ts, email.ts,
 │   │                             # env.ts, http-error.ts, tenant-guard.ts, medicine-scope.ts,
 │   │                             # session-cookie.ts
-│   └── web/                      # Next.js 15 / React 19 frontend — the "dining room" the user sees
+│   └── web/                      # Next.js 16 / React 19 frontend — the "dining room" the user sees
 │       └── src/
 │           ├── app/               # App Router: every folder here is a URL route
 │           ├── components/        # Reusable UI, grouped by concern (ui/, layout/, purchases/, medicines/)
@@ -261,32 +261,42 @@ RxFlow uses **PostgreSQL**, a relational database — data lives in *tables* wit
 ### 4.2 The Prisma client singleton
 
 ```ts
-// packages/db/src/index.ts
+// packages/db/src/index.ts (Prisma 7)
+import { PrismaPg } from '@prisma/adapter-pg'
+import { PrismaClient } from './generated/prisma/client.js'
+
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient | undefined }
-export const prisma = globalForPrisma.prisma ?? new PrismaClient({
-  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-})
+function createClient() {
+  // Prisma 7 has no query-engine binary: queries go through node-postgres via a driver adapter.
+  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL, connectionTimeoutMillis: 10_000 })
+  return new PrismaClient({ adapter, log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'] })
+}
+export const prisma = globalForPrisma.prisma ?? createClient()
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
-export * from '@prisma/client'
+export * from './generated/prisma/client.js'
 ```
+
+The client is generated into `packages/db/src/generated/` (gitignored) by `prisma generate`, which every build runs. Dropping the Rust query engine removed a ~15 MB binary from the API's cold start; the 10-second connect timeout covers a Neon compute waking from idle (node-postgres has no timeout by default).
 
 **Why this pattern exists:** in development, the server process restarts frequently (hot reload). Without stashing the client on `globalThis`, every restart would create a brand-new `PrismaClient` — and therefore a brand-new connection pool — while the old one might still be alive, quickly exhausting the database's connection limit. Stashing it on `globalThis` means restarts reuse the same client instance instead of leaking connections. This guard is skipped in production, where the process doesn't hot-reload.
 
 ### 4.3 Two connection strings, and why
 
-```prisma
-datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")   // pooled — used for every normal query at runtime
-  directUrl = env("DIRECT_URL")     // direct/unpooled — used only for schema changes (DDL)
-}
+```ts
+// packages/db/prisma.config.ts — read by the Prisma CLI only
+datasource: { url: process.env.DIRECT_URL ?? process.env.DATABASE_URL ?? '' }  // direct — schema changes (DDL)
+
+// packages/db/src/index.ts — the running app
+new PrismaPg({ connectionString: process.env.DATABASE_URL })                  // pooled — every normal query
 ```
 
-Neon (the Postgres host) offers a **pooled** connection (routed through PgBouncer, which multiplexes many application connections over fewer real database connections — essential for a serverless-friendly database that many short-lived processes might connect to at once) and a **direct** connection (a real, unpooled connection to the database). Schema-changing statements (`CREATE TABLE`, `ALTER TABLE`, i.e. **DDL** — Data Definition Language) are **not supported reliably over PgBouncer's transaction-pooling mode**, so `prisma db push` and migrations must use `directUrl`, while every runtime query (`SELECT`/`INSERT`/`UPDATE` — **DML**, Data Manipulation Language) uses the pooled `url`. Getting this backwards is a real, documented failure mode this project hit and fixed during deployment — see [Section 15](#15-deployment-architecture).
+Neon (the Postgres host) offers a **pooled** connection (routed through PgBouncer, which multiplexes many application connections over fewer real database connections — essential for a serverless-friendly database that many short-lived processes might connect to at once) and a **direct** connection (a real, unpooled connection to the database). Schema-changing statements (`CREATE TABLE`, `ALTER TABLE`, i.e. **DDL** — Data Definition Language) are **not supported reliably over PgBouncer's transaction-pooling mode**, so `prisma db push` and migrations must use the direct URL (`prisma.config.ts`), while every runtime query (`SELECT`/`INSERT`/`UPDATE` — **DML**, Data Manipulation Language) uses the pooled `url`. Getting this backwards is a real, documented failure mode this project hit and fixed during deployment — see [Section 15](#15-deployment-architecture).
 
 ### 4.4 Why `prisma db push`, not `prisma migrate`
 
-Most Prisma projects use `prisma migrate dev` to generate a versioned history of SQL migration files. RxFlow instead uses **`prisma db push`**, which directly synchronizes the live database to match whatever `schema.prisma` currently says, with no migration history file. The trade-off: you lose the clean, replayable history that `migrate` gives you, but you avoid a specific failure this project hit repeatedly in production — a fresh `prisma migrate deploy` run against a database that already had some objects (like enum types) created outside the migration history would fail with `"type X already exists"`. Instead, schema changes are hand-written as **idempotent SQL files** in `packages/db/prisma/manual-migrations/` (every statement uses `ADD COLUMN IF NOT EXISTS`, `CREATE TABLE IF NOT EXISTS`, etc.), which can be re-run safely any number of times, and `db push --accept-data-loss` is run non-fatally in the Render build step (a failure there logs a message and continues rather than blocking deployment).
+Most Prisma projects use `prisma migrate dev` to generate a versioned history of SQL migration files. RxFlow instead uses **`prisma db push`**, which directly synchronizes the live database to match whatever `schema.prisma` currently says, with no migration history file. The trade-off: you lose the clean, replayable history that `migrate` gives you, but you avoid a specific failure this project hit repeatedly in production — a fresh `prisma migrate deploy` run against a database that already had some objects (like enum types) created outside the migration history would fail with `"type X already exists"`. Instead, schema changes are hand-written as **idempotent SQL files** in `packages/db/prisma/manual-migrations/` (every statement uses `ADD COLUMN IF NOT EXISTS`, `CREATE TABLE IF NOT EXISTS`, etc.), which can be re-run safely any number of times, and `db push` is run non-fatally in the Render build step (a failure there logs a message and continues rather than blocking deployment).
+
+**`db push` never runs with `--accept-data-loss`.** It used to — and an audit found that the unused `multiSchema` preview feature made Prisma read every existing table as foreign, so each deploy's push computed a plan that *dropped and recreated all 36 tables*. It only ever failed because its first statement (`CREATE TYPE`) collided with an existing enum. With the preview flag removed the schema diffs empty against a migrated database, and without the flag Prisma refuses any destructive step (verified by simulating a drifted column holding data: push refused, the data stayed). Additive changes still apply; anything else goes through a hand-written migration.
 
 ### 4.5 Every table, grouped by what it's for
 
@@ -313,8 +323,10 @@ All of this lives in `apps/api/src/utils/medicine-scope.ts`: `catalogWhere(tenan
 
 | Table | Purpose |
 |---|---|
-| `Medicine` | The master record — name, generic name, brand, manufacturer, dosage form, MRP, HSN code, GST rate, drug schedule, plus an extensive set of MARG-ERP-style fields added later (`rateA/B/C` tiered pricing, `division`, `packing`, `taxType`, `cess`, min/max stock defaults), and the ownership columns `ownerTenantId` / `forkedFromId` described above |
-| `MedicineComposition` | The active ingredients making up a medicine (a combination drug can have several) |
+| `Medicine` | The master record — name, generic name, brand, manufacturer, dosage form, MRP, HSN code, GST rate, drug schedule, plus an extensive set of MARG-ERP-style fields added later (`rateA/B/C` tiered pricing, `division`, `packing`, `taxType`, `cess`, min/max stock defaults), the ownership columns `ownerTenantId` / `forkedFromId` described above, the composition keys `ingredientKey` / `compositionKey`, classification `atcCode` / `therapeuticClass`, `dosageFormDetail` / `route`, and provenance `dataSource` / `sourceRef` / `sourceUrl` / `sourceRetrievedAt` (unique per source record) |
+| `MedicineComposition` | The active ingredients making up a medicine (a combination drug can have several) — normalised INN `ingredient`, separate `salt`, canonical `strengthNum` + `unit` (see Section 10.5) |
+| `MedicineDataSource` | One row per open-data source behind the shared catalog: publisher, licence, attribution, snapshot version and record count |
+| `IngredientClass` | ATC code and group name per active-ingredient set (from Health Canada), applied to any product with that composition |
 | `MedicineSubstitute` | Which medicines can substitute for which, with a `confidence` score |
 | `Manufacturer` | Normalized manufacturer names + aliases |
 | `MedicineCategory` | **Tenant-scoped** — each pharmacy can define its own category labels (e.g. "Antibiotics"), linked to medicines by matching the category **name as a string**, not a foreign key. Renaming or deleting a category only rewrites the tenant's **own** medicines; assigning a category to a shared medicine is an edit, so it creates the tenant's copy |
@@ -443,7 +455,7 @@ user.tenant.isActive?
         ↓ active
 create AuthSession row (new sid) — other devices' sessions are untouched
 sign accessToken  (15m, {userId, tenantId, role, storeIds})
-sign refreshToken (7d,  {userId, sid, jti}) → store SHA-256 in AuthSession.tokenHash
+sign refreshToken (7d,  {userId, sid, jti}, own key JWT_REFRESH_SECRET) → store SHA-256 in AuthSession.tokenHash
 Set-Cookie: rxflow_rt=<refreshToken>; HttpOnly; SameSite=Strict; Secure; Path=/api/v1/auth
         ↓
 return { accessToken, expiresIn: 900, user: {...full profile...} }   ← no refresh token in the body
@@ -483,6 +495,8 @@ ensureSession():   // dashboard layout, on every page load
 **Backend refresh logic** (`POST /auth/refresh`): reads the token from the cookie, verifies the signature, loads the user (must be active, tenant must be active), loads the `AuthSession` named by `sid` (must exist, belong to that user, and not be expired), and compares the SHA-256 of the presented token with `tokenHash`. On success it issues a new access token and **rotates** the refresh token — new `jti`, new hash, extended expiry — in a fresh cookie. Any failure clears the cookie and returns 401.
 
 **Per-device sessions** — signing in on the tablet no longer logs out the counter PC: each login creates its own `AuthSession`. `POST /auth/logout` works even with an expired access token (the cookie identifies the session) and deletes only that device's session; a password reset deletes all of them.
+
+**Separate signing keys.** Refresh tokens are signed with `JWT_REFRESH_SECRET` (`apps/api/src/utils/refresh-token.ts`), access tokens with `JWT_SECRET`, so neither can stand in for the other and leaking one key doesn't let anyone mint sessions. Tokens issued under the old shared key are accepted once — only if their payload is refresh-shaped — and rotated onto the new key, so the switch logged nobody out.
 
 **Migrating older sessions:** sessions created before this design kept the refresh token in `localStorage`. On the first refresh after the upgrade, the client sends that token once in the request body; the API validates it against the legacy `User.refreshToken` slot, opens a proper cookie session, and clears the slot. The client deletes the `localStorage` copy before sending it, so the exchange happens exactly once.
 
@@ -527,9 +541,9 @@ export async function authenticate(request, reply) {
   try { await request.jwtVerify() }
   catch { return reply.status(401).send(...) }
 
-  // A refresh token is signed with the same key but carries only {userId, sid, jti}.
-  // Without this check it could be replayed as an access token, leaving tenantId undefined —
-  // and Prisma silently DROPS `where: { tenantId: undefined }`, returning every tenant's rows.
+  // Refresh tokens carry only {userId, sid, jti} and are signed with their own key, so they
+  // fail jwtVerify() here. This check stays as a second line of defence: a token without a
+  // tenant would leave tenantId undefined, and Prisma silently DROPS `where: { tenantId: undefined }`.
   const { userId, tenantId, role } = request.user
   if (!userId || !tenantId || !role) return reply.status(401).send(...)
 
@@ -1245,6 +1259,43 @@ Results deduped by medicine ID, sorted by score descending, sliced to `limit`.
 
 `meilisearch-client.ts` defines index settings for an optional, much faster full-text search engine (typo tolerance, curated synonyms for ~14 common Indian generic↔brand pairs like `paracetamol ↔ acetaminophen/pcm/para`) — but per the deployment documentation, **Meilisearch isn't actually deployed** in the free-tier production stack. The app falls back entirely to the in-memory `FuzzyMedicineMatcher` described above. This is a real, honest example of designing for a future upgrade path (swap in a real search engine once traffic or catalog size justifies its hosting cost) without blocking the current free-tier deployment on it.
 
+### 10.5 The multi-country open-data catalog
+
+**The problem.** A brand name means nothing across borders — India's *Dolo 650*, the US's *Tylenol* and Canada's *Tylenol* are all paracetamol — and a pharmacy needs to know what else contains the same thing, in which strength and form, and whether a "similar" product is actually a different drug. That needs structured compositions and reliable data, not free text.
+
+**Where the data comes from** (all free, official, openly licensed; listed in-app at *Medicines → Data sources*):
+
+| Source | Market | Licence | Used for |
+|---|---|---|---|
+| U.S. FDA National Drug Code Directory (openFDA) | US | Public domain (CC0) | products, labelers, strengths, forms, routes, Rx/OTC/DEA tier, UPC barcodes |
+| Health Canada Drug Product Database (bulk extract) | CA | Open Government Licence – Canada | marketed products, DINs, strengths, forms, routes, schedules, **ATC codes** |
+| NLM RxNorm / RxClass (RxNav APIs) | — | Free (NLM terms) | verifying every ingredient name; naming ATC level-4 groups |
+
+India has no openly licensed machine-readable drug register, so the ten Indian rows remain clearly labelled demo data (`dataSource = 'DEMO_SEED'`, unverified); Indian pharmacies add or correct their own entries.
+
+**How it is built.** `packages/db/catalog/build.ts` is run by a developer (it needs the network), never by production. For ~120 essential ingredients it pulls US and Canadian products, normalises them, keeps a varied handful per ingredient set (brands first, manufacturers before repackagers), and writes a reviewable snapshot to `catalog/snapshot/*.json`, which is committed. Every deploy loads it with `catalog/load.ts` — inserting new rows, refreshing changed ones only when the snapshot version changes, never deleting. Production therefore never depends on a third-party API being up.
+
+**Verification gates in the build.** Every ingredient name must resolve in RxNorm (all 203 do); every strength must parse; and the build *fails* on any route/form contradiction — an inhaled product mapped to an oral form, an intravenous product shown as a syrup. Those gates caught real mapping bugs during development (a nebuliser solution labelled "syrup", a Diskus inhaler labelled "powder").
+
+**The composition model** (`packages/types/src/composition.ts`, shared by API, importer and web form):
+- Ingredient names are normalised to the WHO INN (`acetaminophen → paracetamol`, `albuterol → salbutamol`), with the **salt kept separately** (`amlodipine` + `besylate`) — esters that change the drug (`fluticasone propionate` vs `furoate`) are never stripped.
+- Strengths are canonicalised (`1 g = 1000 mg`, `250 mg/5 mL = 50 mg/mL`, `10 mg/g = 1%`).
+- Two keys index every product: `ingredientKey` (`amoxicillin+clavulanic acid`) and `compositionKey` (`amoxicillin@500mg+clavulanic acid@125mg`).
+- Therapeutic class comes from the ATC code Health Canada assigns to the same ingredient set (93.7% of rows classified; the rest are combinations no Canadian product contains).
+
+**Alternatives never claim interchangeability.** `GET /medicines/:id/alternatives` groups products by relation, and every row lists what differs:
+
+| Group | Meaning |
+|---|---|
+| Same composition | same active moieties, strengths, dosage form, release mechanism and route |
+| Variants | same moieties, but a different strength, form, release (ER vs IR) or route |
+| Combinations | shares an ingredient but adds or lacks others |
+| Similar use | no shared ingredient, same ATC level-4 group — explicitly *not* interchangeable |
+
+A notice on every response states that substitution follows local law and a pharmacist's or prescriber's judgement, and other countries' products are flagged as "other market".
+
+**Search** (`buildSearchWhere`) accepts brand, generic, ingredient (any regional name), strength (`500mg`, `250mg/5ml`), form words (`tab`, `syrup`), ATC codes and everyday therapeutic terms (`antibiotic`, `statin`, `blood pressure`), every term required. **Manual entry** uses a structured ingredients editor with a "fill from text" quick entry; edits re-key the composition, and editing a shared row still saves the pharmacy's own copy.
+
 #### 💬 Interview Questions — Section 10
 
 **Beginner**
@@ -1351,7 +1402,7 @@ This was verified against **real invoice files from five actual distributors** a
 
 | Library | Why it's here | What breaks/gets harder without it |
 |---|---|---|
-| **Next.js 15 (App Router) + React 19** | File-based routing, React Server/Client Component model, built-in bundling/optimization, one framework for the whole frontend | A bare Vite+React SPA would need a router library (react-router) and separate build tooling wired up by hand |
+| **Next.js 16 (App Router) + React 19** | File-based routing, React Server/Client Component model, built-in bundling/optimization, one framework for the whole frontend | A bare Vite+React SPA would need a router library (react-router) and separate build tooling wired up by hand |
 | **@tanstack/react-query** | Server-state caching, background refetching, and the `invalidateQueries` mechanism that powers real-time sync (Section 9) | Every page would need its own hand-rolled loading/error/caching logic, and there'd be no single, app-wide "please refetch this" signal |
 | **zustand** | The one piece of genuinely global client state (notifications) | Redux would work but is much heavier machinery (actions, reducers, dispatch, middleware) for a single small store |
 | **react-hook-form + @hookform/resolvers + zod** | Form state management with schema-based validation, shared validation schemas with the backend's mental model | Manually tracking every field's value/error/touched state in `useState` for every form is repetitive and error-prone |
@@ -1391,8 +1442,8 @@ test: { include: ['apps/**/src/**/*.test.ts', 'packages/**/src/**/*.test.ts'], e
 ```
 One test runner configuration at the repository root, rather than a separate one per app — `pnpm test` from anywhere in the repo discovers and runs every `.test.ts` file across the entire monorepo in one pass.
 
-### 13.5 `apps/web/tailwind.config.ts`
-Defines the design-token layer (the "Dispensary Ledger" system — see Section 7): a custom warm-neutral color scale replacing Tailwind's default cool grays, a signature viridian-green brand color, a deliberately sharp (2–8px) border-radius scale, and a warm, low-opacity shadow scale. This is the single file that, if changed, would re-theme every component in the app at once, since every component references these named tokens (`bg-brand-600`, `text-surface-500`) rather than hardcoded hex values.
+### 13.5 Design tokens (`apps/web/src/app/globals.css`, Tailwind CSS 4)
+Tailwind 4 is configured in CSS: the `@theme` block in `globals.css` defines the design-token layer (the "Dispensary Ledger" system — see Section 7): a custom warm-neutral color scale replacing Tailwind's default cool grays, a signature viridian-green brand color, a deliberately sharp (2–8px) border-radius scale, and a warm, low-opacity shadow scale. This is the single file that, if changed, would re-theme every component in the app at once, since every component references these named tokens (`bg-brand-600`, `text-surface-500`) rather than hardcoded hex values.
 
 ### 13.6 Environment variables (`.env`)
 
@@ -1445,15 +1496,17 @@ Every push to `main` and every pull request runs, in order:
 2. Install pnpm 9.1.0, Node 26 — the same major production runs (with pnpm cache)
 3. pnpm install --frozen-lockfile   (fails if the lockfile is out of sync, as Vercel's install would)
 4. Generate the Prisma client (packages/db)
-5. Typecheck apps/web (tsc --noEmit)
-6. Typecheck apps/api (tsc --noEmit)
-7. Lint apps/web — including React's rules-of-hooks (a hook after an early return once crashed the invoice page)
+5. pnpm audit --prod --audit-level=high   (fails on high/critical advisories in shipped dependencies)
+6. pnpm type-check — all five workspaces
+7. pnpm lint — ESLint 10 flat config over every workspace, including React's rules-of-hooks
+   (a hook after an early return once crashed the invoice page)
 8. Run the full test suite (pnpm test)
-9. Production build the frontend (pnpm --filter @rxflow/web build)
+9. Production build the frontend (pnpm --filter @rxflow/web build, Turbopack)
 ```
+Dependabot (`.github/dependabot.yml`) proposes grouped weekly updates for npm packages and GitHub Actions, holding back any release younger than seven days.
 Concurrency is configured to **cancel an in-progress run** if a new commit lands on the same branch/PR before the previous run finished — no point finishing a CI run against code that's already been superseded.
 
-**Why typecheck both apps separately, rather than one combined `tsc` pass?** They have different `tsconfig.json` settings (the API runs via `tsx` and never emits compiled output; the frontend is built by Next.js's own compiler) — checking them independently catches type errors specific to each app's actual build target, rather than a single merged check that might miss an error only one of the two configurations would actually surface.
+**Why typecheck each workspace separately, rather than one combined `tsc` pass?** They have different `tsconfig.json` settings (the API runs via `tsx` and never emits compiled output; the frontend is built by Next.js's own compiler) — checking them independently catches type errors specific to each app's actual build target, rather than a single merged check that might miss an error only one of the two configurations would actually surface.
 
 #### 💬 Interview Questions — Sections 12–14
 
@@ -1476,7 +1529,7 @@ Concurrency is configured to **cancel an in-progress run** if a new commit lands
 ┌─────────────┐        ┌──────────────┐        ┌─────────────┐
 │   Vercel     │        │    Render     │        │     Neon     │
 │  (frontend)  │───────▶│   (backend)   │───────▶│  (database)  │
-│  Next.js 15  │  HTTPS │   Fastify 5   │ Prisma │  PostgreSQL  │
+│  Next.js 16  │  HTTPS │   Fastify 5   │ Prisma │  PostgreSQL  │
 │  push-to-    │        │  persistent   │        │  serverless, │
 │  deploy      │        │  Node process │        │  auto-pause  │
 └─────────────┘        └──────────────┘        └─────────────┘
@@ -1503,14 +1556,16 @@ npm install -g pnpm@9.1.0 && pnpm install --prod=false --frozen-lockfile=false &
 
 # packages/db/scripts/deploy-db.sh
 prisma generate
-prisma db push --accept-data-loss || echo "already applied"     # creates a FRESH database; non-fatal
+prisma db push || echo "refused or failed"     # fresh DB / additive changes only; never destructive; non-fatal
 for f in $(cat prisma/manual-migrations/IDEMPOTENT); do          # each re-runnable; FATAL on error
   prisma db execute --file prisma/manual-migrations/$f
 done
-tsx prisma/seed.ts || echo "seed skipped"                          # idempotent demo data
+tsx scripts/check-runtime-db.ts                # connects exactly like the API (adapter + pooled URL); FATAL
+tsx prisma/seed.ts || echo "seed skipped"      # idempotent demo data
+tsx catalog/load.ts || echo "catalog load failed"  # open-data medicine catalog snapshot; idempotent
 ```
 
-On a **redeploy** where the schema hasn't changed, `db push` would otherwise fail with errors like "type X already exists" (re-attempting to create enum types that are already present) and — without the `|| echo ...` fallback — that failure would **block the entire deployment**, even though the actual application code changes have nothing to do with the database schema. Making it non-fatal means a redeploy that only changed application logic (a bug fix, a new UI feature) isn't blocked by a schema-sync step that has nothing new to do. The trade-off, and a real failure mode this project hit in practice: if a schema change genuinely *does* need to reach production and `db push` fails for an unrelated reason, that failure is now silent — the deploy "succeeds" while the database is actually out of sync with the code that expects the new columns to exist. The mitigating practice this project follows: every schema change ships as its own idempotent, hand-written SQL file in `manual-migrations/` (`IF NOT EXISTS` guards, constraints added in `DO … EXCEPTION WHEN duplicate_object` blocks). Every file listed in `manual-migrations/IDEMPOTENT` (currently the ownership/sessions migration and the localisation migration) runs **automatically and fatally** in the build — new schema changes ship with the code, with no Render dashboard edits: if it fails, the build fails and Render keeps the previous release live, instead of shipping code that expects columns the database doesn't have. It was verified by running it twice in a row against a fresh database.
+On a **redeploy** where the schema hasn't changed, `db push` would otherwise fail with errors like "type X already exists" (re-attempting to create enum types that are already present) and — without the `|| echo ...` fallback — that failure would **block the entire deployment**, even though the actual application code changes have nothing to do with the database schema. Making it non-fatal means a redeploy that only changed application logic (a bug fix, a new UI feature) isn't blocked by a schema-sync step that has nothing new to do. The trade-off, and a real failure mode this project hit in practice: if a schema change genuinely *does* need to reach production and `db push` fails for an unrelated reason, that failure is now silent — the deploy "succeeds" while the database is actually out of sync with the code that expects the new columns to exist. The mitigating practice this project follows: every schema change ships as its own idempotent, hand-written SQL file in `manual-migrations/` (`IF NOT EXISTS` guards, constraints added in `DO … EXCEPTION WHEN duplicate_object` blocks). Every file listed in `manual-migrations/IDEMPOTENT` (currently the ownership/sessions migration and the localisation migration) runs **automatically and fatally** in the build — new schema changes ship with the code, with no Render dashboard edits: if it fails, the build fails and Render keeps the previous release live, instead of shipping code that expects columns the database doesn't have. It was verified by running it twice in a row against a fresh database. The runtime connection check exists because `/health` doesn't touch the database: without it, a release whose driver couldn't reach Neon would pass Render's health check and go live broken. With it, the build fails and the previous release stays up.
 
 ### 15.4 Cold starts: what was slow, and what changed
 
