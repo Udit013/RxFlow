@@ -2,7 +2,7 @@
   "name": "rxflow",
   "version": "0.1.0",
   "private": true,
-  "description": "RxFlow — Connected Pharma Distribution Network",
+  "description": "RxFlow \u2014 Connected Pharma Distribution Network",
   "workspaces": [
     "apps/*",
     "packages/*"
@@ -30,10 +30,10 @@
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.72.0",
     "vite": "^8.3.5",
-    "vitest": "^4.1.12"
+    "vitest": "^5.0.5"
   },
   "engines": {
-    "node": ">=20.0.0 <27.0.0",
+    "node": ">=22.12.0 <27.0.0",
     "pnpm": ">=9.0.0"
   },
   "packageManager": "pnpm@9.1.0",

@@ -20,12 +20,11 @@
     "@prisma/adapter-pg": "^7.10.1",
     "@prisma/client": "^7.10.1",
     "@rxflow/types": "workspace:*",
-    "bcryptjs": "^2.4.3"
+    "bcryptjs": "^3.0.3"
   },
   "devDependencies": {
     "prisma": "^7.10.1",
     "typescript": "^6.0.3",
-    "@types/bcryptjs": "^2.4.6",
     "tsx": "^4.23.15"
   }
 }
