@@ -4,8 +4,9 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["fullTextSearch", "multiSchema"]
+  // No previewFeatures: `multiSchema` (never used) made Prisma read every existing table as
+  // foreign, so `db push` planned to DROP and recreate all of them.
+  provider = "prisma-client-js"
 }
 
 datasource db {
