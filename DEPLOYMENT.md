@@ -200,6 +200,10 @@ curl -s -o /dev/null -w "%{http_code}\n" -X POST https://rxflow-api-us.onrender.
 
 If you want the demo workspace's data gone too, delete it from the app (Settings → Delete workspace, typing "RxFlow Demo Pharmacy") while signed in as that user *before* disabling it. Do not set `SEED_DEMO` on Render.
 
+### Verify a deploy
+
+`curl -s https://rxflow-api-us.onrender.com/health` returns `"commit":"<7-char sha>"`; it must match the commit you pushed. In Render's deploy log a normal build prints `demo workspace not seeded (demo seeding is opt-in…)` — if you instead see `Seed complete`, `SEED_DEMO` is set; remove it.
+
 ### New environment variable
 
 `REFRESH_REUSE_GRACE_MS` (optional, default `30000`): how long a just-rotated refresh token is still accepted as a concurrent request. Leave unset in production.
