@@ -9,7 +9,7 @@
 #   3. apply every migration listed in prisma/manual-migrations/IDEMPOTENT, in order — each is
 #      safe to re-run, and a failure here FAILS the build so the previous release stays live
 #   4. check the runtime connection (driver adapter + pooled DATABASE_URL) — FATAL on failure
-#   5. seed demo data (idempotent, non-fatal)
+#   5. seed the demo workspace ONLY when SEED_DEMO=true (it has a public login; off by default)
 #   6. load the open-data medicine catalog snapshot (idempotent, non-fatal — see catalog/load.ts)
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -25,5 +25,5 @@ while IFS= read -r file || [ -n "$file" ]; do
 done < prisma/manual-migrations/IDEMPOTENT
 
 pnpm exec tsx scripts/check-runtime-db.ts
-pnpm exec tsx prisma/seed.ts || echo "seed skipped (non-fatal)"
+pnpm exec tsx prisma/seed.ts || echo "seed failed (non-fatal)"
 pnpm exec tsx catalog/load.ts || echo "catalog load failed (non-fatal) — the previous catalog stays in place"

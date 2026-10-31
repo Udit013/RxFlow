@@ -71,7 +71,7 @@ The schema is created automatically on first API deploy (see step 2). No manual 
    ```bash
    pnpm --filter @rxflow/api deploy:seed
    ```
-   This creates the demo tenant + login `admin@rxflow.in` / `admin123` and sample medicines.
+   **Local development only.** With `SEED_DEMO=true` this creates a demo tenant with the publicly documented login `admin@rxflow.in` / `admin123`. It refuses `NODE_ENV=production`, and deploys never run it for you. Production should have no demo account — see "Disable the demo login" below.
 5. Verify: open `https://YOUR-API.onrender.com/health` → should return `{"status":"ok"}`.
 
 > First request after idle is slow (cold start). That's the free tier. The health check keeps it warmer than nothing.
@@ -175,3 +175,32 @@ Until you add BullMQ/Redis, run periodic tasks (daily backup, expiry sweep) with
 ## 8. Updating after launch
 
 Push to `main` → Render and Vercel both auto-deploy. The API re-runs `prisma db push` (syncs any schema changes), the frontend rebuilds. That's it.
+
+---
+
+## Disable the demo login on an existing deployment
+
+Earlier deploys seeded `admin@rxflow.in` / `admin123` into production. New deploys no longer do, but **nothing removes an account that already exists**. Check, and if present disable it (not destructive — nothing is deleted). In the Neon SQL editor:
+
+```sql
+-- Does it exist?
+SELECT id, email, "isActive", "tenantId" FROM "User" WHERE lower(email) = 'admin@rxflow.in';
+
+-- Disable it and end its sessions (reversible: set "isActive" back to true).
+UPDATE "User" SET "isActive" = false, "refreshToken" = NULL WHERE lower(email) = 'admin@rxflow.in';
+DELETE FROM "AuthSession" WHERE "userId" IN (SELECT id FROM "User" WHERE lower(email) = 'admin@rxflow.in');
+```
+
+Then confirm from a terminal that the login is refused (expect `401`):
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" -X POST https://rxflow-api-us.onrender.com/api/v1/auth/login \
+  -H 'Content-Type: application/json' -d '{"email":"admin@rxflow.in","password":"admin123"}'
+```
+
+If you want the demo workspace's data gone too, delete it from the app (Settings → Delete workspace, typing "RxFlow Demo Pharmacy") while signed in as that user *before* disabling it. Do not set `SEED_DEMO` on Render.
+
+### New environment variable
+
+`REFRESH_REUSE_GRACE_MS` (optional, default `30000`): how long a just-rotated refresh token is still accepted as a concurrent request. Leave unset in production.
+

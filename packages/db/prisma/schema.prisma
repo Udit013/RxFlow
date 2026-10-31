@@ -347,6 +347,11 @@ model AuthSession {
   id         String   @id
   userId     String
   tokenHash  String
+  // The token this one replaced, kept briefly so two requests racing on the same cookie (two
+  // tabs) aren't mistaken for theft. Presenting it AFTER the grace window is treated as reuse
+  // of a rotated-out token and revokes the session.
+  prevTokenHash String?
+  rotatedAt     DateTime?
   userAgent  String?
   createdAt  DateTime @default(now())
   lastUsedAt DateTime @default(now())

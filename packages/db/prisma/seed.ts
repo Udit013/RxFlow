@@ -1,11 +1,17 @@
 import { prisma, TenantType, UserRole, SubscriptionPlan } from '../src/index.js'
 import bcrypt from 'bcryptjs'
+import { demoSeedDecision } from './seed-guard.js'
 
 async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 12)
 }
 
 async function main() {
+  const decision = demoSeedDecision(process.env)
+  if (!decision.seed) {
+    console.info(`   demo workspace not seeded (${decision.reason})`)
+    return
+  }
   console.info('🌱 Seeding RxFlow database...')
 
   // ── Demo Tenant ──────────────────────────────────────────────────────────

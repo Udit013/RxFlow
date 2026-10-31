@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { subscribe, openSseStream } from '../utils/events.js'
+import { isRevoked, trackStream } from '../utils/revocation.js'
 
 export async function eventRoutes(app: FastifyInstance) {
   // GET /api/v1/events?token=...
@@ -16,7 +17,8 @@ export async function eventRoutes(app: FastifyInstance) {
       return reply.status(401).send({ success: false, error: 'Invalid token' })
     }
     const tenantId = decoded.tenantId
-    if (!tenantId) return reply.status(401).send({ success: false, error: 'No tenant in token' })
+    if (!tenantId || !decoded.userId) return reply.status(401).send({ success: false, error: 'No tenant in token' })
+    if (isRevoked(decoded.userId, decoded.iat)) return reply.status(401).send({ success: false, error: 'Invalid token' })
 
     const raw = openSseStream(reply)
 
@@ -29,9 +31,13 @@ export async function eventRoutes(app: FastifyInstance) {
       try { raw.write(`: heartbeat\n\n`) } catch { /* ignore */ }
     }, 25_000)
 
+    // Closed by revokeUser() when the user is deactivated or demoted.
+    const untrack = trackStream(decoded.userId, () => raw.end())
+
     request.raw.on('close', () => {
       clearInterval(heartbeat)
       unsub()
+      untrack()
     })
 
     // Don't reply.send() — connection stays open

@@ -1,5 +1,6 @@
 import type { FastifyRequest, FastifyReply } from 'fastify'
 import { canAccess, type JwtPayload, type UserRole } from '@rxflow/types'
+import { isRevoked } from '../utils/revocation.js'
 
 declare module '@fastify/jwt' {
   interface FastifyJWT {
@@ -21,6 +22,10 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
   // and Prisma silently DROPS `where: { tenantId: undefined }`, exposing every tenant's rows.
   const { userId, tenantId, role } = request.user ?? ({} as Partial<JwtPayload>)
   if (!userId || !tenantId || !role) {
+    return reply.status(401).send({ success: false, error: 'Unauthorized' })
+  }
+  // Deactivated or demoted users lose their still-valid access tokens immediately.
+  if (isRevoked(userId, (request.user as { iat?: number }).iat)) {
     return reply.status(401).send({ success: false, error: 'Unauthorized' })
   }
   // Central role matrix (packages/types → canAccess). Every protected route passes through

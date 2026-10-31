@@ -26,8 +26,8 @@ services:
     # schema, but on an already-provisioned DB `db push` errors with "type already
     # exists" — which is benign, so we let the build continue. Idempotent manual SQL for
     # columns added since then runs next and IS fatal: a failed build keeps the previous
-    # release live instead of shipping code against a schema that lacks its columns. The seed is idempotent
-    # (medicines find-then-create, everything else upserts) and populates the catalog.
+    # release live instead of shipping code against a schema that lacks its columns. The demo seed is OPT-IN (SEED_DEMO=true,
+    # never set here: it has a public login) and refused in production; the catalog loads from its snapshot.
     buildCommand: |
       npm install -g pnpm@9.1.0
       pnpm install --prod=false --frozen-lockfile=false

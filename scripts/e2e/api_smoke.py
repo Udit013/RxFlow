@@ -2,17 +2,17 @@
 """
 End-to-end API smoke test — runs against a LOCAL API backed by a throwaway database.
 
-    # fresh DB → schema + migrations + demo seed
-    DATABASE_URL=postgresql://…localhost… DIRECT_URL=… bash packages/db/scripts/deploy-db.sh
-    # start the API (any JWT secrets ≥32 chars)
-    cd apps/api && DATABASE_URL=… JWT_SECRET=… JWT_REFRESH_SECRET=… NODE_ENV=test tsx src/server.ts
+    # fresh DB → schema + migrations + demo seed (the demo login is opt-in: SEED_DEMO=true)
+    SEED_DEMO=true DATABASE_URL=postgresql://…localhost… DIRECT_URL=… bash packages/db/scripts/deploy-db.sh
+    # start the API (any JWT secrets ≥32 chars; a short refresh-reuse grace keeps the test fast)
+    cd apps/api && DATABASE_URL=… JWT_SECRET=… JWT_REFRESH_SECRET=… REFRESH_REUSE_GRACE_MS=1500 NODE_ENV=test tsx src/server.ts
     # run
     python3 scripts/e2e/api_smoke.py            # API_URL defaults to http://localhost:3001/api/v1
 
 It creates tenants, users and documents, so it refuses to run against anything but localhost.
 Uses the demo login from packages/db/prisma/seed.ts. Exit code 1 on any failure.
 """
-import json, os, re, sys, urllib.request, urllib.error
+import json, os, re, sys, threading, time, http.client, urllib.request, urllib.error
 from urllib.parse import urlparse
 
 B = os.environ.get('API_URL', 'http://localhost:3001/api/v1')
@@ -20,6 +20,7 @@ if urlparse(B).hostname not in ('localhost', '127.0.0.1'):
     sys.exit(f'Refusing to run against {B}: this test writes data. Point API_URL at a local API.')
 
 ok = bad = 0
+GRACE = float(os.environ.get('REFRESH_REUSE_GRACE_MS', '1500')) / 1000  # must match the API's setting
 def check(name, cond, extra=''):
     global ok, bad
     if cond: ok += 1; print('PASS', name)
@@ -61,9 +62,20 @@ code, j, _, _ = login('admin@rxflow.in', 'wrong-password')
 check('wrong password → 401 Invalid credentials', code == 401 and j.get('error') == 'Invalid credentials', (code, j))
 code, j, _, rt2 = req('POST', '/auth/refresh', {}, cookie=rt)
 check('refresh rotates the cookie', code == 200 and rt2 and rt2 != rt, code)
-check('rotated-out cookie rejected', req('POST', '/auth/refresh', {}, cookie=rt)[0] == 401)
 check('refresh token not usable as access token', req('GET', '/orders', token=rt2)[0] == 401)
 A = j['data']['accessToken']
+# Reuse detection. Inside the grace window a replay of the just-rotated token is a concurrent
+# request (two tabs): served an access token, NOT rotated, and the session survives.
+c2, _, sc2, rt_dup = req('POST', '/auth/refresh', {}, cookie=rt)
+check('concurrent replay of the just-rotated token is tolerated without rotating', c2 == 200 and rt_dup is None and not any('rxflow_rt=' in x and 'Max-Age=0' not in x for x in sc2), (c2, sc2))
+c3, _, _, rt3 = req('POST', '/auth/refresh', {}, cookie=rt2)
+check('the winning token keeps working after the duplicate', c3 == 200 and rt3 and rt3 not in (rt, rt2), c3)
+time.sleep(GRACE + 0.6)
+check('replaying a rotated-out token after the grace window is rejected', req('POST', '/auth/refresh', {}, cookie=rt2)[0] == 401)
+check('…and revokes the whole session (even the legitimate current token)', req('POST', '/auth/refresh', {}, cookie=rt3)[0] == 401)
+check('garbage and empty refresh tokens are rejected', req('POST', '/auth/refresh', {}, cookie='not-a-token')[0] == 401 and req('POST', '/auth/refresh', {})[0] == 401)
+_, jl, _, _ = login('admin@rxflow.in', 'admin123')
+A = jl['data']['accessToken']
 _, _, _, d1 = login('admin@rxflow.in', 'admin123')
 _, _, _, d2 = login('admin@rxflow.in', 'admin123')
 _, _, _, d1n = req('POST', '/auth/refresh', {}, cookie=d1)
@@ -234,6 +246,89 @@ cl = req('GET', '/medicines?search=salbutamol&limit=50', token=C)[1]['data']
 check('Canada: sees the Health Canada catalog only', cl and all(m['country'] == 'CA' for m in cl), {m['country'] for m in cl})
 inh = [m for m in cl if 'inhalation' in (m['route'] or '').lower()]
 check('Canada: inhaled products are INHALER or nebuliser SOLUTION, never oral forms', inh and all(m['dosageForm'] in ('INHALER', 'SOLUTION') for m in inh) and any(m['dosageForm'] == 'SOLUTION' for m in inh), sorted({m['dosageForm'] for m in inh}))
+
+# ── Session revocation: deactivation and role changes take effect immediately ─
+def stream_closes_on(token, trigger, wait=4):
+    """Open the live-sync stream, run `trigger()`, report whether the server then ended the stream."""
+    host = urlparse(B)
+    conn = http.client.HTTPConnection(host.hostname, host.port, timeout=wait + 2)
+    conn.request('GET', '/api/v1/events?token=' + token)
+    resp = conn.getresponse()
+    if resp.status != 200: return None
+    result = {'ended': False}
+    def reader():
+        try:
+            while resp.read(1): pass
+            result['ended'] = True
+        except Exception: pass
+    t = threading.Thread(target=reader, daemon=True); t.start()
+    time.sleep(0.5); trigger(); t.join(wait)
+    return result['ended']
+
+code, j, _, _ = req('POST', '/tenant/users', {'name': 'Sam Pharmacist', 'email': 'sam@e2e.test', 'phone': '9888888888', 'password': 'sampass123', 'role': 'PHARMACIST', 'storeIds': [store]}, token=A)
+sam = j['data']['id']
+c, sj, _, sam_rt = login('sam@e2e.test', 'sampass123'); S = sj['data']['accessToken']
+check('pharmacist signs in and can read', c == 200 and req('GET', '/orders', token=S)[0] == 200)
+check('pharmacist cannot manage users (403)', req('POST', '/tenant/users', {'name': 'X Y', 'email': 'x@e2e.test', 'phone': '9777777777', 'password': 'xxxxxxxx1', 'role': 'VIEWER'}, token=S)[0] == 403)
+ended = stream_closes_on(S, lambda: req('PATCH', f'/tenant/users/{sam}', {'role': 'VIEWER'}, token=A))
+check('demotion: live-sync stream is closed', ended is True, ended)
+check('demotion: the still-valid access token is rejected at once', req('GET', '/orders', token=S)[0] == 401)
+check('demotion: the refresh cookie is rejected', req('POST', '/auth/refresh', {}, cookie=sam_rt)[0] == 401)
+time.sleep(1.1)  # JWTs are stamped to the second; a token minted in the revocation's own second fails closed
+c, sj, _, sam_rt = login('sam@e2e.test', 'sampass123'); S = sj['data']['accessToken']
+check('after demotion, signing in again gives the new role', c == 200 and sj['data']['user']['role'] == 'VIEWER' and req('GET', '/orders', token=S)[0] == 200 and req('POST', '/customers', {'name': 'Nope'}, token=S)[0] == 403)
+ended = stream_closes_on(S, lambda: req('PATCH', f'/tenant/users/{sam}', {'isActive': False}, token=A))
+check('deactivation: live-sync stream is closed', ended is True, ended)
+check('deactivation: access token rejected at once', req('GET', '/orders', token=S)[0] == 401)
+check('deactivation: refresh cookie rejected', req('POST', '/auth/refresh', {}, cookie=sam_rt)[0] == 401)
+check('deactivation: cannot sign in', login('sam@e2e.test', 'sampass123')[0] == 401)
+check('a changed name alone does not sign anyone out', req('PATCH', f'/tenant/users/{sam}', {'name': 'Sam P', 'isActive': True}, token=A)[0] == 200 and req('GET', '/orders', token=V)[0] == 200)
+check('stream refuses a revoked token', req('GET', '/events?token=' + S)[0] == 401)
+
+# ── Authorization regressions ─────────────────────────────────────────────────
+check('admin cannot create a SUPER_ADMIN', req('POST', '/tenant/users', {'name': 'Su Per', 'email': 'su@e2e.test', 'phone': '9666666666', 'password': 'supersecret1', 'role': 'SUPER_ADMIN'}, token=A)[0] == 422)
+check('admin cannot promote a user to SUPER_ADMIN', req('PATCH', f'/tenant/users/{sam}', {'role': 'SUPER_ADMIN'}, token=A)[0] == 422)
+check('admin cannot change their own role', req('PATCH', f"/tenant/users/{req('GET', '/auth/me', token=A)[1]['data']['id']}", {'role': 'VIEWER'}, token=A)[0] == 400)
+viewer_id = next(u['id'] for u in req('GET', '/tenant/users', token=A)[1]['data'] if u['email'] == 'viewer@e2e.test')
+for label, method, path, body in [
+    ('create user', 'POST', '/tenant/users', {'name': 'X Y', 'email': 'x2@e2e.test', 'phone': '9555555555', 'password': 'xxxxxxxx1', 'role': 'VIEWER'}),
+    ('edit user', 'PATCH', f'/tenant/users/{viewer_id}', {'name': 'Hacked'}),
+    ('create store', 'POST', '/tenant/stores', {'name': 'S', 'code': 'ZZ', 'addressLine1': 'a', 'city': 'c', 'state': 's'}),
+    ('edit workspace', 'PATCH', '/tenant', {'name': 'Hijack'}),
+    ('delete workspace', 'DELETE', '/tenant', {'confirmName': 'x'}),
+    ('export backup', 'GET', '/backup/export', None),
+    ('record expense', 'POST', '/accounts/expenses', {'category': 'x', 'amount': 1}),
+    ('read expenses', 'GET', '/accounts/expenses', None),
+    ('create customer', 'POST', '/customers', {'name': 'N', 'phone': '9444444444'}),
+    ('add stock', 'POST', f'/inventory/batches?storeId={store}', {}),
+]:
+    check(f'viewer cannot {label} (403)', req(method, path, body, token=V)[0] == 403)
+
+# ── Cross-tenant isolation: tenant U (US) against tenant A's (India) records ──
+cust = req('POST', '/customers', {'name': 'Iso Customer', 'phone': '9333333333'}, token=A)[1]['data']['id']
+sup = req('POST', '/suppliers', {'name': 'Iso Supplier', 'companyName': 'Iso Co', 'phone': '9333333334'}, token=A)[1]['data']['id']
+exp = req('POST', '/accounts/expenses', {'category': 'Iso', 'amount': 5}, token=A)[1]['data']['id']
+a_ids = {'customer': cust, 'supplier': sup, 'order': order['id'], 'invoice': inv['id'], 'expense': exp, 'user': viewer_id, 'store': store}
+attacks = [
+    ('GET', f'/customers/{cust}', None), ('PUT', f'/customers/{cust}', {'name': 'Pwn'}), ('DELETE', f'/customers/{cust}', None),
+    ('GET', f'/suppliers/{sup}', None), ('PUT', f'/suppliers/{sup}', {'name': 'Pwn'}), ('DELETE', f'/suppliers/{sup}', None),
+    ('GET', f"/orders/{order['id']}", None), ('PATCH', f"/orders/{order['id']}/status", {'status': 'CANCELLED'}),
+    ('GET', f"/invoices/{inv['id']}", None), ('POST', f"/invoices/{inv['id']}/payment", {'amount': 1, 'method': 'CASH'}),
+    ('POST', f"/invoices/{inv['id']}/credit-note", {'items': []}),
+    ('DELETE', f'/accounts/expenses/{exp}', None),
+    ('PATCH', f'/tenant/users/{viewer_id}', {'role': 'TENANT_ADMIN'}), ('PATCH', f'/tenant/users/{viewer_id}', {'isActive': False}),
+    ('PATCH', f'/tenant/stores/{store}', {'name': 'Pwn'}), ('DELETE', f'/tenant/stores/{store}', None),
+]
+leaks = []
+for method, path, body in attacks:
+    code = req(method, path, body, token=U)[0]
+    if code < 400 or code >= 500: leaks.append((method, path, code))
+check('tenant isolation: U cannot read, edit or delete any of A\'s records by id', not leaks, leaks)
+check('control: A can still read the same records', req('GET', f'/customers/{cust}', token=A)[0] == 200 and req('GET', f"/invoices/{inv['id']}", token=A)[0] == 200 and any(u['id'] == viewer_id for u in req('GET', '/tenant/users', token=A)[1]['data']))
+ids_seen = json.dumps([req('GET', f'/{p}?limit=500', token=U)[1].get('data') for p in ('customers', 'suppliers', 'orders', 'invoices', 'accounts/expenses', 'tenant/users', 'tenant/stores')])
+check("tenant isolation: none of A's ids appear in U's lists", not [k for k, v in a_ids.items() if v in ids_seen], [k for k, v in a_ids.items() if v in ids_seen])
+check("tenant isolation: A's viewer is still active and unchanged after U's attempts", login('viewer@e2e.test', 'viewpass1')[0] == 200)
+check('tenant isolation: U cannot stream A\'s events with a bogus tenant', req('GET', '/events?token=' + 'x.y.z')[0] == 401)
 
 print(f'\n{ok} passed, {bad} failed')
 sys.exit(1 if bad else 0)

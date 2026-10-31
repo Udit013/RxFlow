@@ -7,6 +7,7 @@ import { phoneSchema, assertTaxId, invalidateTenantRegion } from '../utils/regio
 import { REGION_PROFILES, resolveRegion, isValidCurrency, isValidLocale, isValidTimeZone } from '@rxflow/regional'
 import { audit } from '../utils/audit.js'
 import { assertTenantRefs } from '../utils/tenant-guard.js'
+import { revokeUser } from '../utils/revocation.js'
 
 export async function tenantRoutes(app: FastifyInstance) {
   // GET /api/v1/tenant — Current tenant details
@@ -135,6 +136,14 @@ export async function tenantRoutes(app: FastifyInstance) {
     if (!target) return reply.status(404).send({ success: false, error: 'User not found' })
 
     const updated = await prisma.user.update({ where: { id }, data: body })
+    // Deactivation or any role change ends that user's access now: refresh sessions are deleted,
+    // already-issued access tokens are rejected and their live-sync streams are closed. A changed
+    // role simply means signing in again.
+    if (body.isActive === false || (body.role !== undefined && body.role !== target.role)) {
+      await prisma.authSession.deleteMany({ where: { userId: id } })
+      await prisma.user.update({ where: { id }, data: { refreshToken: null } })
+      revokeUser(id)
+    }
     return reply.send({ success: true, data: { id: updated.id, name: updated.name, role: updated.role, isActive: updated.isActive } })
   })
 

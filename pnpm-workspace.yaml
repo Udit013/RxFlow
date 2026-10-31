@@ -7,7 +7,7 @@ packages:
 # packageManager) reads that field; pnpm 10+ reads this file instead.
 overrides:
   'fast-uri': '^3.1.9'
-  'follow-redirects': '^1.16.1'
+  'follow-redirects': '^1.16.2'
   'nanoid@3': '^3.3.18'
   'source-map-js': '^1.2.2'
   'fflate': '^0.8.3'

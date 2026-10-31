@@ -9,6 +9,7 @@ import { regionDefaults } from '@rxflow/regional'
 import { setRefreshCookie, clearRefreshCookie, readRefreshCookie, hashRefreshToken, refreshTokenMatches } from '../utils/session-cookie.js'
 import { createRefreshTokens } from '../utils/refresh-token.js'
 import { env } from '../utils/env.js'
+import { revokeUser } from '../utils/revocation.js'
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -51,13 +52,23 @@ export async function authRoutes(app: FastifyInstance) {
   const refreshTokens = createRefreshTokens(env.JWT_REFRESH_SECRET, env.JWT_SECRET)
 
   /** Sign a refresh token for session `sid` and store its hash (rotation = call again). */
-  async function rotateSession(userId: string, sid: string, reply: FastifyReply) {
+  async function rotateSession(userId: string, sid: string, reply: FastifyReply, presented?: string): Promise<boolean> {
     const token = refreshTokens.sign({ userId, sid, jti: randomUUID() })
-    await prisma.authSession.update({
-      where: { id: sid },
-      data: { tokenHash: hashRefreshToken(token), lastUsedAt: new Date(), expiresAt: new Date(Date.now() + SESSION_TTL_MS) },
+    const data = { tokenHash: hashRefreshToken(token), lastUsedAt: new Date(), expiresAt: new Date(Date.now() + SESSION_TTL_MS) }
+    if (presented === undefined) {
+      await prisma.authSession.update({ where: { id: sid }, data })
+      setRefreshCookie(reply, token)
+      return true
+    }
+    // Compare-and-swap on the token being replaced: of two requests racing on one cookie only
+    // one rotates; the other sees count 0 and must not overwrite the winner's token.
+    const swapped = await prisma.authSession.updateMany({
+      where: { id: sid, tokenHash: hashRefreshToken(presented) },
+      data: { ...data, prevTokenHash: hashRefreshToken(presented), rotatedAt: new Date() },
     })
+    if (swapped.count !== 1) return false
     setRefreshCookie(reply, token)
+    return true
   }
 
   /** Start a new device session for the user (other devices stay signed in). */
@@ -204,11 +215,20 @@ export async function authRoutes(app: FastifyInstance) {
     if (payload.sid) {
       const session = await prisma.authSession.findUnique({ where: { id: payload.sid } })
       if (!session || session.userId !== user.id || session.expiresAt < new Date()) return null
-      if (!(await refreshTokenMatches(token, session.tokenHash))) return null
-      return { user, sid: session.id, legacy: false }
+      if (await refreshTokenMatches(token, session.tokenHash)) return { user, sid: session.id, legacy: false, concurrent: false }
+      // Not the current token. If it is the one just rotated out, inside the grace window, it is
+      // a concurrent request: serve it without rotating. Any other replay of the rotated-out
+      // token means a stale copy exists, so the whole session is revoked.
+      if (session.prevTokenHash && (await refreshTokenMatches(token, session.prevTokenHash))) {
+        const fresh = session.rotatedAt && Date.now() - session.rotatedAt.getTime() <= env.REFRESH_REUSE_GRACE_MS
+        if (fresh) return { user, sid: session.id, legacy: false, concurrent: true }
+        await prisma.authSession.deleteMany({ where: { id: session.id } })
+        app.log.warn({ userId: user.id, sid: session.id }, 'refresh token reuse detected — session revoked')
+      }
+      return null
     }
     if (!user.refreshToken || !(await refreshTokenMatches(token, user.refreshToken))) return null
-    return { user, sid: null, legacy: true }
+    return { user, sid: null, legacy: true, concurrent: false }
   }
 
   // POST /api/v1/auth/refresh — rotate the refresh cookie, return a fresh access token
@@ -230,7 +250,12 @@ export async function authRoutes(app: FastifyInstance) {
 
     const accessToken = app.jwt.sign(newPayload, { expiresIn: '15m' })
     if (resolved.sid) {
-      await rotateSession(user.id, resolved.sid, reply)
+      // A concurrent duplicate gets an access token only; the cookie from the winning request
+      // (already on its way to the browser) stays the one valid refresh token.
+      if (!resolved.concurrent) {
+        const presented = readRefreshCookie(request) ?? body.refreshToken!
+        await rotateSession(user.id, resolved.sid, reply, presented) // false = lost a race: same outcome
+      }
     } else {
       // Legacy single-slot token → upgrade to a device session and retire the old slot.
       await startDeviceSession(user.id, request, reply)
@@ -323,11 +348,10 @@ export async function authRoutes(app: FastifyInstance) {
         const { sendEmail, otpEmailHtml } = await import('../utils/email.js')
         await sendEmail({ to: normalized, subject: 'Reset your RxFlow password', html: otpEmailHtml(code, 'reset') })
       } catch (e) {
-        // Delivery failed (misconfigured key / unverified sender). Log the code
-        // as an operator rescue: an admin can read it from server logs and help
-        // the user complete the reset. The OTP is short-lived and single-use.
+        // Never log the code: anyone who can read the logs could take over the account.
+        // The response stays identical (no account enumeration); a workspace admin can set the
+        // user's password instead while email delivery is unavailable.
         request.log.error({ err: e }, 'password-reset email failed — check RESEND_API_KEY / EMAIL_FROM (verified domain)')
-        request.log.warn({ email: normalized, code }, '[rescue] password-reset OTP (email delivery failed)')
       }
     }
     return reply.send({ success: true, message: 'If an account exists for that email, a reset code has been sent.' })
@@ -354,6 +378,7 @@ export async function authRoutes(app: FastifyInstance) {
     })
     // A password reset signs the account out everywhere.
     await prisma.authSession.deleteMany({ where: { userId: user.id } })
+    revokeUser(user.id) // and any access token already issued
     return reply.send({ success: true, message: 'Password updated. You can now sign in.' })
   })
 
@@ -375,7 +400,6 @@ export async function authRoutes(app: FastifyInstance) {
         delivered = true
       } catch (e) {
         request.log.error({ err: e }, 'login OTP email failed — check RESEND_API_KEY / EMAIL_FROM (verified domain)')
-        request.log.warn({ email: user.email, code }, '[rescue] login OTP (email delivery failed)')
       }
     }
     // Mask the email for the UI (e.g., r***@gmail.com) when we found a user

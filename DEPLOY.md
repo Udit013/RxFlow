@@ -53,11 +53,7 @@ Private repo is fine — Vercel and Render both support private GitHub deploys.
    - `STORAGE_BASE_URL`: paste your Render service URL (Render shows it before deploy, format: `https://rxflow-api.onrender.com`)
 5. Click **Apply**. First build takes 4-6 min — Prisma generates the client and runs migrations.
 6. Once "Live", visit `https://YOUR-API.onrender.com/health` → you should see `{"status":"ok",...}`
-7. **Seed the demo data**: in Render dashboard → your service → **Shell** tab → paste:
-   ```bash
-   cd packages/db && pnpm exec tsx prisma/seed.ts
-   ```
-   This creates the demo tenant + admin user (`admin@rxflow.in` / `admin123`).
+7. **No demo account is created in production.** The old demo login (`admin@rxflow.in` / `admin123`) is public, so deploys no longer seed it. Create your own pharmacy from the app's **Create account** page. If an earlier deploy already created the demo account, disable it — see [DEPLOYMENT.md → Disable the demo login](DEPLOYMENT.md).
 
 **Render free-tier gotchas:**
 - After 15 min with no traffic, the service spins down. First request afterwards takes 30-60s. Subsequent requests are fast.
@@ -75,7 +71,7 @@ Private repo is fine — Vercel and Render both support private GitHub deploys.
    - `NEXT_PUBLIC_API_URL` = `https://YOUR-API.onrender.com/api/v1`
 5. Click **Deploy**. Takes ~2 min.
 6. Visit the URL Vercel gives you (e.g. `rxflow-xxx.vercel.app`).
-7. **Login:** `admin@rxflow.in` / `admin123`
+7. **Sign in:** click **Create account** and register your pharmacy.
 
 ---
 

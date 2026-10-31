@@ -7,6 +7,9 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(32),
   JWT_REFRESH_SECRET: z.string().min(32),
   CORS_ORIGIN: z.string().default('http://localhost:3000'),
+  // How long a just-rotated refresh token still counts as a harmless concurrent request
+  // rather than reuse (two tabs refreshing together).
+  REFRESH_REUSE_GRACE_MS: z.coerce.number().int().min(0).max(300_000).default(30_000),
   // File storage
   STORAGE_PROVIDER: z.enum(['local', 's3', 'cloudinary']).default('local'),
   STORAGE_BASE_URL: z.string().default('http://localhost:3001/uploads'),

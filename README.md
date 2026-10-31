@@ -134,8 +134,9 @@ cp apps/web/.env.local.example apps/web/.env.local
 # Create the schema (the project uses prisma db push, not migrate)
 cd packages/db && pnpm exec prisma generate && pnpm exec prisma db push && cd ../..
 
-# (optional) seed a demo tenant (the medicine catalog loads from catalog/snapshot)
-pnpm --filter @rxflow/api deploy:seed
+# (optional, local only) seed a demo tenant with the public login admin@rxflow.in / admin123
+# — opt-in, and refused in production (the medicine catalog loads from catalog/snapshot)
+SEED_DEMO=true pnpm --filter @rxflow/api deploy:seed
 
 # Run everything
 pnpm dev
@@ -159,13 +160,13 @@ pnpm test          # run the unit suite (Vitest)
 pnpm test:watch    # watch mode
 ```
 
-End-to-end API smoke test (80 checks across CORS, sessions, roles, tenant isolation, billing, GST/VAT/sales tax, localisation, partial updates and the medicine catalog — search, alternatives, manual compositions, Canada) — against a **local** API and throwaway database only; it refuses to run against any other host:
+End-to-end API smoke test (118 checks across CORS, sessions, refresh-token reuse, session revocation, roles, tenant isolation, billing, GST/VAT/sales tax, localisation, partial updates and the medicine catalog — search, alternatives, manual compositions, Canada) — against a **local** API and throwaway database only; it refuses to run against any other host:
 
 ```bash
 python3 scripts/e2e/api_smoke.py   # API_URL=http://localhost:3011/api/v1 for another local port
 ```
 
-131 unit tests covering the money- and security-critical logic: the medicine composition model (INN synonyms, salts, strengths, release/route-aware comparison) and catalog search, the regional tax engines, timezone/fiscal-year boundaries (incl. daylight saving) and per-country validation, collision-safe document numbering, GST/VAT/sales-tax/discount/commission and invoice arithmetic, the auth middleware and role matrix, medicine copy-on-write, refresh-token signing and hashing, and the multi-distributor CSV parsers — the parser tests are pinned to verbatim rows from real supplier invoices, so a config regression can't silently break an import format.
+151 unit tests covering the money- and security-critical logic: the medicine composition model (INN synonyms, salts, strengths, release/route-aware comparison) and catalog search, the regional tax engines, timezone/fiscal-year boundaries (incl. daylight saving) and per-country validation, collision-safe document numbering, GST/VAT/sales-tax/discount/commission and invoice arithmetic, the auth middleware and role matrix, medicine copy-on-write, refresh-token signing and hashing, and the multi-distributor CSV parsers — the parser tests are pinned to verbatim rows from real supplier invoices, so a config regression can't silently break an import format.
 
 ---
 
@@ -219,7 +220,7 @@ The build fails on any route/form contradiction and records its checks in `snaps
 ## Security model
 
 - **Tenant isolation** — every query is scoped to the caller's pharmacy, and IDs sent in requests (stores, customers, suppliers, batches, medicines) are verified to belong to it.
-- **Sessions** — the 15-minute access token lives only in memory; the 7-day refresh token is an httpOnly, `SameSite=Strict` cookie, rotated on every use, signed with its own key (it can never pass as an access token) and stored only as a SHA-256 hash. Each device has its own session.
+- **Sessions** — the 15-minute access token lives only in memory; the 7-day refresh token is an httpOnly, `SameSite=Strict` cookie, rotated on every use, signed with its own key (it can never pass as an access token) and stored only as a SHA-256 hash. Each device has its own session. Replaying a rotated-out token (outside a short concurrency grace window) revokes that session; deactivating or demoting a user ends their access immediately, including live-sync streams. Reset codes are never logged, and the public demo login is opt-in (`SEED_DEMO=true`, never created by a deploy).
 - **Browser hardening** — the web app sends `X-Frame-Options`/`frame-ancestors` (no clickjacking), `nosniff`, a strict referrer policy, a locked-down `Permissions-Policy` and COOP; HSTS comes from Vercel.
 - **Supply chain** — CI fails on high/critical production advisories; Dependabot proposes grouped weekly updates and holds back releases younger than seven days.
 - **Authorization** — one role matrix decides who can read or change what; viewers are read-only, and unlisted write endpoints are restricted to managers by default.
@@ -244,7 +245,7 @@ See [PROJECT_DOCUMENTATION.md](PROJECT_DOCUMENTATION.md) (Section 5) for the ful
 ```bash
 pnpm dev                 # run api + web
 pnpm --filter @rxflow/web exec tsc --noEmit   # type-check web
-pnpm --filter @rxflow/api deploy:seed             # reseed demo data
+SEED_DEMO=true pnpm --filter @rxflow/api deploy:seed   # reseed demo data (local only)
 ```
 
 The schema source of truth is `packages/db/prisma/schema.prisma`. After editing it, run `prisma generate` + `prisma db push`, and for production add an idempotent SQL file to `packages/db/prisma/manual-migrations/` and list it in `IDEMPOTENT` — the Render build (`packages/db/scripts/deploy-db.sh`) applies every listed file on each deploy.
