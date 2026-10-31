@@ -149,7 +149,9 @@ app.get('/health', async (_request, reply) => {
   // Helmet's default `Cross-Origin-Resource-Policy: same-origin` made browsers log a blocked-
   // response error for that ping; it is public and harmless, so allow cross-origin reads here.
   reply.header('Cross-Origin-Resource-Policy', 'cross-origin')
-  return { status: 'ok', version: '1.0.0', timestamp: new Date().toISOString() }
+  // `commit` lets a deploy be verified from outside: Render injects RENDER_GIT_COMMIT.
+  const commit = process.env.RENDER_GIT_COMMIT?.slice(0, 7)
+  return { status: 'ok', version: '1.0.0', ...(commit ? { commit } : {}), timestamp: new Date().toISOString() }
 })
 
 
