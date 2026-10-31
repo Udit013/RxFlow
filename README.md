@@ -226,7 +226,7 @@ The build fails on any route/form contradiction and records its checks in `snaps
 - **Authorization** — one role matrix decides who can read or change what; viewers are read-only, and unlisted write endpoints are restricted to managers by default.
 - **Abuse protection** — per-route rate limits on auth endpoints, constant-time login responses, single-use 6-digit OTPs with a 5-attempt cap.
 
-See [PROJECT_DOCUMENTATION.md](PROJECT_DOCUMENTATION.md) (Section 5) for the full design.
+See [PROJECT_DOCUMENTATION_RxFlow.md](PROJECT_DOCUMENTATION_RxFlow.md) (Section 5) for the full design.
 
 ---
 
@@ -250,9 +250,9 @@ SEED_DEMO=true pnpm --filter @rxflow/api deploy:seed   # reseed demo data (local
 
 The schema source of truth is `packages/db/prisma/schema.prisma`. After editing it, run `prisma generate` + `prisma db push`, and for production add an idempotent SQL file to `packages/db/prisma/manual-migrations/` and list it in `IDEMPOTENT` — the Render build (`packages/db/scripts/deploy-db.sh`) applies every listed file on each deploy.
 
-To support a new country, add a profile under `packages/regional/src/profiles/` — see [PROJECT_DOCUMENTATION.md](PROJECT_DOCUMENTATION.md), Section 20.
+To support a new country, add a profile under `packages/regional/src/profiles/` — see [PROJECT_DOCUMENTATION_RxFlow.md](PROJECT_DOCUMENTATION_RxFlow.md), Section 20.
 
-For the complete technical handbook — architecture, data model, auth, business logic, and deployment — see [PROJECT_DOCUMENTATION.md](PROJECT_DOCUMENTATION.md).
+For the complete technical handbook — architecture, data model, auth, business logic, and deployment — see [PROJECT_DOCUMENTATION_RxFlow.md](PROJECT_DOCUMENTATION_RxFlow.md).
 
 ---
 

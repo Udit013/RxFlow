@@ -498,7 +498,20 @@ ensureSession():   // dashboard layout, on every page load
 
 **Separate signing keys.** Refresh tokens are signed with `JWT_REFRESH_SECRET` (`apps/api/src/utils/refresh-token.ts`), access tokens with `JWT_SECRET`, so neither can stand in for the other and leaking one key doesn't let anyone mint sessions. Tokens issued under the old shared key are accepted once — only if their payload is refresh-shaped — and rotated onto the new key, so the switch logged nobody out.
 
+**Revocation and reuse detection.** Deactivating a user or changing their role deletes their refresh sessions, rejects their still-valid access tokens immediately (`utils/revocation.ts`: `authenticate` refuses any token issued at or before the revocation) and closes their live-sync streams; a password reset does the same. The registry is process-local like the SSE pub/sub (single instance), and entries expire after the 15-minute token lifetime. A token minted in the same second as a revocation fails closed, so a demoted user signs in again a second later. Each refresh stores the previous token's hash and rotation time (`AuthSession.prevTokenHash` / `rotatedAt`); rotation is a compare-and-swap on the token being replaced. Presenting the rotated-out token inside `REFRESH_REUSE_GRACE_MS` (default 30 s) is a concurrent request, such as two tabs: it receives an access token but no new cookie, and the session survives. Presenting it later means a stale copy exists, so the whole session is deleted. Reset and login codes are never logged.
+
+**Demo account.** `packages/db/prisma/seed.ts` creates a demo workspace with the publicly documented login `admin@rxflow.in / admin123`, so it runs only when `SEED_DEMO=true`, and refuses `NODE_ENV=production` unless `SEED_DEMO_IN_PRODUCTION=true` is also set (`seed-guard.ts`, unit-tested). Deploys never create it.
+
 **Migrating older sessions:** sessions created before this design kept the refresh token in `localStorage`. On the first refresh after the upgrade, the client sends that token once in the request body; the API validates it against the legacy `User.refreshToken` slot, opens a proper cookie session, and clears the slot. The client deletes the `localStorage` copy before sending it, so the exchange happens exactly once.
+
+### Deployment verification (2026-10-31)
+
+Verified against production after `1c2b8cf`:
+- **Deployed commit:** `GET /health` reports `"commit":"1c2b8cf"` (Render's `RENDER_GIT_COMMIT`), and GitHub's deployment record for `rxflow-api-us` shows the build — including the additive `AuthSession` migration — succeeded. `baccd26`, which carried the security fixes, deployed first and is contained in `1c2b8cf`.
+- **Access control:** all 127 protected operations in the OpenAPI spec answer `401` without credentials (none reached a handler); the live-sync stream rejects missing and forged tokens; a failed refresh clears the cookie (`HttpOnly; SameSite=Strict; Secure`); an unknown account's login and reset requests get the same generic responses as a real one.
+- **Not exercised live:** session revocation, token rotation and replay detection need a signed-in session, and no test account is created in production. They are covered by the 118-check end-to-end suite run on a fresh local database against the same code (concurrent refresh, reuse after the grace window, demotion and deactivation including the live stream, cross-tenant sweep, role denials) and 151 unit tests.
+- **Demo seeding:** the code refuses to create the demo login unless `SEED_DEMO=true`, and refuses `NODE_ENV=production` even then. The Render dashboard's environment cannot be read from outside, so confirm `SEED_DEMO` is absent there; an existing production demo user is NOT removed by a deploy (steps in DEPLOYMENT.md).
+- **Dependency advisories:** `pnpm audit --prod` reports none. The two moderate ones (`glob` and `minimatch`, reached through `@fastify/swagger-ui` → `@fastify/static`) were cleared with scoped overrides (`glob@13` → 14, `minimatch@10` → 11) after confirming Swagger UI still serves. The API's `/docs` endpoint is public by design.
 
 ### 5.4 Passwordless login (OTP) and password reset — shared machinery
 
@@ -1927,8 +1940,12 @@ No route, schema or page changes are needed.
 
 - **Tax-inclusive pricing** (common for VAT retail prices) isn't modelled — prices are entered net of tax, as in India.
 - **Right-to-left languages** (Arabic) aren't supported yet: the layout uses left/right spacing.
-- The bundled **distributor CSV formats** and **sample catalog** are Indian; other markets start with the generic CSV column mapper.
+- The bundled **distributor CSV formats** are Indian; other markets start with the generic CSV column mapper. (The Indian demo medicines were replaced by the official Jan Aushadhi list; see Section 10.5.)
 - Regional defaults are starting points, not legal advice — rates and register formats should be checked against local rules.
+- **Session revocation is process-local** (Section 5). After an API restart a revoked access token can live until its own 15-minute expiry; refresh sessions are already deleted in the database. A user signing in within the same second as their own revocation is rejected once. A refresh token replayed inside the 30-second concurrency grace window still yields one access token.
+- **Existing production demo account.** Deploys no longer create `admin@rxflow.in`, but nothing removes one that earlier deploys created; the owner must disable it (DEPLOYMENT.md). Whether `SEED_DEMO` is unset in Render's dashboard cannot be verified from outside.
+- **Live-verified vs locally verified.** Revocation, rotation and replay detection were verified on a fresh local database (118-check end-to-end suite), not against production, which has no test account.
+- **Jan Aushadhi drug schedules** are not published, so Indian rows default to Schedule H (prescription) until a pharmacy confirms them.
 
 #### 💬 Interview Questions — Section 20
 
@@ -1943,4 +1960,4 @@ No route, schema or page changes are needed.
 
 ---
 
-*End of PROJECT_DOCUMENTATION.md — this file is maintained as the living technical reference for RxFlow. When the schema, routes, or major architectural decisions change, update the corresponding section directly rather than letting this document drift out of sync with the actual implementation.*
+*End of PROJECT_DOCUMENTATION_RxFlow.md — this file is maintained as the living technical reference for RxFlow. When the schema, routes, or major architectural decisions change, update the corresponding section directly rather than letting this document drift out of sync with the actual implementation.*
