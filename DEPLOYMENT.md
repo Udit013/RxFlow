@@ -178,6 +178,44 @@ Push to `main` → Render and Vercel both auto-deploy. The API re-runs `prisma d
 
 ---
 
+## 9. Showing it to someone
+
+- Send them the Vercel URL and have them click **Create account**. Each person registers their own pharmacy; there is no shared demo login.
+- The first load after idle is slow (Render cold start plus Neon resume, ~30-60 s). Once warm it is quick; tell them to refresh if the first request hangs.
+- Not working on the free stack: uploads/images (Render's disk is ephemeral until R2 is wired in, section 5), Meilisearch and Redis (the app falls back to in-memory search and pub/sub).
+
+### No cloud accounts: laptop tunnel
+
+To show the app right now, run it locally and expose it with a free Cloudflare tunnel (no signup). The tunnel lives only while your laptop and the command run.
+
+```bash
+brew install cloudflared            # one-time
+pnpm dev                            # in another terminal
+cloudflared tunnel --url http://localhost:3000    # prints a public https://….trycloudflare.com URL
+```
+
+The web app still calls the API at `NEXT_PUBLIC_API_URL` (local by default), so for the API to be reachable too, tunnel it separately and point the web app at it:
+
+```bash
+cloudflared tunnel --url http://localhost:3001
+echo "NEXT_PUBLIC_API_URL=https://that-url/api/v1" > apps/web/.env.local   # then restart pnpm dev
+```
+
+Add the web tunnel's URL to the API's `CORS_ORIGIN` (comma-separated) or the browser will block the calls.
+
+## 10. Cost trajectory
+
+| Stage | Cost | When |
+|---|---|---|
+| Demo / MVP | ₹0/mo | Now |
+| 1 real pharmacy (~500 invoices/mo) | still ₹0 | First few months |
+| Uploads + always-on API | ~₹2,000/mo | First paying customers (Render Starter ≈ $7 + R2 ≈ $0.015/GB) |
+| Production-grade | ~₹6,000/mo | Multiple tenants, real SLA |
+
+The free stack comfortably carries an MVP and the first one or two customers.
+
+---
+
 ## Disable the demo login on an existing deployment
 
 Earlier deploys seeded `admin@rxflow.in` / `admin123` into production. New deploys no longer do, but **nothing removes an account that already exists**. Check, and if present disable it (not destructive — nothing is deleted). In the Neon SQL editor:
