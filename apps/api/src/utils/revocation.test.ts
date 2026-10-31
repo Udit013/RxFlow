@@ -53,7 +53,7 @@ describe('authenticate honours revocation', () => {
   })
   afterAll(() => app.close())
   const token = (iatSec: number, role: 'PHARMACIST' | 'VIEWER' = 'PHARMACIST') =>
-    app.jwt.sign({ userId: 'u1', tenantId: 't1', role, storeIds: [], iat: iatSec })
+    app.jwt.sign({ userId: 'u1', tenantId: 't1', role, storeIds: [], iat: iatSec } as never)
   const get = (t: string) => app.inject({ method: 'GET', url: '/me', headers: { authorization: `Bearer ${t}` } })
   const now = () => Math.floor(Date.now() / 1000)
 
