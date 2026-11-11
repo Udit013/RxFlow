@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
-import { UserCheck, Plus, Phone, X, MapPin, Percent } from 'lucide-react'
+import { UserCheck, Plus, Phone, X, MapPin } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { formatCurrency, optionalNumber, moneySymbol } from '@/lib/utils'
@@ -46,8 +46,8 @@ export default function SalesRepsPage() {
     <div className="space-y-5">
       <div className="page-header">
         <div>
-          <h1 className="page-title flex items-center gap-2"><UserCheck className="w-5 h-5" /> Sales Reps</h1>
-          <p className="text-sm text-slate-500">{reps.length} representatives</p>
+          <h1 className="page-title">Sales Reps</h1>
+          <p className="text-[13px] leading-5 text-surface-500 mt-1">{reps.length} representatives</p>
         </div>
         <button onClick={() => setShowCreate(true)} className="btn-primary">
           <Plus className="w-4 h-4" /> Add Sales Rep
@@ -58,12 +58,12 @@ export default function SalesRepsPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Name</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Contact</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Territory</th>
-              <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Commission %</th>
-              <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Flat Bonus</th>
-              <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Status</th>
+              <th className="text-left px-4 h-9 text-xs font-medium text-surface-500 whitespace-nowrap">Name</th>
+              <th className="text-left px-4 h-9 text-xs font-medium text-surface-500 whitespace-nowrap">Contact</th>
+              <th className="text-left px-4 h-9 text-xs font-medium text-surface-500 whitespace-nowrap">Territory</th>
+              <th className="text-center px-4 h-9 text-xs font-medium text-surface-500 whitespace-nowrap">Commission %</th>
+              <th className="text-right px-4 h-9 text-xs font-medium text-surface-500 whitespace-nowrap">Flat Bonus</th>
+              <th className="text-center px-4 h-9 text-xs font-medium text-surface-500 whitespace-nowrap">Status</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>
@@ -79,7 +79,7 @@ export default function SalesRepsPage() {
             ) : reps.length === 0 ? (
               <tr>
                 <td colSpan={7} className="text-center py-12 text-slate-400">
-                  <UserCheck className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                  <UserCheck className="w-5 h-5 mx-auto mb-3 text-surface-400" strokeWidth={1.75} aria-hidden="true" />
                   No sales reps yet. Add one to start tracking commissions.
                 </td>
               </tr>
@@ -111,7 +111,7 @@ export default function SalesRepsPage() {
                     {r.isActive ? <span className="badge-success">Active</span> : <span className="badge-neutral">Inactive</span>}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <Link href={`/dashboard/sales-reps/${r.id}`} className="text-xs text-brand-600 hover:underline">View</Link>
+                    <Link href={`/dashboard/sales-reps/${r.id}`} className="text-xs text-brand-700 hover:text-brand-800 hover:underline underline-offset-2">View</Link>
                   </td>
                 </tr>
               ))
@@ -121,7 +121,7 @@ export default function SalesRepsPage() {
       </div>
 
       <div className="card p-5 bg-slate-50 border-dashed">
-        <h3 className="font-semibold text-slate-900 flex items-center gap-2 mb-2"><Percent className="w-4 h-4" /> How commission works</h3>
+        <h3 className="text-[13px] font-semibold text-surface-900 mb-2">How commission works</h3>
         <ul className="text-sm text-slate-600 space-y-1 list-disc list-inside">
           <li>When creating a sale (POS), optionally attach a sales rep — commission is computed automatically.</li>
           <li>Default commission % per rep is configured here; can be overridden per order.</li>
@@ -159,11 +159,11 @@ function CreateSalesRepModal({ onClose, onCreated }: { onClose: () => void; onCr
   })
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-        <div className="flex items-center justify-between px-5 py-4 border-b">
+    <div className="modal-overlay">
+      <div className="modal-panel w-full max-w-md">
+        <div className="modal-header">
           <h2 className="font-semibold text-slate-900">New Sales Rep</h2>
-          <button onClick={onClose}><X className="w-4 h-4 text-slate-400" /></button>
+          <button type="button" onClick={onClose} aria-label="Close" className="modal-close"><X className="w-4 h-4" /></button>
         </div>
         <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="p-5 space-y-3">
           <div>

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Trash2, Search, PackagePlus, Save, Edit3, FileSpreadsheet, Clock, X } from 'lucide-react'
+import { Trash2, Search, Save, Edit3, FileSpreadsheet, Clock, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { authService } from '@/lib/auth'
@@ -200,30 +200,18 @@ export default function NewPurchasePage() {
     <div className="space-y-5">
       <div className="page-header">
         <div>
-          <h1 className="page-title flex items-center gap-2"><PackagePlus className="w-5 h-5" /> New Purchase</h1>
-          <p className="text-sm text-slate-500">Add stock to inventory — manually, or by importing a supplier CSV</p>
+          <h1 className="page-title">New Purchase</h1>
+          <p className="text-[13px] leading-5 text-surface-500 mt-1">Add stock to inventory — manually, or by importing a supplier CSV</p>
         </div>
       </div>
 
       {/* Mode toggle */}
-      <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 w-fit">
-        <button
-          onClick={() => setMode('manual')}
-          className={cn(
-            'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
-            mode === 'manual' ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50'
-          )}
-        >
-          <Edit3 className="w-3.5 h-3.5" /> Manual entry
+      <div role="tablist" className="tab-list">
+        <button role="tab" aria-selected={mode === 'manual'} onClick={() => setMode('manual')} className="tab">
+          <Edit3 /> Manual entry
         </button>
-        <button
-          onClick={() => setMode('csv')}
-          className={cn(
-            'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
-            mode === 'csv' ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50'
-          )}
-        >
-          <FileSpreadsheet className="w-3.5 h-3.5" /> Import from CSV
+        <button role="tab" aria-selected={mode === 'csv'} onClick={() => setMode('csv')} className="tab">
+          <FileSpreadsheet /> Import from CSV
         </button>
       </div>
 
@@ -296,7 +284,7 @@ function ManualFlow(props: any) {
         {lines.length > 0 && (
           <div className="overflow-x-auto"><table className="w-full text-sm mt-3">
             <thead>
-              <tr className="bg-slate-50 text-xs uppercase text-slate-500">
+              <tr className="bg-surface-50 text-xs text-surface-500 border-b border-surface-200">
                 <th className="text-left px-2 py-2">Medicine</th>
                 <th className="text-left px-2 py-2">Batch *</th>
                 <th className="text-left px-2 py-2">Lot</th>
@@ -368,7 +356,7 @@ function ManualFlow(props: any) {
               <tr><td colSpan={10} className="px-3 py-2 text-right text-slate-600">Subtotal (after discounts)</td><td className="px-2 py-2 text-right">{formatCurrency(subtotal)}</td><td/></tr>
               <tr><td colSpan={10} className="px-3 py-2 text-right text-slate-600">GST</td><td className="px-2 py-2 text-right">{formatCurrency(tax)}</td><td/></tr>
               {transportCharge > 0 && <tr><td colSpan={10} className="px-3 py-2 text-right text-slate-600">Transport</td><td className="px-2 py-2 text-right">{formatCurrency(transportCharge)}</td><td/></tr>}
-              <tr className="border-t"><td colSpan={10} className="px-3 py-2 text-right font-bold">Total</td><td className="px-2 py-2 text-right font-bold">{formatCurrency(total)}</td><td/></tr>
+              <tr className="border-t"><td colSpan={10} className="px-3 py-2 text-right font-semibold">Total</td><td className="px-2 py-2 text-right font-semibold">{formatCurrency(total)}</td><td/></tr>
               {salesman && commissionAmount > 0 && <tr><td colSpan={10} className="px-3 py-1 text-right text-xs text-accent-700">Salesman commission ({commissionPercent}%)</td><td className="px-2 py-1 text-right text-xs text-accent-700">{formatCurrency(commissionAmount)}</td><td/></tr>}
             </tfoot>
           </table></div>
@@ -488,18 +476,18 @@ function TemporaryPurchaseBanner({ supplier, storeId, onConverted }: { supplier:
       </div>
 
       {open && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-elevated w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between px-5 py-3.5 border-b border-surface-200 sticky top-0 bg-white">
+        <div className="modal-overlay">
+          <div className="modal-panel w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="modal-header sticky top-0 z-10">
               <div>
                 <h2 className="font-semibold text-surface-900">Convert temporary purchases — {supplier.name}</h2>
                 <p className="text-2xs text-surface-500">Enter the invoiced purchase price for each item. Stock is already in inventory; this only records the bill.</p>
               </div>
-              <button onClick={() => setOpen(false)}><X className="w-4 h-4 text-surface-400" /></button>
+              <button type="button" onClick={() => setOpen(false)} aria-label="Close" className="modal-close"><X className="w-4 h-4" /></button>
             </div>
             <div className="p-5">
               <div className="overflow-x-auto"><table className="w-full text-sm">
-                <thead className="bg-surface-50 text-2xs uppercase text-surface-500">
+                <thead className="bg-surface-50 text-xs text-surface-500 border-b border-surface-200">
                   <tr><th className="text-left px-2 py-2">Item</th><th className="text-center px-2 py-2">Qty</th><th className="text-right px-2 py-2">Purchase Price</th><th className="text-right px-2 py-2">Line</th></tr>
                 </thead>
                 <tbody className="divide-y divide-surface-100">

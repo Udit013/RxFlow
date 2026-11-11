@@ -86,7 +86,7 @@ export default function SuppliersPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Suppliers</h1>
-          <p className="text-sm text-surface-500">{data?.meta?.total ?? suppliers.length} suppliers</p>
+          <p className="text-[13px] leading-5 text-surface-500 mt-1">{data?.meta?.total ?? suppliers.length} suppliers</p>
         </div>
         <button className="btn-primary" onClick={() => setShowCreate(true)}>
           <Plus className="w-4 h-4" />
@@ -138,11 +138,11 @@ function CreateSupplierModal({ onClose, onCreated }: { onClose: () => void; onCr
   })
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-        <div className="flex items-center justify-between px-5 py-4 border-b">
+    <div className="modal-overlay">
+      <div className="modal-panel w-full max-w-md">
+        <div className="modal-header">
           <h2 className="font-semibold text-slate-900">New Supplier</h2>
-          <button onClick={onClose}><X className="w-4 h-4 text-slate-400" /></button>
+          <button type="button" onClick={onClose} aria-label="Close" className="modal-close"><X className="w-4 h-4" /></button>
         </div>
         <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="p-5 space-y-3">
           <div>

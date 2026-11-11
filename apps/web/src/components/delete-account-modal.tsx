@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { X, AlertTriangle, Trash2 } from 'lucide-react'
+import { X, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { authService } from '@/lib/auth'
 
@@ -24,13 +24,12 @@ export function DeleteAccountModal({ tenantName, onClose, onDeleted }: { tenantN
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-surface-100">
-          <h2 className="font-semibold text-red-600 flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4" /> Delete account
+    <div className="modal-overlay z-100">
+      <div className="modal-panel w-full max-w-md">
+        <div className="modal-header">
+          <h2 className="text-danger-700">Delete account
           </h2>
-          <button onClick={onClose}><X className="w-4 h-4 text-surface-400" /></button>
+          <button type="button" onClick={onClose} aria-label="Close" className="modal-close"><X className="w-4 h-4" /></button>
         </div>
         <div className="p-5 space-y-4">
           <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-900">

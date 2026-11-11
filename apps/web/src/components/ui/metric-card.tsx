@@ -8,21 +8,18 @@ import { cn, formatNumber } from '@/lib/utils'
 
 type Tone = 'brand' | 'success' | 'warning' | 'danger' | 'neutral' | 'accent'
 
-// Each stat carries a colored "tick" — a short ledger rule above the label —
-// instead of an icon chip. Color means something; it never decorates.
-const TONE_TICK: Record<Tone, string> = {
-  brand: 'bg-brand-500',
-  success: 'bg-success-500',
+// Colour only where it carries meaning: a small status dot for figures that need attention.
+const TONE_DOT: Partial<Record<Tone, string>> = {
   warning: 'bg-warning-500',
   danger: 'bg-danger-500',
-  accent: 'bg-accent-500',
-  neutral: 'bg-surface-400',
+  accent: 'bg-warning-500',
 }
 
 interface MetricCardProps {
   label: string
   value: ReactNode
   sub?: ReactNode
+  /** Accepted for compatibility; figures are presented without icons. */
   icon?: LucideIcon
   tone?: Tone
   trend?: { value: number; label?: string }
@@ -34,53 +31,51 @@ interface MetricCardProps {
   loading?: boolean
 }
 
+/**
+ * One figure in a ledger strip. Designed to sit inside <StatGrid>, which draws the
+ * hairlines between cells — a row of figures reads as one instrument, not a pile of cards.
+ */
 export function MetricCard({
-  label, value, sub, icon: Icon, tone = 'neutral', trend, countUp, href, className, loading,
+  label, value, sub, tone = 'neutral', trend, countUp, href, className, loading,
 }: MetricCardProps) {
   const valueRef = useRef<HTMLDivElement>(null)
 
-  // CountUp animation if requested
   useEffect(() => {
     if (typeof countUp !== 'number' || !valueRef.current) return
     const node = valueRef.current
     const obj = { v: 0 }
     const tween = gsap.to(obj, {
       v: countUp,
-      duration: 1.1,
+      duration: 0.8,
       ease: 'power2.out',
       onUpdate: () => {
-        const formatted = countUp >= 1000
-          ? formatNumber(Math.round(obj.v))
-          : Math.round(obj.v).toString()
-        node.textContent = formatted
+        node.textContent = countUp >= 1000 ? formatNumber(Math.round(obj.v)) : Math.round(obj.v).toString()
       },
     })
     return () => { tween.kill() }
   }, [countUp])
 
+  const dot = TONE_DOT[tone]
   const inner = (
-    <div className={cn('card-hover px-4 pt-3 pb-3.5 h-full', className)}>
-      {/* ledger tick */}
-      <div className={cn('h-[3px] w-5 rounded-full mb-2.5', TONE_TICK[tone])} />
-
-      <div className="flex items-start justify-between gap-2">
-        <p className="microlabel">{label}</p>
-        {Icon && <Icon className="w-3.5 h-3.5 text-surface-400 shrink-0 mt-px" />}
-      </div>
+    <div className={cn('h-full px-4 py-3.5', className)}>
+      <p className="flex items-center gap-1.5 text-xs font-medium text-surface-500">
+        {dot && <span aria-hidden="true" className={cn('w-1.5 h-1.5 rounded-full shrink-0', dot)} />}
+        <span className="truncate">{label}</span>
+      </p>
 
       {loading ? (
-        <div className="h-7 w-24 skeleton mt-1.5" />
+        <div className="h-6 w-20 skeleton mt-2" />
       ) : (
         <div className="flex items-baseline gap-2 mt-1">
           <div
             ref={valueRef}
-            className="font-display text-[22px] leading-7 font-semibold text-surface-900 tracking-tight tabular-nums"
+            className="font-display text-[22px] leading-7 font-semibold text-surface-950 tracking-[-0.02em] tabular-nums"
           >
             {countUp != null ? '0' : value}
           </div>
           {trend && (
             <span className={cn(
-              'text-[11px] font-mono font-medium tabular-nums',
+              'text-xs font-medium tabular-nums',
               trend.value >= 0 ? 'text-success-600' : 'text-danger-600'
             )}>
               {trend.value >= 0 ? '+' : '−'}{Math.abs(trend.value)}%
@@ -89,9 +84,25 @@ export function MetricCard({
           )}
         </div>
       )}
-      {sub && <div className="text-xs text-surface-500 mt-1">{sub}</div>}
+      {sub && <div className="text-xs text-surface-500 mt-0.5 truncate">{sub}</div>}
     </div>
   )
 
-  return href ? <Link href={href} className="block h-full">{inner}</Link> : inner
+  return href
+    ? <Link href={href} className="block h-full transition-colors hover:bg-surface-50 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-600">{inner}</Link>
+    : inner
+}
+
+/**
+ * A bordered strip of figures separated by hairlines. Pass the column classes,
+ * e.g. `grid-cols-2 lg:grid-cols-4`. Rows that don't fill stay clean.
+ */
+export function StatGrid({ className, children }: { className?: string; children: ReactNode }) {
+  return (
+    <div className="card overflow-hidden">
+      <div className={cn('grid -mr-px -mb-px [&>*]:shadow-[inset_-1px_-1px_0_var(--color-surface-200)]', className)}>
+        {children}
+      </div>
+    </div>
+  )
 }

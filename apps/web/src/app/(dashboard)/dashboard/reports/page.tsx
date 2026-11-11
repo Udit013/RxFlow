@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { FileSpreadsheet, Calendar, Package } from 'lucide-react'
+import { FileSpreadsheet, Package } from 'lucide-react'
 import { api } from '@/lib/api'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -14,14 +14,14 @@ import { zonedMonthRange } from '@rxflow/regional'
 type ReportKey = 'gstr1' | 'gstr3b' | 'tax' | 'sales' | 'purchase' | 'stock'
 
 function TaxSummaryView({ data, isLoading }: any) {
-  if (isLoading) return <div className="card p-12 text-center text-slate-400">Loading...</div>
+  if (isLoading) return <div className="card p-12 text-center text-[13px] text-surface-400">Loading…</div>
   if (!data) return null
   const label = data.taxLabel
   const Section = ({ title, block, sign = 1 }: { title: string; block: any; sign?: 1 | -1 }) => (
     <div className="card p-5">
       <h3 className="font-semibold text-slate-900 mb-3">{title}</h3>
       <div className="overflow-x-auto"><table className="w-full text-sm">
-        <thead><tr className="text-xs uppercase text-slate-500 text-left">
+        <thead><tr className="text-xs font-medium text-surface-500 text-left">
           <th className="py-2">Rate</th><th className="py-2 text-right">Taxable value</th><th className="py-2 text-right">{label}</th>
         </tr></thead>
         <tbody className="divide-y divide-slate-100">
@@ -29,7 +29,7 @@ function TaxSummaryView({ data, isLoading }: any) {
           {block.byRate.map((r: any) => (
             <tr key={r.rate}><td className="py-2">{r.rate}%</td><td className="py-2 text-right">{formatCurrency(sign * r.taxable)}</td><td className="py-2 text-right">{formatCurrency(sign * r.tax)}</td></tr>
           ))}
-          <tr className="border-t-2"><td className="py-2 font-semibold">Total</td><td className="py-2 text-right font-semibold">{formatCurrency(sign * block.taxable)}</td><td className="py-2 text-right font-bold">{formatCurrency(sign * block.tax)}</td></tr>
+          <tr className="border-t border-surface-300"><td className="py-2 font-semibold">Total</td><td className="py-2 text-right font-semibold">{formatCurrency(sign * block.taxable)}</td><td className="py-2 text-right font-semibold">{formatCurrency(sign * block.tax)}</td></tr>
         </tbody>
       </table></div>
       {block.components.length > 1 && (
@@ -41,10 +41,10 @@ function TaxSummaryView({ data, isLoading }: any) {
   )
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="metric-card"><p className="text-xs uppercase text-slate-500">Output {label}</p><p className="text-lg font-bold">{formatCurrency(data.outputTax)}</p></div>
-        <div className="metric-card"><p className="text-xs uppercase text-slate-500">Input {label}</p><p className="text-lg font-bold">{formatCurrency(data.inputTax)}</p></div>
-        <div className="metric-card"><p className="text-xs uppercase text-slate-500">Net {data.netPayable >= 0 ? 'payable' : 'refundable'}</p><p className="text-lg font-bold">{formatCurrency(Math.abs(data.netPayable))}</p></div>
+      <div className="stat-strip grid-cols-1 sm:grid-cols-3">
+        <div className="metric-card"><p className="text-xs font-medium text-surface-500">Output {label}</p><p className="font-display text-lg font-semibold tracking-[-0.01em]">{formatCurrency(data.outputTax)}</p></div>
+        <div className="metric-card"><p className="text-xs font-medium text-surface-500">Input {label}</p><p className="font-display text-lg font-semibold tracking-[-0.01em]">{formatCurrency(data.inputTax)}</p></div>
+        <div className="metric-card"><p className="text-xs font-medium text-surface-500">Net {data.netPayable >= 0 ? 'payable' : 'refundable'}</p><p className="font-display text-lg font-semibold tracking-[-0.01em]">{formatCurrency(Math.abs(data.netPayable))}</p></div>
       </div>
       <Section title="Sales (output tax)" block={data.sales} />
       {data.creditNotes.byRate.length > 0 && <Section title="Credit notes issued (−)" block={data.creditNotes} sign={-1} />}
@@ -128,21 +128,22 @@ export default function ReportsPage() {
           title="Reports"
           description={`${hasGstr ? 'GST returns, ' : ''}${region.tax.label} summary, sales/purchase registers, stock valuation`}
           actions={
-            <div className="flex items-center gap-2 bg-white border border-surface-200 rounded-lg px-3 py-1.5 shadow-xs">
-              <Calendar className="w-4 h-4 text-surface-400" />
+            <label className="flex items-center gap-2">
+              <span className="text-xs font-medium text-surface-500">Period</span>
               <input
                 type="month"
+                aria-label="Report period"
                 value={period}
                 onChange={(e) => setPeriod(e.target.value)}
-                className="text-sm outline-hidden bg-transparent"
+                className="input w-auto"
               />
-            </div>
+            </label>
           }
         />
       </AnimatedSection>
 
       <AnimatedSection>
-        <div className="flex items-center gap-1 bg-white border border-surface-200/70 rounded-xl p-1 w-fit shadow-xs overflow-x-auto max-w-full">
+        <div role="tablist" className="tab-list">
           {([
             ...(hasGstr ? [['gstr1', 'GSTR-1 (Sales)'], ['gstr3b', 'GSTR-3B (Summary)']] : []),
             ['tax', `${region.tax.label} summary`],
@@ -152,10 +153,10 @@ export default function ReportsPage() {
           ] as [ReportKey, string][]).map(([key, label]) => (
             <button
               key={key}
+              role="tab"
+              aria-selected={activeReport === key}
               onClick={() => setActiveReport(key)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
-                activeReport === key ? 'bg-brand-600 text-white shadow-sm' : 'text-surface-600 hover:bg-surface-50'
-              }`}
+              className="tab"
             >
               {label}
             </button>
@@ -188,7 +189,7 @@ export default function ReportsPage() {
 }
 
 function Gstr1View({ data, isLoading, period, onExport }: any) {
-  if (isLoading) return <div className="card p-12 text-center text-slate-400">Loading...</div>
+  if (isLoading) return <div className="card p-12 text-center text-[13px] text-surface-400">Loading…</div>
   if (!data) return null
 
   const exportAllExcel = () => {
@@ -211,28 +212,28 @@ function Gstr1View({ data, isLoading, period, onExport }: any) {
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="stat-strip grid-cols-2 sm:grid-cols-3 xl:grid-cols-6">
         <div className="metric-card">
-          <p className="text-xs text-surface-500 uppercase">Invoices</p>
-          <p className="text-lg font-bold">{data.totals.totalInvoices}</p>
+          <p className="text-xs font-medium text-surface-500">Invoices</p>
+          <p className="font-display text-lg font-semibold tracking-[-0.01em]">{data.totals.totalInvoices}</p>
           <p className="text-xs text-surface-500">B2B: {data.totals.b2bCount ?? 0} · B2C: {data.totals.b2cCount ?? 0}</p>
         </div>
         <div className="metric-card">
-          <p className="text-xs text-surface-500 uppercase">Credit Notes</p>
-          <p className="text-lg font-bold text-amber-600">-{formatCurrency(data.creditNoteTotals?.grandTotal ?? 0)}</p>
+          <p className="text-xs font-medium text-surface-500">Credit Notes</p>
+          <p className="font-display text-lg font-semibold tracking-[-0.01em] text-amber-600">-{formatCurrency(data.creditNoteTotals?.grandTotal ?? 0)}</p>
           <p className="text-xs text-surface-500">{data.creditNoteTotals?.count ?? 0} issued</p>
         </div>
         <div className="metric-card">
-          <p className="text-xs text-surface-500 uppercase">Taxable Value</p>
-          <p className="text-lg font-bold">{formatCurrency(data.totals.totalTaxableValue)}</p>
+          <p className="text-xs font-medium text-surface-500">Taxable Value</p>
+          <p className="font-display text-lg font-semibold tracking-[-0.01em]">{formatCurrency(data.totals.totalTaxableValue)}</p>
         </div>
         <div className="metric-card">
-          <p className="text-xs text-surface-500 uppercase">Total Tax</p>
-          <p className="text-lg font-bold">{formatCurrency(data.totals.totalCgst + data.totals.totalSgst + data.totals.totalIgst)}</p>
+          <p className="text-xs font-medium text-surface-500">Total Tax</p>
+          <p className="font-display text-lg font-semibold tracking-[-0.01em]">{formatCurrency(data.totals.totalCgst + data.totals.totalSgst + data.totals.totalIgst)}</p>
         </div>
         <div className="metric-card">
-          <p className="text-xs text-surface-500 uppercase">Grand Total</p>
-          <p className="text-lg font-bold">{formatCurrency(data.totals.grandTotal)}</p>
+          <p className="text-xs font-medium text-surface-500">Grand Total</p>
+          <p className="font-display text-lg font-semibold tracking-[-0.01em]">{formatCurrency(data.totals.grandTotal)}</p>
         </div>
       </div>
 
@@ -245,7 +246,7 @@ function Gstr1View({ data, isLoading, period, onExport }: any) {
         <div className="card-header"><h3 className="font-semibold">Rate-wise Summary</h3></div>
         <div className="overflow-x-auto"><table className="w-full text-sm">
           <thead>
-            <tr className="bg-slate-50 text-xs uppercase text-slate-500">
+            <tr className="bg-surface-50 text-xs text-surface-500 border-b border-surface-200">
               <th className="text-left px-4 py-2">Rate</th>
               <th className="text-right px-4 py-2">Taxable Value</th>
               <th className="text-right px-4 py-2">CGST</th>
@@ -270,17 +271,17 @@ function Gstr1View({ data, isLoading, period, onExport }: any) {
       </div>
 
       {((data.cdnr ?? []).length > 0 || (data.cdnur ?? []).length > 0) && (
-        <div className="card overflow-hidden border-amber-200">
-          <div className="card-header flex items-center justify-between bg-amber-50">
-            <h3 className="font-semibold text-amber-900">Credit/Debit Notes (Section 9B — CDNR/CDNUR)</h3>
-            <span className="text-xs text-amber-800">Reduces outward supplies</span>
+        <div className="card overflow-hidden">
+          <div className="card-header">
+            <h3>Credit/Debit Notes (Section 9B — CDNR/CDNUR)</h3>
+            <span className="text-xs text-warning-700">Reduces outward supplies</span>
           </div>
           {(data.cdnr ?? []).length > 0 && (
             <>
-              <div className="px-4 py-2 text-xs uppercase text-slate-500 bg-slate-50">CDNR — Registered (with GSTIN)</div>
+              <div className="px-4 py-2 text-xs font-medium text-surface-500 bg-surface-50">CDNR — Registered (with GSTIN)</div>
               <div className="overflow-x-auto"><table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-slate-50 text-xs uppercase text-slate-500">
+                  <tr className="bg-surface-50 text-xs text-surface-500 border-b border-surface-200">
                     <th className="text-left px-4 py-2">CN #</th>
                     <th className="text-left px-4 py-2">Against</th>
                     <th className="text-left px-4 py-2">Customer</th>
@@ -308,10 +309,10 @@ function Gstr1View({ data, isLoading, period, onExport }: any) {
           )}
           {(data.cdnur ?? []).length > 0 && (
             <>
-              <div className="px-4 py-2 text-xs uppercase text-slate-500 bg-slate-50 border-t">CDNUR — Unregistered (B2C returns)</div>
+              <div className="px-4 py-2 text-xs font-medium text-surface-500 bg-surface-50 border-t">CDNUR — Unregistered (B2C returns)</div>
               <div className="overflow-x-auto"><table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-slate-50 text-xs uppercase text-slate-500">
+                  <tr className="bg-surface-50 text-xs text-surface-500 border-b border-surface-200">
                     <th className="text-left px-4 py-2">CN #</th>
                     <th className="text-left px-4 py-2">Against</th>
                     <th className="text-left px-4 py-2">Customer</th>
@@ -338,7 +339,7 @@ function Gstr1View({ data, isLoading, period, onExport }: any) {
           {data.netOutward && (
             <div className="bg-slate-50 px-4 py-3 border-t flex items-center justify-between text-sm">
               <span className="text-slate-600">Net outward supply (after returns)</span>
-              <span className="font-bold text-slate-900">{formatCurrency(data.netOutward.grandTotal)}</span>
+              <span className="font-semibold text-slate-900">{formatCurrency(data.netOutward.grandTotal)}</span>
             </div>
           )}
         </div>
@@ -349,7 +350,7 @@ function Gstr1View({ data, isLoading, period, onExport }: any) {
           <div className="card-header"><h3 className="font-semibold">B2B Supplies (Section 4)</h3></div>
           <div className="overflow-x-auto"><table className="w-full text-sm">
             <thead>
-              <tr className="bg-slate-50 text-xs uppercase text-slate-500">
+              <tr className="bg-surface-50 text-xs text-surface-500 border-b border-surface-200">
                 <th className="text-left px-4 py-2">Invoice #</th>
                 <th className="text-left px-4 py-2">Customer</th>
                 <th className="text-left px-4 py-2">GSTIN</th>
@@ -382,7 +383,7 @@ function Gstr1View({ data, isLoading, period, onExport }: any) {
         <div className="card-header"><h3 className="font-semibold">HSN-wise Summary (Section 12)</h3></div>
         <div className="overflow-x-auto"><table className="w-full text-sm">
           <thead>
-            <tr className="bg-slate-50 text-xs uppercase text-slate-500">
+            <tr className="bg-surface-50 text-xs text-surface-500 border-b border-surface-200">
               <th className="text-left px-4 py-2">HSN</th>
               <th className="text-left px-4 py-2">Description</th>
               <th className="text-center px-4 py-2">Qty</th>
@@ -412,7 +413,7 @@ function Gstr1View({ data, isLoading, period, onExport }: any) {
 }
 
 function Gstr3bView({ data, isLoading }: any) {
-  if (isLoading) return <div className="card p-12 text-center text-slate-400">Loading...</div>
+  if (isLoading) return <div className="card p-12 text-center text-[13px] text-surface-400">Loading…</div>
   if (!data) return null
 
   return (
@@ -426,15 +427,15 @@ function Gstr3bView({ data, isLoading }: any) {
             <tr><td className="py-2 text-slate-600">Integrated Tax (IGST)</td><td className="py-2 text-right">{formatCurrency(data.outwardSupplies.igst)}</td></tr>
             <tr><td className="py-2 text-slate-600">Central Tax (CGST)</td><td className="py-2 text-right">{formatCurrency(data.outwardSupplies.cgst)}</td></tr>
             <tr><td className="py-2 text-slate-600">State Tax (SGST)</td><td className="py-2 text-right">{formatCurrency(data.outwardSupplies.sgst)}</td></tr>
-            <tr className="border-t-2"><td className="py-2 font-semibold">Total Output Tax (net)</td><td className="py-2 text-right font-bold">{formatCurrency(data.outwardSupplies.totalTax)}</td></tr>
+            <tr className="border-t border-surface-300"><td className="py-2 font-semibold">Total Output Tax (net)</td><td className="py-2 text-right font-semibold">{formatCurrency(data.outwardSupplies.totalTax)}</td></tr>
           </tbody>
         </table></div>
         {data.creditNotes?.count > 0 && (
-          <div className="mt-3 pt-3 border-t-2 border-amber-200 bg-amber-50 -m-5 mt-3 p-4">
-            <p className="text-xs uppercase font-semibold text-amber-900 mb-2">Credit Notes Issued This Period (-)</p>
+          <div className="mt-4 pt-3 border-t border-surface-200">
+            <p className="text-xs font-medium text-surface-500 mb-1.5">Credit Notes Issued This Period (-)</p>
             <div className="flex items-center justify-between text-sm">
-              <span className="text-amber-900">{data.creditNotes.count} note(s) · Taxable {formatCurrency(data.creditNotes.taxableValue)}</span>
-              <span className="font-bold text-amber-700">-{formatCurrency(data.creditNotes.totalValue)}</span>
+              <span className="text-surface-700">{data.creditNotes.count} note(s) · Taxable {formatCurrency(data.creditNotes.taxableValue)}</span>
+              <span className="font-semibold text-amber-700">-{formatCurrency(data.creditNotes.totalValue)}</span>
             </div>
           </div>
         )}
@@ -449,19 +450,19 @@ function Gstr3bView({ data, isLoading }: any) {
             <tr><td className="py-2 text-slate-600">IGST</td><td className="py-2 text-right">{formatCurrency(data.inwardSuppliesItc.igst)}</td></tr>
             <tr><td className="py-2 text-slate-600">CGST</td><td className="py-2 text-right">{formatCurrency(data.inwardSuppliesItc.cgst)}</td></tr>
             <tr><td className="py-2 text-slate-600">SGST</td><td className="py-2 text-right">{formatCurrency(data.inwardSuppliesItc.sgst)}</td></tr>
-            <tr className="border-t-2"><td className="py-2 font-semibold">Total ITC Available</td><td className="py-2 text-right font-bold text-green-600">{formatCurrency(data.inwardSuppliesItc.totalItc)}</td></tr>
+            <tr className="border-t border-surface-300"><td className="py-2 font-semibold">Total ITC Available</td><td className="py-2 text-right font-semibold text-green-600">{formatCurrency(data.inwardSuppliesItc.totalItc)}</td></tr>
           </tbody>
         </table></div>
       </div>
 
-      <div className="card p-5 bg-amber-50 border-amber-200">
-        <h3 className="font-semibold text-slate-900 mb-3">Net Tax Payable (Output − ITC)</h3>
+      <div className="card p-5 border-surface-300">
+        <h3 className="text-[13px] font-semibold text-surface-900 mb-3">Net Tax Payable (Output − ITC)</h3>
         <div className="overflow-x-auto"><table className="w-full text-sm">
-          <tbody className="divide-y divide-amber-200">
+          <tbody className="divide-y divide-surface-100">
             <tr><td className="py-2 text-slate-600">IGST</td><td className="py-2 text-right font-medium">{formatCurrency(data.netTaxPayable.igst)}</td></tr>
             <tr><td className="py-2 text-slate-600">CGST</td><td className="py-2 text-right font-medium">{formatCurrency(data.netTaxPayable.cgst)}</td></tr>
             <tr><td className="py-2 text-slate-600">SGST</td><td className="py-2 text-right font-medium">{formatCurrency(data.netTaxPayable.sgst)}</td></tr>
-            <tr className="border-t-2 border-amber-300"><td className="py-2 font-bold">Total Payable</td><td className="py-2 text-right font-bold text-amber-700 text-lg">
+            <tr className="border-t border-surface-300"><td className="pt-3 font-semibold">Total Payable</td><td className="pt-3 text-right font-display font-semibold text-surface-950 text-xl tracking-[-0.015em]">
               {formatCurrency(data.netTaxPayable.igst + data.netTaxPayable.cgst + data.netTaxPayable.sgst)}
             </td></tr>
           </tbody>
@@ -472,7 +473,7 @@ function Gstr3bView({ data, isLoading }: any) {
 }
 
 function RegisterView({ title, data, isLoading, period, filename }: any) {
-  if (isLoading) return <div className="card p-12 text-center text-slate-400">Loading...</div>
+  if (isLoading) return <div className="card p-12 text-center text-[13px] text-surface-400">Loading…</div>
 
   const rows = data ?? []
   const total = rows.reduce((s: number, r: any) => s + (r.grandTotal ?? 0), 0)
@@ -490,7 +491,7 @@ function RegisterView({ title, data, isLoading, period, filename }: any) {
         ) : (
           <div className="overflow-x-auto"><table className="w-full text-sm">
             <thead>
-              <tr className="bg-slate-50 text-xs uppercase text-slate-500">
+              <tr className="bg-surface-50 text-xs text-surface-500 border-b border-surface-200">
                 <th className="text-left px-3 py-2">Invoice #</th>
                 <th className="text-left px-3 py-2">Date</th>
                 <th className="text-left px-3 py-2">Party</th>
@@ -521,7 +522,7 @@ function RegisterView({ title, data, isLoading, period, filename }: any) {
 }
 
 function StockValuationView({ data, isLoading }: any) {
-  if (isLoading) return <div className="card p-12 text-center text-slate-400">Loading...</div>
+  if (isLoading) return <div className="card p-12 text-center text-[13px] text-surface-400">Loading…</div>
   if (!data) return null
 
   const totals = data.totals
@@ -530,33 +531,33 @@ function StockValuationView({ data, isLoading }: any) {
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-2 xl:grid-cols-5 gap-4">
+      <div className="stat-strip grid-cols-2 xl:grid-cols-5">
         <div className="metric-card">
-          <p className="text-xs text-slate-500 uppercase">SKUs in stock</p>
-          <p className="text-lg font-bold">{totals.skuCount}</p>
+          <p className="text-xs font-medium text-surface-500">SKUs in stock</p>
+          <p className="font-display text-lg font-semibold tracking-[-0.01em]">{totals.skuCount}</p>
           <p className="text-xs text-slate-500">{totals.totalQty} units total</p>
         </div>
         <div className="metric-card">
-          <p className="text-xs text-slate-500 uppercase">Value at Cost</p>
-          <p className="text-lg font-bold text-slate-900">{formatCurrency(totals.valueAtCost)}</p>
+          <p className="text-xs font-medium text-surface-500">Value at Cost</p>
+          <p className="font-display text-lg font-semibold tracking-[-0.01em] text-slate-900">{formatCurrency(totals.valueAtCost)}</p>
           <p className="text-xs text-slate-500">What you paid</p>
         </div>
         <div className="metric-card">
-          <p className="text-xs text-slate-500 uppercase">Value at Selling</p>
-          <p className="text-lg font-bold text-blue-700">{formatCurrency(totals.valueAtSelling)}</p>
+          <p className="text-xs font-medium text-surface-500">Value at Selling</p>
+          <p className="font-display text-lg font-semibold tracking-[-0.01em] text-surface-900">{formatCurrency(totals.valueAtSelling)}</p>
           <p className="text-xs text-slate-500">If sold at current price</p>
         </div>
         <div className="metric-card">
-          <p className="text-xs text-slate-500 uppercase">Value at MRP</p>
-          <p className="text-lg font-bold text-slate-700">{formatCurrency(totals.valueAtMrp)}</p>
+          <p className="text-xs font-medium text-surface-500">Value at MRP</p>
+          <p className="font-display text-lg font-semibold tracking-[-0.01em] text-slate-700">{formatCurrency(totals.valueAtMrp)}</p>
           <p className="text-xs text-slate-500">Max retail value</p>
         </div>
         <div className="metric-card">
           <div className="flex items-center justify-between">
-            <p className="text-xs text-slate-500 uppercase">Potential Margin</p>
+            <p className="text-xs font-medium text-surface-500">Potential Margin</p>
             <Package className="w-3.5 h-3.5 text-green-600" />
           </div>
-          <p className="text-lg font-bold text-green-700">{formatCurrency(totals.margin)}</p>
+          <p className="font-display text-lg font-semibold tracking-[-0.01em] text-green-700">{formatCurrency(totals.margin)}</p>
           <p className="text-xs text-slate-500">{totals.marginPercent.toFixed(1)}% on cost</p>
         </div>
       </div>
@@ -580,7 +581,7 @@ function StockValuationView({ data, isLoading }: any) {
           <div className="card-header"><h3 className="font-semibold">Top Manufacturers by Inventory Value</h3></div>
           <div className="overflow-x-auto"><table className="w-full text-sm">
             <thead>
-              <tr className="bg-slate-50 text-xs uppercase text-slate-500">
+              <tr className="bg-surface-50 text-xs text-surface-500 border-b border-surface-200">
                 <th className="text-left px-4 py-2">Manufacturer</th>
                 <th className="text-center px-4 py-2">SKUs</th>
                 <th className="text-center px-4 py-2">Units</th>
@@ -616,7 +617,7 @@ function StockValuationView({ data, isLoading }: any) {
           <div className="max-h-[500px] overflow-y-auto">
             <table className="w-full text-sm">
               <thead className="sticky top-0 bg-slate-50">
-                <tr className="text-xs uppercase text-slate-500">
+                <tr className="text-xs font-medium text-surface-500">
                   <th className="text-left px-3 py-2">Medicine</th>
                   <th className="text-left px-3 py-2">Manufacturer</th>
                   <th className="text-center px-3 py-2">Qty</th>
@@ -639,7 +640,7 @@ function StockValuationView({ data, isLoading }: any) {
                     <td className="px-3 py-2 text-right">{formatCurrency(r.avgCostPrice)}</td>
                     <td className="px-3 py-2 text-right text-slate-600">{formatCurrency(r.mrp)}</td>
                     <td className="px-3 py-2 text-right font-medium">{formatCurrency(r.valueAtCost)}</td>
-                    <td className="px-3 py-2 text-right text-blue-700">{formatCurrency(r.valueAtSelling)}</td>
+                    <td className="px-3 py-2 text-right text-surface-900">{formatCurrency(r.valueAtSelling)}</td>
                     <td className="px-3 py-2 text-right text-green-700">{r.marginPercent.toFixed(1)}%</td>
                   </tr>
                 ))}

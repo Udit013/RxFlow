@@ -20,7 +20,8 @@ function thisMonth() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
-const PIE_COLORS = ['#0c83d0', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16']
+// Categorical palette tuned to the warm-neutral system: viridian, ochre, slate blue, terracotta, sage, plum, lagoon, stone.
+const PIE_COLORS = ['#0e5f52', '#d47f16', '#4a6fa5', '#c03b2d', '#74aa50', '#7d5a8c', '#3f8f9a', '#a3a094']
 
 export default function AccountsPage() {
   const [tab, setTab] = useState<'pnl' | 'expenses' | 'cashflow'>('pnl')
@@ -44,15 +45,14 @@ export default function AccountsPage() {
       </AnimatedSection>
 
       <AnimatedSection>
-        <div className="flex items-center gap-1 bg-white border border-surface-200/70 rounded-xl p-1 w-fit shadow-xs">
+        <div role="tablist" className="tab-list">
           {([['pnl', 'Profit & Loss'], ['expenses', 'Expenses & Income'], ['cashflow', 'Cash Flow']] as const).map(([k, label]) => (
             <button
               key={k}
               onClick={() => setTab(k)}
-              className={cn(
-                'px-3 py-1.5 rounded-lg text-sm font-medium transition-all',
-                tab === k ? 'bg-brand-600 text-white shadow-sm' : 'text-surface-600 hover:bg-surface-50'
-              )}
+              role="tab"
+              aria-selected={tab === k}
+              className="tab"
             >
               {label}
             </button>
@@ -85,9 +85,9 @@ function ProfitLossTab({ period }: { period: string }) {
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="stat-strip grid-cols-2 lg:grid-cols-4">
         <MetricCard icon={TrendingUp} tone="brand" label="Net Revenue" value={formatCurrency(d.revenue.net)} sub={`${d.revenue.invoiceCount} invoices · ${formatCurrency(d.revenue.returns)} returns`} />
-        <MetricCard icon={TrendingDown} tone="warning" label="COGS" value={formatCurrency(d.cogs)} sub={`Gross margin ${d.grossMargin.toFixed(1)}%`} />
+        <MetricCard icon={TrendingDown} tone="neutral" label="COGS" value={formatCurrency(d.cogs)} sub={`Gross margin ${d.grossMargin.toFixed(1)}%`} />
         <MetricCard icon={ArrowUpCircle} tone="neutral" label="Operating Expenses" value={formatCurrency(d.operatingExpenses)} sub={`+ ${formatCurrency(d.otherIncome)} other income`} />
         <MetricCard icon={Wallet} tone={profitTone} label="Net Profit" value={formatCurrency(d.netProfit)} sub={`${d.netMargin.toFixed(1)}% net margin`} />
       </div>
@@ -153,7 +153,7 @@ function StatementRow({ label, value, bold, muted, large, accent }: {
       <span className={cn(muted ? 'text-surface-500' : 'text-surface-800', bold && 'font-semibold')}>{label}</span>
       <span className={cn(
         'tabular-nums',
-        bold && 'font-bold', large && 'text-lg',
+        bold && 'font-semibold', large && 'text-lg',
         accent === 'green' ? 'text-success-700' : accent === 'red' ? 'text-danger-700' : muted ? 'text-surface-500' : 'text-surface-900'
       )}>
         {value < 0 ? `(${formatCurrency(Math.abs(value))})` : formatCurrency(value)}
@@ -189,8 +189,8 @@ function ExpensesTab({ period }: { period: string }) {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <MetricCard icon={ArrowUpCircle} tone="danger" label="Expenses (period)" value={formatCurrency(totalOut)} sub={`${rows.filter(r => r.direction === 'OUT').length} entries`} />
+      <div className="stat-strip grid-cols-2">
+        <MetricCard icon={ArrowUpCircle} tone="neutral" label="Expenses (period)" value={formatCurrency(totalOut)} sub={`${rows.filter(r => r.direction === 'OUT').length} entries`} />
         <MetricCard icon={ArrowDownCircle} tone="success" label="Other Income (period)" value={formatCurrency(totalIn)} sub={`${rows.filter(r => r.direction === 'IN').length} entries`} />
       </div>
 
@@ -201,7 +201,7 @@ function ExpensesTab({ period }: { period: string }) {
       >
         <div className="overflow-x-auto"><table className="w-full text-sm">
           <thead>
-            <tr className="bg-surface-50/60 text-[10px] uppercase tracking-widest text-surface-500">
+            <tr className="bg-surface-50 text-xs text-surface-500 border-b border-surface-200">
               <th className="text-left px-4 py-2.5">Date</th>
               <th className="text-left px-4 py-2.5">Category</th>
               <th className="text-left px-4 py-2.5">Paid To / Ref</th>
@@ -273,11 +273,11 @@ function AddExpenseModal({ onClose, onSaved }: { onClose: () => void; onSaved: (
   })
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-elevated w-full max-w-md">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-surface-100">
+    <div className="modal-overlay">
+      <div className="modal-panel w-full max-w-md">
+        <div className="modal-header">
           <h2 className="font-semibold text-surface-900">Record Transaction</h2>
-          <button onClick={onClose}><X className="w-4 h-4 text-surface-400" /></button>
+          <button type="button" onClick={onClose} aria-label="Close" className="modal-close"><X className="w-4 h-4" /></button>
         </div>
         <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="p-5 space-y-3">
           <div className="grid grid-cols-2 gap-2">
@@ -343,9 +343,9 @@ function CashFlowTab({ period }: { period: string }) {
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="stat-strip grid-cols-1 sm:grid-cols-3">
         <MetricCard icon={ArrowDownCircle} tone="success" label="Cash In" value={formatCurrency(d.cashIn)} sub="Receipts + other income" />
-        <MetricCard icon={ArrowUpCircle} tone="danger" label="Cash Out" value={formatCurrency(d.cashOut)} sub="Supplier payments + expenses" />
+        <MetricCard icon={ArrowUpCircle} tone="neutral" label="Cash Out" value={formatCurrency(d.cashOut)} sub="Supplier payments + expenses" />
         <MetricCard icon={Wallet} tone={d.netCashFlow >= 0 ? 'success' : 'danger'} label="Net Cash Flow" value={formatCurrency(d.netCashFlow)} sub={d.netCashFlow >= 0 ? 'Positive' : 'Negative — watch liquidity'} />
       </div>
 
@@ -355,7 +355,7 @@ function CashFlowTab({ period }: { period: string }) {
         ) : (
           <div className="overflow-x-auto"><table className="w-full text-sm">
             <thead>
-              <tr className="bg-surface-50/60 text-[10px] uppercase tracking-widest text-surface-500">
+              <tr className="bg-surface-50 text-xs text-surface-500 border-b border-surface-200">
                 <th className="text-left px-4 py-2.5">Method</th>
                 <th className="text-right px-4 py-2.5">In</th>
                 <th className="text-right px-4 py-2.5">Out</th>

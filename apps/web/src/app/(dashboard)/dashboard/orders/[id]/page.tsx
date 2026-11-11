@@ -57,19 +57,19 @@ export default function OrderDetailPage() {
         <div className="flex items-start justify-between">
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-slate-900">{o.orderNumber}</h1>
+              <h1 className="text-2xl font-semibold text-slate-900">{o.orderNumber}</h1>
               <span className={o.type === 'SALE' ? 'badge-info' : 'badge-neutral'}>{o.type}</span>
               <span className="badge-info">{o.status}</span>
             </div>
             <p className="text-sm text-slate-500 mt-1">Created {formatDate(o.createdAt)} • {o.items.length} items</p>
             <p className="text-sm text-slate-600 mt-2">
               {o.type === 'SALE'
-                ? (o.customer ? <>Customer: <Link href={`/dashboard/customers/${o.customer.id}`} className="text-brand-600 hover:underline">{o.customer.name}</Link></> : 'Walk-in customer')
-                : (o.supplier ? <>Supplier: <Link href={`/dashboard/suppliers/${o.supplier.id}`} className="text-brand-600 hover:underline">{o.supplier.name}</Link></> : '—')}
+                ? (o.customer ? <>Customer: <Link href={`/dashboard/customers/${o.customer.id}`} className="text-brand-700 hover:text-brand-800 hover:underline underline-offset-2">{o.customer.name}</Link></> : 'Walk-in customer')
+                : (o.supplier ? <>Supplier: <Link href={`/dashboard/suppliers/${o.supplier.id}`} className="text-brand-700 hover:text-brand-800 hover:underline underline-offset-2">{o.supplier.name}</Link></> : '—')}
             </p>
             {o.salesRep && (
               <p className="text-sm text-slate-600 mt-1">
-                Sales rep: <Link href={`/dashboard/sales-reps/${o.salesRep.id}`} className="text-brand-600 hover:underline">{o.salesRep.name}</Link>
+                Sales rep: <Link href={`/dashboard/sales-reps/${o.salesRep.id}`} className="text-brand-700 hover:text-brand-800 hover:underline underline-offset-2">{o.salesRep.name}</Link>
                 {o.commissionAmount != null && (
                   <> · Commission: <strong>{formatCurrency(o.commissionAmount)}</strong> ({o.commissionPercent}%) · <span className={o.commissionStatus === 'PAID' ? 'text-green-600' : 'text-amber-600'}>{o.commissionStatus}</span></>
                 )}
@@ -78,20 +78,21 @@ export default function OrderDetailPage() {
           </div>
           <div className="text-right">
             <p className="text-xs text-slate-500">Total</p>
-            <p className="text-2xl font-bold text-slate-900">{formatCurrency(o.total)}</p>
+            <p className="text-2xl font-semibold text-slate-900">{formatCurrency(o.total)}</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 mt-5 pt-5 border-t">
-          <span className="text-xs text-slate-500 mr-2">Update status:</span>
+        <div className="flex flex-wrap items-center gap-2 mt-5 pt-5 border-t border-surface-200">
+          <span className="text-xs font-medium text-surface-500 mr-1">Update status</span>
           {STATUS_FLOW.map((s) => (
             <button
               key={s}
               disabled={o.status === s || statusMutation.isPending}
               onClick={() => statusMutation.mutate(s)}
-              className={`text-xs px-2.5 py-1 rounded-md border ${
-                o.status === s ? 'bg-brand-600 text-white border-brand-600' : 'border-slate-200 hover:bg-slate-50'
-              } disabled:opacity-50`}
+              aria-pressed={o.status === s}
+              className={`text-[11px] font-medium uppercase tracking-[0.03em] h-7 px-2.5 rounded-md border transition-colors ${
+                o.status === s ? 'bg-ink text-paper border-ink' : 'border-surface-300 text-surface-600 hover:bg-surface-100 hover:text-surface-900'
+              } disabled:cursor-not-allowed ${o.status === s ? '' : 'disabled:opacity-50'}`}
             >
               {s}
             </button>
@@ -109,7 +110,7 @@ export default function OrderDetailPage() {
         <div className="card-header"><h3 className="font-semibold text-slate-900">Line items</h3></div>
         <div className="overflow-x-auto"><table className="w-full text-sm">
           <thead>
-            <tr className="bg-slate-50 text-xs uppercase text-slate-500">
+            <tr className="bg-surface-50 text-xs text-surface-500 border-b border-surface-200">
               <th className="text-left px-4 py-2">Medicine</th>
               <th className="text-center px-4 py-2">Qty</th>
               <th className="text-right px-4 py-2">Unit Price</th>
@@ -137,7 +138,7 @@ export default function OrderDetailPage() {
             <tr><td colSpan={5} className="px-4 py-2 text-right text-slate-600">Subtotal</td><td className="px-4 py-2 text-right font-medium">{formatCurrency(o.subtotal)}</td></tr>
             <tr><td colSpan={5} className="px-4 py-2 text-right text-slate-600">Discount</td><td className="px-4 py-2 text-right font-medium">-{formatCurrency(o.discountAmount)}</td></tr>
             <tr><td colSpan={5} className="px-4 py-2 text-right text-slate-600">Tax</td><td className="px-4 py-2 text-right font-medium">{formatCurrency(o.taxAmount)}</td></tr>
-            <tr className="border-t border-slate-200"><td colSpan={5} className="px-4 py-2 text-right font-semibold text-slate-900">Total</td><td className="px-4 py-2 text-right font-bold text-slate-900">{formatCurrency(o.total)}</td></tr>
+            <tr className="border-t border-slate-200"><td colSpan={5} className="px-4 py-2 text-right font-semibold text-slate-900">Total</td><td className="px-4 py-2 text-right font-semibold text-slate-900">{formatCurrency(o.total)}</td></tr>
           </tfoot>
         </table></div>
       </div>
@@ -224,7 +225,7 @@ function InvoiceRow({ invoice, order }: { invoice: any; order: any }) {
   return (
     <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
       <div>
-        <Link href={`/dashboard/invoices/${invoice.id}`} className="font-medium text-brand-600 hover:underline">
+        <Link href={`/dashboard/invoices/${invoice.id}`} className="font-medium text-brand-700 hover:text-brand-800 hover:underline underline-offset-2">
           {invoice.invoiceNumber}
         </Link>
         <p className="text-xs text-slate-500">{formatDate(invoice.createdAt)} • {invoice.paymentStatus}</p>

@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 interface SectionCardProps {
   title?: ReactNode
   description?: string
+  /** Accepted for compatibility; section titles are type-only. */
   icon?: LucideIcon
   /** Right-side header action (button, link, count) */
   action?: ReactNode
@@ -19,26 +20,21 @@ interface SectionCardProps {
 }
 
 export function SectionCard({
-  title, description, icon: Icon, action, footer, flush, className, children,
+  title, description, action, footer, flush, className, children,
 }: SectionCardProps) {
   return (
-    <div className={cn('card overflow-hidden', className)}>
+    <section className={cn('card overflow-hidden', className)}>
       {(title || action) && (
         <div className="card-header">
           <div className="min-w-0">
-            {title && (
-              <h3 className="font-semibold text-surface-900 flex items-center gap-2 truncate">
-                {Icon && <Icon className="w-4 h-4 text-brand-600 shrink-0" />}
-                <span className="truncate">{title}</span>
-              </h3>
-            )}
+            {title && <h2 className="text-[13px] font-semibold text-surface-900 truncate">{title}</h2>}
             {description && <p className="text-xs text-surface-500 mt-0.5">{description}</p>}
           </div>
-          {action && <div className="shrink-0">{action}</div>}
+          {action && <div className="shrink-0 text-xs">{action}</div>}
         </div>
       )}
       <div className={flush ? '' : 'card-body'}>{children}</div>
-      {footer && <div className="card-header border-t border-b-0 bg-surface-50/40">{footer}</div>}
-    </div>
+      {footer && <div className="px-4 py-2.5 border-t border-surface-200 bg-surface-50/60 flex items-center justify-between gap-3">{footer}</div>}
+    </section>
   )
 }

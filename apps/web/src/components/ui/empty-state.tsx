@@ -14,26 +14,16 @@ interface EmptyStateProps {
   size?: 'compact' | 'default' | 'large'
 }
 
+/** A calm, left-weighted note — what's missing and the one thing to do about it. */
 export function EmptyState({
   icon: Icon, title, description, action, className, size = 'default',
 }: EmptyStateProps) {
   const py = size === 'compact' ? 'py-8' : size === 'large' ? 'py-20' : 'py-14'
-  const iconSize = size === 'compact' ? 'w-10 h-10' : size === 'large' ? 'w-16 h-16' : 'w-12 h-12'
-
   return (
     <div className={cn('flex flex-col items-center text-center px-6', py, className)}>
-      {Icon && (
-        <div className={cn(
-          // an empty ledger cell: dashed hairline frame, nothing inside yet
-          'mb-3 rounded-sm border border-dashed border-surface-300 bg-surface-50',
-          'flex items-center justify-center',
-          iconSize
-        )}>
-          <Icon className="w-1/2 h-1/2 text-surface-400" strokeWidth={1.5} />
-        </div>
-      )}
-      <h3 className="font-display font-semibold text-surface-800">{title}</h3>
-      {description && <p className="text-sm text-surface-500 mt-1 max-w-md">{description}</p>}
+      {Icon && <Icon aria-hidden="true" className="w-5 h-5 mb-3 text-surface-400" strokeWidth={1.75} />}
+      <h3 className="text-[13px] font-semibold text-surface-800">{title}</h3>
+      {description && <p className="text-[13px] leading-5 text-surface-500 mt-1 max-w-sm">{description}</p>}
       {action && <div className="mt-4">{action}</div>}
     </div>
   )

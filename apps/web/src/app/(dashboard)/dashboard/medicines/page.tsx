@@ -192,7 +192,7 @@ export default function MedicinesPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Medicines</h1>
-          <p className="text-sm text-slate-500">
+          <p className="text-[13px] leading-5 text-surface-500 mt-1">
             {data?.meta?.total ?? 0} {search ? 'matching' : 'in master catalog'}
             {(data?.meta?.total ?? 0) > medicines.length && ` · showing the first ${medicines.length} — refine the search to narrow it down`}
           </p>
@@ -318,7 +318,7 @@ const medicineColumns: DataTableColumn<Medicine>[] = [
   {
     key: 'actions', header: '', sortable: false, pinned: true, align: 'right',
     render: (m) => (
-      <Link href={`/dashboard/medicines/${m.id}`} onClick={(e) => e.stopPropagation()} className="text-brand-600 hover:underline text-xs inline-flex items-center gap-1">
+      <Link href={`/dashboard/medicines/${m.id}`} onClick={(e) => e.stopPropagation()} className="text-brand-700 hover:text-brand-800 hover:underline underline-offset-2 text-xs inline-flex items-center gap-1">
         <Pencil className="w-3 h-3" /> Details
       </Link>
     ),

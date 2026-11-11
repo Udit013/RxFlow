@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, TrendingUp, TrendingDown, Package, Pill, Award, Pencil, FlaskConical, Database, ExternalLink, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, TrendingUp, TrendingDown, Package, Pill, Pencil, ExternalLink, AlertTriangle } from 'lucide-react'
 import { api } from '@/lib/api'
 import { cn, formatCurrency, formatDate } from '@/lib/utils'
 import { useRegion } from '@/lib/region'
@@ -58,7 +58,7 @@ export default function MedicineDetailPage() {
                 <Pill className="w-5 h-5 text-brand-600" />
               </div>
               <div className="min-w-0">
-                <h1 className="text-xl sm:text-2xl font-bold text-slate-900 wrap-break-word">{m.name}</h1>
+                <h1 className="text-xl sm:font-display text-[22px] leading-7 font-semibold tracking-[-0.02em] text-slate-900 wrap-break-word">{m.name}</h1>
                 <p className="text-sm text-slate-500">{m.genericName} • {m.strength} • {formLabel(m.dosageForm)}</p>
               </div>
             </div>
@@ -78,7 +78,7 @@ export default function MedicineDetailPage() {
           <div className="flex sm:flex-col items-center sm:items-end justify-between gap-2">
             <div className="sm:text-right">
               <p className="text-xs text-slate-500">MRP</p>
-              <p className="text-2xl font-bold text-slate-900">{m.mrp > 0 ? formatCurrency(m.mrp) : <span className="text-base font-medium text-slate-400">Not set</span>}</p>
+              <p className="font-display text-[22px] leading-7 font-semibold tracking-[-0.02em] text-slate-900">{m.mrp > 0 ? formatCurrency(m.mrp) : <span className="text-base font-medium text-slate-400">Not set</span>}</p>
               <p className="text-xs text-slate-500 mt-1">{m.packSize}</p>
             </div>
             <button onClick={() => setEditing(true)} className="btn-secondary">
@@ -96,7 +96,7 @@ export default function MedicineDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <div className="card overflow-hidden">
           <div className="card-header">
-            <h3 className="font-semibold text-slate-900 flex items-center gap-2"><FlaskConical className="w-4 h-4 text-brand-600" /> Composition &amp; classification</h3>
+            <h3 className="text-[13px] font-semibold text-surface-900">Composition &amp; classification</h3>
           </div>
           <div className="p-4 space-y-4 text-sm">
             {compositions.length === 0 ? (
@@ -104,7 +104,7 @@ export default function MedicineDetailPage() {
             ) : (
               <table className="w-full">
                 <thead>
-                  <tr className="text-xs uppercase text-slate-500"><th className="text-left py-1">Active ingredient</th><th className="text-left py-1">Salt / form</th><th className="text-right py-1">Strength</th></tr>
+                  <tr className="text-xs font-medium text-surface-500"><th className="text-left py-1">Active ingredient</th><th className="text-left py-1">Salt / form</th><th className="text-right py-1">Strength</th></tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {compositions.map((c, i) => (
@@ -128,13 +128,13 @@ export default function MedicineDetailPage() {
 
         <div className="card overflow-hidden">
           <div className="card-header">
-            <h3 className="font-semibold text-slate-900 flex items-center gap-2"><Database className="w-4 h-4 text-brand-600" /> Data source</h3>
+            <h3 className="text-[13px] font-semibold text-surface-900">Data source</h3>
           </div>
           <div className="p-4 space-y-3 text-sm">
             {m.forkedFrom && (
               <p className="text-slate-600">
                 Your pharmacy&apos;s edited copy of{' '}
-                <Link href={`/dashboard/medicines/${m.forkedFrom.id}`} className="text-brand-600 hover:underline">{m.forkedFrom.name}</Link>.
+                <Link href={`/dashboard/medicines/${m.forkedFrom.id}`} className="text-brand-700 hover:text-brand-800 hover:underline underline-offset-2">{m.forkedFrom.name}</Link>.
                 The shared entry other pharmacies use is unchanged.
               </p>
             )}
@@ -143,12 +143,12 @@ export default function MedicineDetailPage() {
                 <p><strong>{m.source.name}</strong> — {m.source.publisher}</p>
                 <p className="text-slate-600">{m.source.attribution}</p>
                 <p className="text-xs text-slate-500">
-                  Licence: {m.source.licenseUrl ? <a href={m.source.licenseUrl} target="_blank" rel="noopener noreferrer" className="text-brand-600 hover:underline">{m.source.license}</a> : m.source.license}
+                  Licence: {m.source.licenseUrl ? <a href={m.source.licenseUrl} target="_blank" rel="noopener noreferrer" className="text-brand-700 hover:text-brand-800 hover:underline underline-offset-2">{m.source.license}</a> : m.source.license}
                   {m.sourceRetrievedAt && <> · retrieved {formatDate(m.sourceRetrievedAt)}</>}
                 </p>
                 {m.source.notes && <p className="text-xs text-slate-500">{m.source.notes}</p>}
                 {m.sourceUrl && (
-                  <a href={m.sourceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-brand-600 hover:underline text-xs">
+                  <a href={m.sourceUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-brand-700 hover:text-brand-800 hover:underline underline-offset-2 text-xs">
                     <ExternalLink className="w-3 h-3" /> View the official record
                   </a>
                 )}
@@ -171,30 +171,30 @@ export default function MedicineDetailPage() {
       />
 
       {stats && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="stat-strip grid-cols-2 lg:grid-cols-4">
           <div className="metric-card">
-            <p className="text-xs text-slate-500 uppercase">Last Buy Price</p>
-            <p className="text-lg font-bold text-slate-900">{formatCurrency(stats.lastPurchasePrice)}</p>
+            <p className="text-xs font-medium text-surface-500">Last Buy Price</p>
+            <p className="font-display text-lg font-semibold tracking-[-0.01em] text-slate-900">{formatCurrency(stats.lastPurchasePrice)}</p>
             <p className="text-xs text-slate-500 mt-1">from {stats.lastSupplierName ?? '—'}</p>
           </div>
           <div className="metric-card">
-            <p className="text-xs text-slate-500 uppercase">Avg Buy Price</p>
-            <p className="text-lg font-bold text-slate-900">{formatCurrency(stats.avgPurchasePrice)}</p>
+            <p className="text-xs font-medium text-surface-500">Avg Buy Price</p>
+            <p className="font-display text-lg font-semibold tracking-[-0.01em] text-slate-900">{formatCurrency(stats.avgPurchasePrice)}</p>
             <p className="text-xs text-slate-500 mt-1">over {stats.totalBatches} batches</p>
           </div>
           <div className="metric-card">
             <div className="flex items-center justify-between">
-              <p className="text-xs text-slate-500 uppercase">Min</p>
+              <p className="text-xs font-medium text-surface-500">Min</p>
               <TrendingDown className="w-3.5 h-3.5 text-green-500" />
             </div>
-            <p className="text-lg font-bold text-green-600">{formatCurrency(stats.minPurchasePrice)}</p>
+            <p className="font-display text-lg font-semibold tracking-[-0.01em] text-green-600">{formatCurrency(stats.minPurchasePrice)}</p>
           </div>
           <div className="metric-card">
             <div className="flex items-center justify-between">
-              <p className="text-xs text-slate-500 uppercase">Max</p>
+              <p className="text-xs font-medium text-surface-500">Max</p>
               <TrendingUp className="w-3.5 h-3.5 text-red-500" />
             </div>
-            <p className="text-lg font-bold text-red-600">{formatCurrency(stats.maxPurchasePrice)}</p>
+            <p className="font-display text-lg font-semibold tracking-[-0.01em] text-red-600">{formatCurrency(stats.maxPurchasePrice)}</p>
           </div>
         </div>
       )}
@@ -202,20 +202,19 @@ export default function MedicineDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <div className="card overflow-hidden">
           <div className="card-header flex items-center justify-between">
-            <h3 className="font-semibold text-slate-900 flex items-center gap-2">
-              <Award className="w-4 h-4 text-brand-600" /> Supplier Comparison
+            <h3 className="text-[13px] font-semibold text-surface-900">Supplier Comparison
             </h3>
             <span className="text-xs text-slate-500">{suppliers.length} suppliers</span>
           </div>
           {suppliers.length === 0 ? (
-            <div className="p-8 text-center text-slate-400 text-sm">
-              <Package className="w-8 h-8 mx-auto mb-2 opacity-40" />
+            <div className="px-6 py-10 text-center text-[13px] text-surface-500">
+              <Package className="w-5 h-5 mx-auto mb-3 text-surface-400" strokeWidth={1.75} aria-hidden="true" />
               No purchase history yet
             </div>
           ) : (
             <div className="overflow-x-auto"><table className="w-full text-sm">
               <thead>
-                <tr className="bg-slate-50 text-xs uppercase text-slate-500">
+                <tr className="bg-surface-50 text-xs text-surface-500 border-b border-surface-200">
                   <th className="text-left px-3 py-2">Supplier</th>
                   <th className="text-right px-3 py-2">Last</th>
                   <th className="text-right px-3 py-2">Avg</th>
@@ -246,7 +245,7 @@ export default function MedicineDetailPage() {
             <h3 className="font-semibold text-slate-900">Recent Batches</h3>
           </div>
           {batches.length === 0 ? (
-            <div className="p-8 text-center text-slate-400 text-sm">No batches recorded</div>
+            <div className="px-6 py-10 text-center text-[13px] text-surface-500">No batches recorded</div>
           ) : (
             <div className="divide-y divide-slate-100 max-h-96 overflow-y-auto">
               {batches.slice(0, 15).map((b: any) => (

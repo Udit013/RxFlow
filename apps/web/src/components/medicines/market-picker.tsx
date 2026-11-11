@@ -84,9 +84,9 @@ export function MarketPicker({
           )}
         >
           <div className="flex gap-1 px-1 pb-1.5 mb-1 border-b border-surface-100">
-            <button type="button" className="text-xs text-brand-600 hover:underline px-1" onClick={() => onChange([home])}>My market</button>
+            <button type="button" className="text-xs text-brand-700 hover:text-brand-800 hover:underline underline-offset-2 px-1" onClick={() => onChange([home])}>My market</button>
             <span className="text-surface-300">·</span>
-            <button type="button" className="text-xs text-brand-600 hover:underline px-1" onClick={() => onChange(all)}>All markets</button>
+            <button type="button" className="text-xs text-brand-700 hover:text-brand-800 hover:underline underline-offset-2 px-1" onClick={() => onChange(all)}>All markets</button>
           </div>
           {ordered.map((o) => (
             <label key={o.code} className={cn('flex items-center gap-2 px-2 py-1.5 rounded text-sm hover:bg-surface-50 cursor-pointer')}>

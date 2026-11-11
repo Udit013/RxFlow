@@ -145,11 +145,11 @@ function CreateCustomerModal({ onClose, onCreated }: { onClose: () => void; onCr
   })
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-        <div className="flex items-center justify-between px-5 py-4 border-b">
+    <div className="modal-overlay">
+      <div className="modal-panel w-full max-w-md">
+        <div className="modal-header">
           <h2 className="font-semibold text-slate-900">New Customer</h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X className="w-4 h-4" /></button>
+          <button type="button" onClick={onClose} aria-label="Close" className="modal-close"><X className="w-4 h-4" /></button>
         </div>
         <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="p-5 space-y-3">
           <div>

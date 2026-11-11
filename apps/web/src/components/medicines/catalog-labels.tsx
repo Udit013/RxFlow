@@ -30,9 +30,13 @@ export function SourceBadge({ source, verified }: { source: string | null | unde
   const s = SOURCE_LABELS[source ?? 'MANUAL'] ?? SOURCE_LABELS.MANUAL!
   const Icon = s.icon
   return (
-    <span className={`${s.cls} text-2xs inline-flex items-center gap-1`} title={s.title}>
-      <Icon className="w-3 h-3" /> {s.label}
-      {verified && <BadgeCheck className="w-3 h-3" aria-label="Ingredients verified against NLM RxNorm" />}
+    // Provenance is reference information, so it reads as quiet text; only a retired demo row is flagged.
+    <span
+      className={s.cls === 'badge-warning' ? `${s.cls} inline-flex items-center gap-1` : 'inline-flex items-center gap-1 text-xs text-surface-600 whitespace-nowrap'}
+      title={s.title}
+    >
+      <Icon className="w-3 h-3 text-surface-400" aria-hidden="true" /> {s.label}
+      {verified && <BadgeCheck className="w-3.5 h-3.5 text-brand-600" aria-label="Ingredients verified against NLM RxNorm" />}
     </span>
   )
 }

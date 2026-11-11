@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
-import { AlertTriangle, ExternalLink, GitCompare, Package } from 'lucide-react'
+import { AlertTriangle, ExternalLink, Package } from 'lucide-react'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { CountryTag, SourceBadge, formLabel } from './catalog-labels'
@@ -69,8 +69,7 @@ export function AlternativesPanel({ medicineId, composition }: { medicineId: str
     <div className="card overflow-hidden">
       <div className="card-header flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h3 className="font-semibold text-slate-900 flex items-center gap-2">
-            <GitCompare className="w-4 h-4 text-brand-600" /> Alternatives &amp; variants
+          <h3 className="text-[13px] font-semibold text-surface-900">Alternatives &amp; variants
           </h3>
           <p className="text-xs text-slate-500 mt-0.5">Compared with {composition || 'this product'}</p>
         </div>
@@ -90,16 +89,17 @@ export function AlternativesPanel({ medicineId, composition }: { medicineId: str
           <p>{data?.notice ?? 'Shown for reference only — not a statement that products are interchangeable.'}</p>
         </div>
         <div className="flex flex-wrap items-center justify-between gap-2 mt-3">
-          <div role="tablist" className="flex flex-wrap gap-1">
+          <div role="tablist" className="segmented">
             {GROUPS.map((g) => (
               <button
                 key={g.id}
                 role="tab"
                 aria-selected={group === g.id}
                 onClick={() => setGroup(g.id)}
-                className={cn('px-3 py-1.5 rounded-md text-sm', group === g.id ? 'bg-brand-50 text-brand-700 font-medium' : 'text-slate-600 hover:bg-slate-50')}
+                data-active={group === g.id}
+                className="segment"
               >
-                {g.label} <span className="text-xs text-slate-400">{data?.[g.id]?.length ?? 0}</span>
+                {g.label} <span className="text-xs text-surface-400 tabular-nums">{data?.[g.id]?.length ?? 0}</span>
               </button>
             ))}
           </div>
@@ -114,10 +114,10 @@ export function AlternativesPanel({ medicineId, composition }: { medicineId: str
       </div>
 
       {isLoading ? (
-        <div className="p-8 text-center text-slate-400 text-sm">Finding alternatives…</div>
+        <div className="px-6 py-10 text-center text-[13px] text-surface-500">Finding alternatives…</div>
       ) : rows.length === 0 ? (
-        <div className="p-8 text-center text-slate-400 text-sm">
-          <Package className="w-8 h-8 mx-auto mb-2 opacity-40" />
+        <div className="px-6 py-10 text-center text-[13px] text-surface-500">
+          <Package className="w-5 h-5 mx-auto mb-3 text-surface-400" strokeWidth={1.75} aria-hidden="true" />
           {group === 'similarUse' && !data?.base?.atcCode
             ? 'No therapeutic classification for this composition yet — add an ATC code to see similar-use products.'
             : 'Nothing found in this group.'}
@@ -126,7 +126,7 @@ export function AlternativesPanel({ medicineId, composition }: { medicineId: str
         <div className="overflow-x-auto mt-3">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-slate-50 text-xs uppercase text-slate-500">
+              <tr className="bg-surface-50 text-xs text-surface-500 border-b border-surface-200">
                 <th className="text-left px-3 py-2">Product</th>
                 <th className="text-left px-3 py-2">Composition</th>
                 <th className="text-left px-3 py-2">Form</th>

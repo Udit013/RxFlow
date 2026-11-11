@@ -8,6 +8,7 @@ import { useUi } from '@/lib/ui-store'
 import { authService } from '@/lib/auth'
 import { canAccess } from '@rxflow/types'
 import { useT } from '@/lib/i18n'
+import { BrandMark } from '@/components/brand-mark'
 import {
   LayoutDashboard, Package, ShoppingCart, FileText,
   Users, Truck, Pill, BarChart3, Settings,
@@ -102,7 +103,7 @@ export function Sidebar() {
         aria-hidden="true"
         onClick={() => setOpen(false)}
         className={cn(
-          'fixed inset-0 z-30 bg-ink/40 backdrop-blur-[1px] transition-opacity duration-200 lg:hidden',
+          'fixed inset-0 z-30 bg-ink/25 transition-opacity duration-200 lg:hidden',
           open ? 'opacity-100' : 'pointer-events-none opacity-0'
         )}
       />
@@ -110,27 +111,27 @@ export function Sidebar() {
         id="app-sidebar"
         aria-label="Primary"
         className={cn(
-          'w-60 bg-brand-950 flex flex-col overflow-hidden shrink-0 rounded-xl shadow-float ring-1 ring-black/20 z-40',
+          'w-60 lg:w-56 bg-surface-100 border-r border-surface-200 flex flex-col overflow-hidden shrink-0 z-40',
           // < lg: off-canvas drawer that slides in from the left
-          'fixed inset-y-3 left-3 transition-transform duration-200 ease-out',
-          open ? 'translate-x-0' : '-translate-x-[calc(100%+1rem)]',
-          // ≥ lg: the floating panel, always in flow
-          'lg:relative lg:inset-auto lg:m-3 lg:translate-x-0 lg:z-20'
+          'fixed inset-y-0 left-0 transition-transform duration-200 ease-out',
+          open ? 'translate-x-0 shadow-elevated' : '-translate-x-full',
+          // ≥ lg: a flush column, always in flow
+          'lg:relative lg:translate-x-0 lg:shadow-none lg:z-20'
         )}
       >
         {/* Wordmark */}
-        <div className="px-5 pt-5 pb-4 border-b border-white/10 flex items-start justify-between">
-          <Link href="/dashboard" className="rounded-sm focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-300">
-            <span className="flex items-baseline gap-2">
-              <Pill className="w-4 h-4 text-brand-300 self-center" aria-hidden="true" />
-              <span className="font-display font-bold text-paper text-[19px] tracking-tight">RxFlow</span>
-            </span>
-            <span className="block text-[10px] font-semibold uppercase tracking-[0.2em] text-brand-300/70 mt-1">Pharmacy OS</span>
+        <div className="h-12 px-4 flex items-center justify-between shrink-0">
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-2 -mx-1 px-1 py-1 rounded-md focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-600"
+          >
+            <BrandMark />
+            <span className="sr-only">Pharmacy OS</span>
           </Link>
           <button
             type="button"
             onClick={() => setOpen(false)}
-            className="lg:hidden -mr-1.5 p-1.5 rounded-sm text-brand-200/70 hover:text-paper hover:bg-white/10 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-300"
+            className="lg:hidden -mr-1.5 p-1.5 rounded-md text-surface-500 hover:text-surface-900 hover:bg-surface-200/70 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-600"
             aria-label={t('Close navigation')}
           >
             <X className="w-4 h-4" />
@@ -138,13 +139,13 @@ export function Sidebar() {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 overflow-y-auto py-4" aria-label="Main navigation">
+        <nav className="flex-1 overflow-y-auto px-2 pt-2 pb-4" aria-label="Main navigation">
           {sections.map((section) => (
-            <div key={section.label} className="mb-5">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-brand-300/60 px-5 mb-1.5">
+            <div key={section.label} className="mb-4 last:mb-0">
+              <p className="px-2 mb-1 text-[11px] font-medium text-surface-500">
                 {t(section.label)}
               </p>
-              <ul>
+              <ul className="space-y-px">
                 {section.items.map((item) => {
                   // Exact match for the dashboard root; prefix match for nested routes.
                   const isActive = item.href === '/dashboard'
@@ -156,17 +157,19 @@ export function Sidebar() {
                         href={item.href}
                         aria-current={isActive ? 'page' : undefined}
                         className={cn(
-                          'relative flex items-center gap-2.5 pl-5 pr-4 py-[7px] text-[13px] transition-colors',
-                          'focus:outline-hidden focus-visible:bg-white/8 focus-visible:text-paper',
-                          // ledger rule: a 2px left marker, not a pill highlight
-                          'border-l-2',
+                          'flex items-center gap-2.5 h-9 lg:h-7 px-2 rounded-md text-[14px] lg:text-[13px] transition-colors',
+                          'focus:outline-hidden focus-visible:ring-2 focus-visible:ring-brand-600',
                           isActive
-                            ? 'border-brand-300 bg-white/6 text-paper font-medium'
-                            : 'border-transparent text-brand-100/70 hover:text-brand-50 hover:bg-white/3'
+                            ? 'bg-paper text-surface-950 font-medium shadow-[0_0_0_1px_var(--color-surface-200)]'
+                            : 'text-surface-600 hover:bg-surface-200/60 hover:text-surface-950'
                         )}
                       >
-                        <item.icon aria-hidden="true" className={cn('w-4 h-4 shrink-0', isActive ? 'text-brand-300' : 'text-brand-200/50')} />
-                        {t(item.label)}
+                        <item.icon
+                          aria-hidden="true"
+                          strokeWidth={isActive ? 2.1 : 1.8}
+                          className={cn('w-4 h-4 shrink-0', isActive ? 'text-brand-700' : 'text-surface-400')}
+                        />
+                        <span className="truncate">{t(item.label)}</span>
                       </Link>
                     </li>
                   )
@@ -176,9 +179,8 @@ export function Sidebar() {
           ))}
         </nav>
 
-        {/* Footer rule */}
-        <div className="px-5 py-3 border-t border-white/10">
-          <p className="text-[10px] text-brand-200/50 tracking-wide font-mono">v1 · book of record</p>
+        <div className="px-4 py-2.5 border-t border-surface-200">
+          <p className="text-[11px] text-surface-400 font-mono">v1 · book of record</p>
         </div>
       </aside>
     </>

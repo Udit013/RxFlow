@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Phone, Mail, MapPin, Check, Wallet } from 'lucide-react'
+import { ArrowLeft, Phone, Mail, MapPin, Check } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { cn, formatCurrency, formatDate } from '@/lib/utils'
@@ -78,7 +78,7 @@ export default function SalesRepDetailPage() {
       <div className="card p-6">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">{rep.name}</h1>
+            <h1 className="font-display text-[22px] leading-7 font-semibold tracking-[-0.02em] text-slate-900">{rep.name}</h1>
             <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-slate-600">
               {rep.phone && <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> {rep.phone}</span>}
               {rep.email && <span className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5" /> {rep.email}</span>}
@@ -88,34 +88,34 @@ export default function SalesRepDetailPage() {
           </div>
           <div className="text-right">
             <p className="text-xs text-slate-500">Commission Rate</p>
-            <p className="text-2xl font-bold text-slate-900">{rep.defaultCommissionPercent}%</p>
+            <p className="font-display text-[22px] leading-7 font-semibold tracking-[-0.02em] text-slate-900">{rep.defaultCommissionPercent}%</p>
             {rep.flatBonusAmount > 0 && <p className="text-xs text-slate-500">+ {formatCurrency(rep.flatBonusAmount)} bonus/order</p>}
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-4">
+      <div className="stat-strip grid-cols-2 lg:grid-cols-4">
         <div className="metric-card">
-          <p className="text-xs text-slate-500 uppercase">Lifetime Orders</p>
-          <p className="text-lg font-bold text-slate-900">{rep.stats?.totalOrders ?? 0}</p>
+          <p className="text-xs font-medium text-surface-500">Lifetime Orders</p>
+          <p className="font-display text-lg font-semibold tracking-[-0.01em] text-slate-900">{rep.stats?.totalOrders ?? 0}</p>
         </div>
         <div className="metric-card">
-          <p className="text-xs text-slate-500 uppercase">Lifetime Sales</p>
-          <p className="text-lg font-bold text-slate-900">{formatCurrency(rep.stats?.totalSales ?? 0)}</p>
+          <p className="text-xs font-medium text-surface-500">Lifetime Sales</p>
+          <p className="font-display text-lg font-semibold tracking-[-0.01em] text-slate-900">{formatCurrency(rep.stats?.totalSales ?? 0)}</p>
         </div>
         <div className="metric-card">
-          <p className="text-xs text-slate-500 uppercase">Lifetime Commission</p>
-          <p className="text-lg font-bold text-slate-900">{formatCurrency(rep.stats?.totalCommission ?? 0)}</p>
+          <p className="text-xs font-medium text-surface-500">Lifetime Commission</p>
+          <p className="font-display text-lg font-semibold tracking-[-0.01em] text-slate-900">{formatCurrency(rep.stats?.totalCommission ?? 0)}</p>
         </div>
         <div className="metric-card">
-          <p className="text-xs text-slate-500 uppercase">This Period Pending</p>
-          <p className="text-lg font-bold text-amber-600">{formatCurrency(totals.pendingCommission)}</p>
+          <p className="text-xs font-medium text-surface-500">This Period Pending</p>
+          <p className="font-display text-lg font-semibold tracking-[-0.01em] text-amber-600">{formatCurrency(totals.pendingCommission)}</p>
         </div>
       </div>
 
       <div className="card p-5">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-          <h3 className="font-semibold text-slate-900 flex items-center gap-2"><Wallet className="w-4 h-4" /> Commission Report</h3>
+          <h3 className="text-[13px] font-semibold text-surface-900">Commission Report</h3>
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-0.5 bg-surface-100 rounded-lg p-0.5">
               {(['SALE', 'PURCHASE', 'all'] as const).map((t) => (
@@ -179,7 +179,7 @@ export default function SalesRepDetailPage() {
         ) : (
           <div className="overflow-x-auto"><table className="w-full text-sm">
             <thead>
-              <tr className="bg-slate-50 text-xs uppercase text-slate-500">
+              <tr className="bg-surface-50 text-xs text-surface-500 border-b border-surface-200">
                 <th className="px-2 py-2">
                   <input type="checkbox" checked={allPendingSelected} onChange={toggleAll} />
                 </th>
@@ -208,7 +208,7 @@ export default function SalesRepDetailPage() {
                       />
                     </td>
                     <td className="px-2 py-2">
-                      <Link href={`/dashboard/orders/${o.id}`} className="text-brand-600 hover:underline font-medium">
+                      <Link href={`/dashboard/orders/${o.id}`} className="text-brand-700 hover:text-brand-800 hover:underline underline-offset-2 font-medium">
                         {o.orderNumber}
                       </Link>
                     </td>

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
-import { Settings, Building, Save, X, Plus, Users as UsersIcon, AlertTriangle, Wifi, Trash2, Globe2 } from 'lucide-react'
+import { Building, Save, X, Plus, Users as UsersIcon, Wifi, Trash2, Globe2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
@@ -13,6 +13,7 @@ import { DeleteAccountModal } from '@/components/delete-account-modal'
 import { useRegion } from '@/lib/region'
 import { taxIdRules } from '@/lib/regional-form'
 import { RegionTab } from '@/components/settings/region-tab'
+import { FormSection } from '@/components/ui'
 
 const ROLES = ['TENANT_ADMIN', 'STORE_MANAGER', 'PHARMACIST', 'SALES_REP', 'ACCOUNTANT', 'DELIVERY_STAFF', 'VIEWER'] as const
 
@@ -28,27 +29,26 @@ export default function SettingsPage() {
     <div className="space-y-5">
       <div className="page-header">
         <div>
-          <h1 className="page-title flex items-center gap-2"><Settings className="w-5 h-5" /> Settings</h1>
-          <p className="text-sm text-slate-500">Tenant configuration, region & tax, team members, LAN deployment</p>
+          <h1 className="page-title">Settings</h1>
+          <p className="text-[13px] leading-5 text-surface-500 mt-1">Tenant configuration, region & tax, team members, LAN deployment</p>
         </div>
       </div>
 
-      <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 w-fit">
+      <div role="tablist" className="tab-list">
         {([
           ['tenant', 'Tenant & Operations', Building],
           ['region', 'Region & Tax', Globe2],
           ['users', 'Users & Roles', UsersIcon],
           ['lan', 'LAN Deployment', Wifi],
-        ] as const).map(([k, label, Icon]) => (
+        ] as const).map(([k, label]) => (
           <button
             key={k}
             onClick={() => setTab(k)}
-            className={cn(
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
-              tab === k ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50'
-            )}
+            role="tab"
+              aria-selected={tab === k}
+              className="tab"
           >
-            <Icon className="w-3.5 h-3.5" /> {label}
+            {label}
           </button>
         ))}
       </div>
@@ -145,11 +145,10 @@ function TenantTab({ user }: { user: NonNullable<ReturnType<typeof authService.g
   const isAdmin = user.role === 'TENANT_ADMIN' || user.role === 'SUPER_ADMIN'
 
   return (
-   <div className="space-y-5">
-    <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="space-y-5">
-      <div className="card p-5">
-        <h3 className="font-semibold mb-3 flex items-center gap-2"><Building className="w-4 h-4" /> Business Information</h3>
-        <div className="grid grid-cols-2 gap-4">
+   <div>
+    <form onSubmit={handleSubmit((d) => mutation.mutate(d))}>
+      <FormSection title="Business information" description="Printed on invoices and used for tax and licence records.">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="label">Pharmacy Name *</label>
             <input className="input" {...register('name', { required: true })} />
@@ -170,11 +169,11 @@ function TenantTab({ user }: { user: NonNullable<ReturnType<typeof authService.g
             <label className="label">Phone</label>
             <input className="input" {...register('phone')} />
           </div>
-          <div className="col-span-2">
+          <div className="sm:col-span-2">
             <label className="label">Email</label>
             <input className="input" type="email" {...register('email')} />
           </div>
-          <div className="col-span-2">
+          <div className="sm:col-span-2">
             <label className="label">Address</label>
             <input className="input" {...register('addressLine1')} placeholder="Street address" />
           </div>
@@ -191,29 +190,28 @@ function TenantTab({ user }: { user: NonNullable<ReturnType<typeof authService.g
             <input className="input" {...register('pincode')} />
           </div>
         </div>
-      </div>
+      </FormSection>
 
-      <div className="card p-5">
-        <h3 className="font-semibold mb-3 flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-amber-600" /> Operations</h3>
+      <FormSection title="Operations" description="How the counter behaves when stock records lag behind the shelf.">
         <label className="flex items-start gap-3 cursor-pointer">
-          <input type="checkbox" {...register('allowNegativeStock')} className="mt-1" />
+          <input type="checkbox" {...register('allowNegativeStock')} className="mt-0.5 w-4 h-4 accent-brand-700" />
           <div>
-            <p className="font-medium text-sm">Allow negative stock (sell before stocking)</p>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="font-medium text-[13px] text-surface-900">Allow negative stock (sell before stocking)</p>
+            <p className="text-[13px] leading-5 text-surface-500 mt-1">
               When enabled, the POS will let you complete a sale even if the medicine isn&apos;t in inventory yet — the
               system tracks the negative balance until the purchase is recorded. Useful for fast-moving items received
               outside of business hours.
             </p>
             {allowNeg && (
-              <div className="mt-2 bg-amber-50 border border-amber-200 rounded-lg p-2 text-xs text-amber-900">
-                ⚠️ Negative balances will appear with a red badge in inventory. Run regular stock takes to reconcile.
+              <div className="mt-3 bg-warning-50 border border-warning-200 rounded-md px-3 py-2 text-xs text-warning-800">
+                Negative balances will appear with a red badge in inventory. Run regular stock takes to reconcile.
               </div>
             )}
           </div>
         </label>
-      </div>
+      </FormSection>
 
-      <div className="flex justify-end">
+      <div className="flex justify-end pb-6 border-b border-surface-200 lg:pl-[calc(15rem+2.5rem)]">
         <button type="submit" disabled={mutation.isPending} className="btn-primary">
           <Save className="w-4 h-4" /> {mutation.isPending ? 'Saving...' : 'Save changes'}
         </button>
@@ -221,11 +219,8 @@ function TenantTab({ user }: { user: NonNullable<ReturnType<typeof authService.g
     </form>
 
     {isAdmin && (
-      <div className="card p-5 border-red-200">
-        <h3 className="font-semibold mb-1 flex items-center gap-2 text-red-600">
-          <AlertTriangle className="w-4 h-4" /> Danger Zone
-        </h3>
-        <div className="flex items-center justify-between gap-4 mt-3">
+      <FormSection title="Danger zone" tone="danger" description="Irreversible actions for this pharmacy account." className="border-t-0!">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <p className="font-medium text-sm text-surface-900">Delete this account</p>
             <p className="text-xs text-surface-500 mt-0.5">
@@ -236,7 +231,7 @@ function TenantTab({ user }: { user: NonNullable<ReturnType<typeof authService.g
             <Trash2 className="w-4 h-4" /> Delete account
           </button>
         </div>
-      </div>
+      </FormSection>
     )}
 
     {showDelete && (
@@ -301,11 +296,11 @@ function UsersTab({ currentUserId }: { currentUserId: string }) {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Name</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Email</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Role</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Last Login</th>
-              <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Active</th>
+              <th className="text-left px-4 h-9 text-xs font-medium text-surface-500 whitespace-nowrap">Name</th>
+              <th className="text-left px-4 h-9 text-xs font-medium text-surface-500 whitespace-nowrap">Email</th>
+              <th className="text-left px-4 h-9 text-xs font-medium text-surface-500 whitespace-nowrap">Role</th>
+              <th className="text-left px-4 h-9 text-xs font-medium text-surface-500 whitespace-nowrap">Last Login</th>
+              <th className="text-center px-4 h-9 text-xs font-medium text-surface-500 whitespace-nowrap">Active</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -380,11 +375,11 @@ function InviteUserModal({ onClose, onCreated }: { onClose: () => void; onCreate
   })
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-        <div className="flex items-center justify-between px-5 py-4 border-b">
+    <div className="modal-overlay">
+      <div className="modal-panel w-full max-w-md">
+        <div className="modal-header">
           <h2 className="font-semibold">Invite User</h2>
-          <button onClick={onClose}><X className="w-4 h-4 text-slate-400" /></button>
+          <button type="button" onClick={onClose} aria-label="Close" className="modal-close"><X className="w-4 h-4" /></button>
         </div>
         <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="p-5 space-y-3">
           <div>
@@ -430,60 +425,60 @@ function LanTab() {
   return (
     <div className="space-y-4">
       <div className="card p-5 space-y-4">
-        <h3 className="font-semibold flex items-center gap-2"><Wifi className="w-4 h-4 text-brand-600" /> LAN Multi-Device Setup</h3>
-        <p className="text-sm text-slate-600">
+        <h2 className="text-[14px] font-semibold text-surface-950">LAN multi-device setup</h2>
+        <p className="text-[13px] leading-5 text-surface-600 max-w-2xl">
           Run RxFlow on one machine and access it from phones, tablets, or other PCs on the same WiFi/LAN.
           All users share one database, so the POS can be open on the counter PC while a tablet manages inventory
           and a phone handles billing.
         </p>
 
-        <div className="bg-slate-50 rounded-lg p-4 space-y-3 text-sm">
-          <div>
-            <p className="font-semibold mb-1">1. Find the host machine&apos;s LAN IP</p>
-            <pre className="bg-slate-900 text-slate-100 text-xs p-3 rounded font-mono overflow-x-auto">{`# On macOS:
+        <ol className="divide-y divide-surface-200 border border-surface-200 rounded-lg text-[13px]">
+          <li className="p-4">
+            <p className="font-medium text-surface-900 mb-1.5">1. Find the host machine&apos;s LAN IP</p>
+            <pre className="bg-surface-950 text-surface-100 text-xs px-3 py-2.5 rounded-md font-mono overflow-x-auto">{`# On macOS:
 ipconfig getifaddr en0
 # Or for any platform:
 ifconfig | grep "inet "
 `}</pre>
             <p className="text-xs text-slate-500 mt-1">
-              Example output: <code className="bg-slate-200 px-1.5 py-0.5 rounded">192.168.1.42</code>
+              Example output: <code className="bg-surface-100 border border-surface-200 font-mono px-1.5 py-0.5 rounded">192.168.1.42</code>
             </p>
-          </div>
+          </li>
 
-          <div>
-            <p className="font-semibold mb-1">2. Update API CORS to accept LAN origins</p>
-            <p className="text-xs text-slate-600 mb-1">In <code className="bg-slate-200 px-1 py-0.5 rounded">apps/api/.env</code>:</p>
-            <pre className="bg-slate-900 text-slate-100 text-xs p-3 rounded font-mono overflow-x-auto">{`CORS_ORIGIN=*
+          <li className="p-4">
+            <p className="font-medium text-surface-900 mb-1.5">2. Update API CORS to accept LAN origins</p>
+            <p className="text-xs text-slate-600 mb-1">In <code className="bg-surface-100 border border-surface-200 font-mono px-1 py-0.5 rounded">apps/api/.env</code>:</p>
+            <pre className="bg-surface-950 text-surface-100 text-xs px-3 py-2.5 rounded-md font-mono overflow-x-auto">{`CORS_ORIGIN=*
 # Or list specific origins:
 # CORS_ORIGIN=http://192.168.1.42:3000,http://localhost:3000`}</pre>
-          </div>
+          </li>
 
-          <div>
-            <p className="font-semibold mb-1">3. Point the web app at the host&apos;s LAN IP</p>
-            <p className="text-xs text-slate-600 mb-1">In <code className="bg-slate-200 px-1 py-0.5 rounded">apps/web/.env.local</code>:</p>
-            <pre className="bg-slate-900 text-slate-100 text-xs p-3 rounded font-mono overflow-x-auto">{`NEXT_PUBLIC_API_URL=http://192.168.1.42:3001/api/v1`}</pre>
-            <p className="text-xs text-slate-500 mt-1">Replace with your actual LAN IP. Restart <code className="bg-slate-200 px-1 py-0.5 rounded">pnpm dev</code>.</p>
-          </div>
+          <li className="p-4">
+            <p className="font-medium text-surface-900 mb-1.5">3. Point the web app at the host&apos;s LAN IP</p>
+            <p className="text-xs text-slate-600 mb-1">In <code className="bg-surface-100 border border-surface-200 font-mono px-1 py-0.5 rounded">apps/web/.env.local</code>:</p>
+            <pre className="bg-surface-950 text-surface-100 text-xs px-3 py-2.5 rounded-md font-mono overflow-x-auto">{`NEXT_PUBLIC_API_URL=http://192.168.1.42:3001/api/v1`}</pre>
+            <p className="text-xs text-slate-500 mt-1">Replace with your actual LAN IP. Restart <code className="bg-surface-100 border border-surface-200 font-mono px-1 py-0.5 rounded">pnpm dev</code>.</p>
+          </li>
 
-          <div>
-            <p className="font-semibold mb-1">4. Bind Next.js dev server to all interfaces</p>
-            <pre className="bg-slate-900 text-slate-100 text-xs p-3 rounded font-mono overflow-x-auto">{`# Run from project root:
+          <li className="p-4">
+            <p className="font-medium text-surface-900 mb-1.5">4. Bind Next.js dev server to all interfaces</p>
+            <pre className="bg-surface-950 text-surface-100 text-xs px-3 py-2.5 rounded-md font-mono overflow-x-auto">{`# Run from project root:
 cd apps/web && pnpm next dev -H 0.0.0.0 -p 3000
 
 # API already binds to 0.0.0.0:3001 by default.`}</pre>
-          </div>
+          </li>
 
-          <div>
-            <p className="font-semibold mb-1">5. Open on devices</p>
+          <li className="p-4">
+            <p className="font-medium text-surface-900 mb-1.5">5. Open on devices</p>
             <p className="text-xs text-slate-600">
               From any phone, tablet, or PC on the same WiFi, open <br />
-              <code className="bg-slate-200 px-1.5 py-0.5 rounded mt-1 inline-block">http://192.168.1.42:3000</code>
+              <code className="bg-surface-100 border border-surface-200 font-mono px-1.5 py-0.5 rounded mt-1 inline-block">http://192.168.1.42:3000</code>
             </p>
-          </div>
-        </div>
+          </li>
+        </ol>
 
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-900">
-          <p className="font-semibold mb-1">⚠️ Security for LAN mode</p>
+        <div className="bg-warning-50 border border-warning-200 rounded-md p-3 text-xs text-warning-900">
+          <p className="font-semibold mb-1">Security for LAN mode</p>
           <ul className="list-disc list-inside space-y-0.5">
             <li>Only do this on a trusted private network (your shop&apos;s WiFi, not public hotspots).</li>
             <li>Set strong passwords for every user — anyone on the LAN can reach the login page.</li>
@@ -493,8 +488,8 @@ cd apps/web && pnpm next dev -H 0.0.0.0 -p 3000
         </div>
       </div>
 
-      <div className="card p-4 bg-slate-50 text-xs text-slate-600">
-        <p><strong>Current API URL detected:</strong> <code className="bg-white px-1.5 py-0.5 rounded">{apiUrl}</code></p>
+      <div className="card px-4 py-3 text-xs text-surface-600">
+        <p><strong className="font-medium text-surface-900">Current API URL detected:</strong> <code className="bg-surface-100 px-1.5 py-0.5 rounded font-mono">{apiUrl}</code></p>
         <p className="mt-1">If this shows <code>localhost</code>, other devices on the network can&apos;t reach it. Follow steps 1-5 above.</p>
       </div>
     </div>

@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
-import { Package, AlertTriangle, Clock, Search, Plus, RefreshCw, X, TrendingUp, TrendingDown, Building2, Trash2, Download, MapPin } from 'lucide-react'
+import { Package, AlertTriangle, Clock, Search, Plus, RefreshCw, X, Download, MapPin } from 'lucide-react'
 import Papa from 'papaparse'
 import { AnimatedSection, PageHeader, SectionCard, EmptyState, SkeletonRow } from '@/components/ui'
 import { toast } from 'sonner'
@@ -135,7 +135,7 @@ export default function InventoryPage() {
   ]
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <AnimatedSection immediate>
         <PageHeader
           icon={Package}
@@ -162,7 +162,7 @@ export default function InventoryPage() {
       </AnimatedSection>
 
       {insightsData?.data && (
-        <AnimatedSection stagger=".insight-tile">
+        <AnimatedSection className="max-md:order-last">
           <InsightsPanel data={insightsData.data} />
         </AnimatedSection>
       )}
@@ -170,47 +170,47 @@ export default function InventoryPage() {
       <AnimatedSection>
         {/* Filter tabs + search inline */}
         <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
-          <div className="flex items-center gap-1 bg-white border border-surface-200/70 rounded-xl p-1 shadow-xs overflow-x-auto">
+          <div className="segmented self-start">
             {filterTabs.map((tab) => (
               <button
                 key={tab.key}
+                type="button"
+                aria-pressed={filter === tab.key}
                 onClick={() => setFilter(tab.key as typeof filter)}
-                className={cn(
-                  'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap',
-                  filter === tab.key
-                    ? 'bg-brand-600 text-white shadow-sm'
-                    : 'text-surface-600 hover:bg-surface-50'
-                )}
+                className="segment"
               >
-                {tab.icon && <tab.icon className={cn('w-3.5 h-3.5', filter !== tab.key && tab.color)} />}
+                {tab.icon && <tab.icon className={cn(filter !== tab.key && tab.color)} />}
                 {tab.label}
               </button>
             ))}
           </div>
-          <div className="card p-2! flex-1 flex items-center gap-2">
-            <Search className="w-4 h-4 text-surface-400 ml-1" />
+          <div className="search-field flex-1">
+            <Search />
             <input
-              className="flex-1 text-sm bg-transparent placeholder:text-surface-400 outline-hidden"
-              placeholder="Search by medicine name, generic, manufacturer, barcode..."
+              type="search"
+              aria-label="Search inventory"
+              className="input pr-8"
+              placeholder="Search by medicine name, generic, manufacturer, barcode…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-            {search && <button onClick={() => setSearch('')} className="text-surface-400 hover:text-surface-700 px-1"><X className="w-3.5 h-3.5" /></button>}
+            {search && <button type="button" aria-label="Clear search" onClick={() => setSearch('')} className="absolute right-1.5 p-1 rounded text-surface-400 hover:text-surface-700"><X className="w-3.5 h-3.5" /></button>}
           </div>
         </div>
       </AnimatedSection>
 
       <AnimatedSection>
         <SectionCard flush className="overflow-hidden">
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full text-[13px] min-w-[760px]">
           <thead>
-            <tr className="bg-surface-50/60 border-b border-surface-200/70">
-              <th className="text-left px-4 py-3 text-[10px] font-semibold text-surface-500 uppercase tracking-widest">Medicine</th>
-              <th className="text-center px-4 py-3 text-[10px] font-semibold text-surface-500 uppercase tracking-widest">Available</th>
-              <th className="text-center px-4 py-3 text-[10px] font-semibold text-surface-500 uppercase tracking-widest">Batches</th>
-              <th className="text-left px-4 py-3 text-[10px] font-semibold text-surface-500 uppercase tracking-widest">Nearest Expiry</th>
-              <th className="text-right px-4 py-3 text-[10px] font-semibold text-surface-500 uppercase tracking-widest">Selling Price</th>
-              <th className="text-center px-4 py-3 text-[10px] font-semibold text-surface-500 uppercase tracking-widest">Status</th>
+            <tr className="bg-surface-50 border-b border-surface-200">
+              <th className="text-left px-4 h-9 text-xs font-medium text-surface-500 whitespace-nowrap">Medicine</th>
+              <th className="text-center px-4 h-9 text-xs font-medium text-surface-500 whitespace-nowrap">Available</th>
+              <th className="text-center px-4 h-9 text-xs font-medium text-surface-500 whitespace-nowrap">Batches</th>
+              <th className="text-left px-4 h-9 text-xs font-medium text-surface-500 whitespace-nowrap">Nearest Expiry</th>
+              <th className="text-right px-4 h-9 text-xs font-medium text-surface-500 whitespace-nowrap">Selling Price</th>
+              <th className="text-center px-4 h-9 text-xs font-medium text-surface-500 whitespace-nowrap">Status</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>
@@ -240,7 +240,7 @@ export default function InventoryPage() {
                 const daysLeft = nearestBatch ? getDaysUntilExpiry(nearestBatch.expiryDate) : null
 
                 return (
-                  <tr key={item.id} className="hover:bg-surface-50/60 transition-colors">
+                  <tr key={item.id} className="hover:bg-surface-50 transition-colors">
                     <td className="px-4 py-3">
                       <div>
                         <div className="flex items-center gap-2">
@@ -291,7 +291,7 @@ export default function InventoryPage() {
                       <span className={cn(
                         stockStatus === 'negative' ? 'badge-danger' :
                         stockStatus === 'out' ? 'badge-danger' :
-                        stockStatus === 'low' ? 'badge-warning' : 'badge-success'
+                        stockStatus === 'low' ? 'badge-warning' : 'text-xs text-surface-500'
                       )}>
                         {stockStatus === 'negative' ? 'Negative' :
                          stockStatus === 'out' ? 'Out of Stock' :
@@ -299,7 +299,7 @@ export default function InventoryPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <button onClick={() => setManageItem(item)} className="text-xs text-brand-600 hover:underline">Manage</button>
+                      <button onClick={() => setManageItem(item)} className="text-xs font-medium text-surface-600 hover:text-surface-950 px-1.5 py-1 -my-1 rounded-md hover:bg-surface-100">Manage</button>
                     </td>
                   </tr>
                 )
@@ -307,6 +307,7 @@ export default function InventoryPage() {
             )}
           </tbody>
         </table>
+        </div>
         </SectionCard>
       </AnimatedSection>
 
@@ -357,14 +358,14 @@ function ManageItemModal({ item, onClose, onSaved }: { item: any; onClose: () =>
   })
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-elevated w-full max-w-md">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-surface-100">
+    <div className="modal-overlay">
+      <div className="modal-panel w-full max-w-md">
+        <div className="modal-header">
           <div>
             <h2 className="font-semibold text-surface-900">Manage Item</h2>
             <p className="text-xs text-surface-500">{item.medicine?.name}</p>
           </div>
-          <button onClick={onClose}><X className="w-4 h-4 text-surface-400" /></button>
+          <button type="button" onClick={onClose} aria-label="Close" className="modal-close"><X className="w-4 h-4" /></button>
         </div>
         <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="p-5 space-y-3">
           <div className="grid grid-cols-2 gap-3">
@@ -453,11 +454,11 @@ function AddStockModal({ onClose, onSaved }: { onClose: () => void; onSaved: () 
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-5 py-4 border-b sticky top-0 bg-white">
+    <div className="modal-overlay">
+      <div className="modal-panel w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="modal-header sticky top-0 z-10">
           <h2 className="font-semibold text-slate-900">Add Stock · Temporary Purchase</h2>
-          <button onClick={onClose}><X className="w-4 h-4 text-slate-400" /></button>
+          <button type="button" onClick={onClose} aria-label="Close" className="modal-close"><X className="w-4 h-4" /></button>
         </div>
         <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="p-5 space-y-3">
           <div className="bg-brand-50 border border-brand-200 rounded-lg p-2.5 text-xs text-surface-700">
@@ -569,27 +570,29 @@ function AddStockModal({ onClose, onSaved }: { onClose: () => void; onSaved: () 
 
 function InsightsPanel({ data }: { data: any }) {
   const { topMovers, slowMovers, byManufacturer, writeOffs } = data
+  const col = 'min-w-0 flex flex-col'
+  const head = 'flex items-baseline justify-between gap-2 px-4 pt-3.5 pb-2'
+  const title = 'text-[13px] font-semibold text-surface-900'
+  const hint = 'text-xs text-surface-500'
+  const row = 'px-4 py-2 flex items-center justify-between gap-3 text-[13px]'
+  const empty = 'px-4 py-6 text-[13px] text-surface-400'
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
-      <div className="insight-tile card overflow-hidden">
-        <div className="card-header flex items-center justify-between">
-          <h3 className="font-semibold text-slate-900 flex items-center gap-2 text-sm">
-            <TrendingUp className="w-4 h-4 text-green-600" /> Top Movers (30d)
-          </h3>
-        </div>
-        <div className="divide-y divide-slate-100 max-h-72 overflow-y-auto">
+    <section aria-label="Inventory insights" className="card overflow-hidden grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 divide-y md:divide-y-0 divide-surface-200 [&>*]:border-surface-200 md:[&>*:nth-child(odd)]:border-r md:[&>*:nth-child(-n+2)]:border-b xl:[&>*]:border-b-0 xl:[&>*:not(:last-child)]:border-r">
+      <div className={col}>
+        <div className={head}><h3 className={title}>Top movers</h3><span className={hint}>30 days</span></div>
+        <div className="pb-2">
           {topMovers.length === 0 ? (
-            <p className="p-6 text-center text-slate-400 text-xs">No sales in last 30 days</p>
+            <p className={empty}>No sales in the last 30 days</p>
           ) : (
             topMovers.slice(0, 6).map((m: any, i: number) => (
-              <div key={m.medicineId} className="p-2.5 flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2 truncate">
-                  <span className="text-xs text-slate-400 w-4">{i + 1}.</span>
+              <div key={m.medicineId} className={row}>
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-xs text-surface-400 w-3 tabular-nums">{i + 1}</span>
                   <span className="truncate">{m.medicineName}</span>
                 </div>
-                <div className="text-right shrink-0 ml-2">
-                  <p className="font-semibold text-xs">{m.unitsSold}u</p>
-                  <p className="text-[10px] text-slate-500">{formatCurrency(m.revenue)}</p>
+                <div className="text-right shrink-0 tabular-nums">
+                  <p className="font-medium">{m.unitsSold}u</p>
+                  <p className="text-xs text-surface-500">{formatCurrency(m.revenue)}</p>
                 </div>
               </div>
             ))
@@ -597,25 +600,21 @@ function InsightsPanel({ data }: { data: any }) {
         </div>
       </div>
 
-      <div className="insight-tile card overflow-hidden">
-        <div className="card-header">
-          <h3 className="font-semibold text-slate-900 flex items-center gap-2 text-sm">
-            <TrendingDown className="w-4 h-4 text-amber-600" /> Slow Movers
-          </h3>
-        </div>
-        <div className="divide-y divide-slate-100 max-h-72 overflow-y-auto">
+      <div className={col}>
+        <div className={head}><h3 className={title}>Slow movers</h3><span className={hint}>Oldest stock</span></div>
+        <div className="pb-2">
           {slowMovers.length === 0 ? (
-            <p className="p-6 text-center text-slate-400 text-xs">All stock is moving</p>
+            <p className={empty}>All stock is moving</p>
           ) : (
             slowMovers.slice(0, 6).map((m: any) => (
-              <div key={m.medicineId} className="p-2.5 flex items-center justify-between text-sm">
-                <div className="truncate">
+              <div key={m.medicineId} className={row}>
+                <div className="min-w-0">
                   <p className="truncate">{m.medicineName}</p>
-                  <p className="text-[10px] text-slate-500">{m.daysInStock}d in stock</p>
+                  <p className="text-xs text-surface-500">{m.daysInStock}d in stock</p>
                 </div>
-                <div className="text-right shrink-0 ml-2">
-                  <p className="font-semibold text-xs">{m.quantity}u</p>
-                  <p className="text-[10px] text-slate-500">{formatCurrency(m.valueAtCost)}</p>
+                <div className="text-right shrink-0 tabular-nums">
+                  <p className="font-medium">{m.quantity}u</p>
+                  <p className="text-xs text-surface-500">{formatCurrency(m.valueAtCost)}</p>
                 </div>
               </div>
             ))
@@ -623,68 +622,56 @@ function InsightsPanel({ data }: { data: any }) {
         </div>
       </div>
 
-      <div className="insight-tile card overflow-hidden">
-        <div className="card-header">
-          <h3 className="font-semibold text-slate-900 flex items-center gap-2 text-sm">
-            <Building2 className="w-4 h-4 text-brand-600" /> Top Manufacturers
-          </h3>
-        </div>
-        <div className="divide-y divide-slate-100 max-h-72 overflow-y-auto">
+      <div className={col}>
+        <div className={head}><h3 className={title}>Top manufacturers</h3><span className={hint}>By value</span></div>
+        <div className="pb-2">
           {byManufacturer.length === 0 ? (
-            <p className="p-6 text-center text-slate-400 text-xs">No inventory</p>
+            <p className={empty}>No inventory</p>
           ) : (
             byManufacturer.slice(0, 6).map((m: any) => (
-              <div key={m.manufacturer} className="p-2.5 flex items-center justify-between text-sm">
-                <div className="truncate">
+              <div key={m.manufacturer} className={row}>
+                <div className="min-w-0">
                   <p className="truncate">{m.manufacturer}</p>
-                  <p className="text-[10px] text-slate-500">{m.skus} SKUs · {m.quantity}u</p>
+                  <p className="text-xs text-surface-500">{m.skus} SKUs · {m.quantity}u</p>
                 </div>
-                <div className="text-right shrink-0 ml-2">
-                  <p className="font-semibold text-xs">{formatCurrency(m.valueAtCost)}</p>
-                </div>
+                <p className="font-medium shrink-0 tabular-nums">{formatCurrency(m.valueAtCost)}</p>
               </div>
             ))
           )}
         </div>
       </div>
 
-      <div className="insight-tile card overflow-hidden border-amber-200">
-        <div className="card-header bg-amber-50">
-          <h3 className="font-semibold text-slate-900 flex items-center gap-2 text-sm">
-            <Trash2 className="w-4 h-4 text-amber-700" /> Write-offs (30d)
-          </h3>
-        </div>
-        <div className="p-3 border-b">
-          <div className="grid grid-cols-2 gap-2">
-            <div>
-              <p className="text-xs text-slate-500">Units</p>
-              <p className="text-lg font-bold text-amber-700">{writeOffs.totalUnits}</p>
-            </div>
-            <div>
-              <p className="text-xs text-slate-500">Loss</p>
-              <p className="text-lg font-bold text-red-600">{formatCurrency(writeOffs.totalLoss)}</p>
-            </div>
+      <div className={col}>
+        <div className={head}><h3 className={title}>Write-offs</h3><span className={hint}>30 days</span></div>
+        <div className="px-4 pb-3 grid grid-cols-2 gap-3 border-b border-surface-100">
+          <div>
+            <p className="text-xs text-surface-500">Units</p>
+            <p className="font-display text-lg font-semibold tabular-nums">{writeOffs.totalUnits}</p>
+          </div>
+          <div>
+            <p className="text-xs text-surface-500">Loss</p>
+            <p className={cn('font-display text-lg font-semibold tabular-nums', writeOffs.totalLoss > 0 && 'text-danger-600')}>{formatCurrency(writeOffs.totalLoss)}</p>
           </div>
         </div>
-        <div className="divide-y divide-slate-100 max-h-44 overflow-y-auto">
+        <div className="pb-2">
           {writeOffs.recent.length === 0 ? (
-            <p className="p-6 text-center text-slate-400 text-xs">No write-offs in 30 days</p>
+            <p className={empty}>No write-offs in 30 days</p>
           ) : (
             writeOffs.recent.slice(0, 5).map((w: any) => (
-              <div key={w.batchId} className="p-2 flex items-center justify-between text-xs">
-                <div className="truncate">
+              <div key={w.batchId} className={row}>
+                <div className="min-w-0">
                   <p className="font-medium truncate">{w.medicineName}</p>
-                  <p className="text-[10px] text-slate-500">B {w.batchNumber} · {w.writeOffReason}</p>
+                  <p className="text-xs text-surface-500">B {w.batchNumber} · {w.writeOffReason}</p>
                 </div>
-                <div className="text-right shrink-0 ml-2">
-                  <p className="font-semibold">{w.writeOffQuantity}u</p>
-                  <p className="text-[10px] text-red-600">{formatCurrency(w.lossValue)}</p>
+                <div className="text-right shrink-0 tabular-nums">
+                  <p className="font-medium">{w.writeOffQuantity}u</p>
+                  <p className="text-xs text-danger-600">{formatCurrency(w.lossValue)}</p>
                 </div>
               </div>
             ))
           )}
         </div>
       </div>
-    </div>
+    </section>
   )
 }

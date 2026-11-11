@@ -29,7 +29,7 @@ const mono = IBM_Plex_Mono({
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: '#052220', // brand-950 — matches the sidebar / splash mark
+  themeColor: '#faf9f6', // surface-50 — the app canvas, so mobile browser chrome blends in
 }
 
 export const metadata: Metadata = {

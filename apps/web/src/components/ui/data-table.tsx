@@ -136,10 +136,12 @@ export function DataTable<T>({
       {(searchable || toolbar || exportFileName) && (
         <div className="flex flex-wrap items-center gap-2">
           {searchable && (
-            <div className="card p-2! flex items-center gap-2 flex-1 min-w-[200px]">
-              <Search className="w-4 h-4 text-surface-400 ml-1" />
+            <div className="relative flex-1 min-w-[200px]">
+              <Search aria-hidden="true" className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-surface-400 pointer-events-none" />
               <input
-                className="flex-1 text-sm bg-transparent outline-hidden"
+                type="search"
+                aria-label={searchPlaceholder}
+                className="input pl-8"
                 placeholder={searchPlaceholder}
                 value={query}
                 onChange={(e) => { setQuery(e.target.value); setPage(0) }}
@@ -156,7 +158,7 @@ export function DataTable<T>({
               aria-haspopup="true"
               aria-expanded={colMenuOpen}
             >
-              <SlidersHorizontal className="w-4 h-4" /> Columns
+              <SlidersHorizontal className="w-3.5 h-3.5" /> Columns
             </button>
             {colMenuOpen && (
               // Opens towards the side with room: when the toolbar wraps this button starts a row,
@@ -164,14 +166,14 @@ export function DataTable<T>({
               <div
                 role="menu"
                 className={cn(
-                  'absolute top-full mt-1 w-56 max-w-[calc(100vw-2rem)] bg-white border border-surface-200 rounded-lg shadow-dropdown z-30 p-1.5 max-h-72 overflow-y-auto',
+                  'absolute top-full mt-1 w-56 max-w-[calc(100vw-2rem)] bg-paper rounded-lg shadow-dropdown z-30 p-1 max-h-72 overflow-y-auto',
                   colMenuAlign === 'left' ? 'left-0' : 'right-0',
                 )}
               >
                 {columns.map((c) => (
                   <label
                     key={c.key}
-                    className={cn('flex items-center gap-2 px-2 py-1.5 rounded text-sm hover:bg-surface-50', c.pinned && 'opacity-50')}
+                    className={cn('flex items-center gap-2 px-2 py-1.5 rounded-md text-[13px] text-surface-700 hover:bg-surface-100 cursor-pointer', c.pinned && 'opacity-50 cursor-default')}
                   >
                     <input
                       type="checkbox"
@@ -194,18 +196,18 @@ export function DataTable<T>({
           </div>
           {exportFileName && (
             <button onClick={exportCsv} className="btn-secondary" title="Export CSV">
-              <Download className="w-4 h-4" /> Export
+              <Download className="w-3.5 h-3.5" /> Export
             </button>
           )}
         </div>
       )}
 
       {/* Table */}
-      <div className="card p-0! overflow-hidden">
+      <div className="card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-[13px]">
             <thead className="sticky top-0 z-10">
-              <tr className="bg-surface-50/80 backdrop-blur-sm text-2xs uppercase tracking-[0.08em] text-surface-500 border-b border-surface-200">
+              <tr className="bg-surface-50 text-xs text-surface-500 border-b border-surface-200">
                 {visibleColumns.map((col) => {
                   const isSorted = sortKey === col.key
                   return (
@@ -213,9 +215,9 @@ export function DataTable<T>({
                       key={col.key}
                       onClick={() => toggleSort(col)}
                       className={cn(
-                        'px-4 py-2.5 font-semibold whitespace-nowrap select-none',
+                        'group/th px-4 h-9 font-medium whitespace-nowrap select-none',
                         alignCls(col.align),
-                        col.sortable !== false && 'cursor-pointer hover:text-surface-700',
+                        col.sortable !== false && 'cursor-pointer hover:text-surface-900',
                       )}
                     >
                       <span className={cn('inline-flex items-center gap-1', col.align === 'right' && 'flex-row-reverse')}>
@@ -223,7 +225,7 @@ export function DataTable<T>({
                         {col.sortable !== false && (
                           isSorted
                             ? (sortDir === 'asc' ? <ArrowUp className="w-3 h-3 text-brand-600" /> : <ArrowDown className="w-3 h-3 text-brand-600" />)
-                            : <ArrowUpDown className="w-3 h-3 text-surface-300" />
+                            : <ArrowUpDown className="w-3 h-3 text-surface-300 opacity-0 group-hover/th:opacity-100 transition-opacity" />
                         )}
                       </span>
                     </th>
@@ -245,7 +247,7 @@ export function DataTable<T>({
                   <tr
                     key={rowKey(row)}
                     onClick={onRowClick ? () => onRowClick(row) : undefined}
-                    className={cn('hover:bg-surface-50/60', onRowClick && 'cursor-pointer')}
+                    className={cn('transition-colors hover:bg-surface-50', onRowClick && 'cursor-pointer')}
                   >
                     {visibleColumns.map((col) => (
                       <td key={col.key} className={cn('px-4 py-2.5', alignCls(col.align), col.className)}>
@@ -262,22 +264,22 @@ export function DataTable<T>({
         {/* Footer / pagination */}
         {!isLoading && sorted.length > pageSize && (
           <div className="flex items-center justify-between px-4 py-2.5 border-t border-surface-200 text-xs text-surface-500">
-            <span>
+            <span className="tabular-nums">
               {safePage * pageSize + 1}–{Math.min((safePage + 1) * pageSize, sorted.length)} of {sorted.length}
             </span>
             <div className="flex items-center gap-1">
               <button
                 disabled={safePage === 0}
                 onClick={() => setPage(safePage - 1)}
-                className="p-1.5 rounded hover:bg-surface-100 disabled:opacity-40 disabled:hover:bg-transparent"
+                className="p-1.5 rounded-md text-surface-600 hover:bg-surface-100 disabled:opacity-40 disabled:hover:bg-transparent"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
-              <span className="px-2">Page {safePage + 1} / {pageCount}</span>
+              <span className="px-2 tabular-nums">Page {safePage + 1} of {pageCount}</span>
               <button
                 disabled={safePage >= pageCount - 1}
                 onClick={() => setPage(safePage + 1)}
-                className="p-1.5 rounded hover:bg-surface-100 disabled:opacity-40 disabled:hover:bg-transparent"
+                className="p-1.5 rounded-md text-surface-600 hover:bg-surface-100 disabled:opacity-40 disabled:hover:bg-transparent"
               >
                 <ChevronRight className="w-4 h-4" />
               </button>

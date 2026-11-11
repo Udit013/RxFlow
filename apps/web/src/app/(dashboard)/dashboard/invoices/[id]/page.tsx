@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
-import { ArrowLeft, Download, MessageCircle, X, Wallet, Receipt as ReceiptIcon, Printer, RotateCcw } from 'lucide-react'
+import { ArrowLeft, Download, MessageCircle, X, Wallet, Receipt as Printer, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { authService, buildTenantHeader } from '@/lib/auth'
@@ -127,23 +127,23 @@ export default function InvoiceDetailPage() {
         <div className="flex items-start justify-between">
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-slate-900">{inv.invoiceNumber}</h1>
+              <h1 className="text-2xl font-semibold text-slate-900">{inv.invoiceNumber}</h1>
               <span className={STATUS_STYLES[inv.paymentStatus] ?? 'badge-neutral'}>{inv.paymentStatus}</span>
             </div>
             <p className="text-sm text-slate-500 mt-1">Issued {formatDate(inv.createdAt)}</p>
             <p className="text-sm text-slate-600 mt-2">
-              {inv.customer ? <>Customer: <Link href={`/dashboard/customers/${inv.customer.id}`} className="text-brand-600 hover:underline">{inv.customer.name}</Link></> :
-               inv.supplier ? <>Supplier: <Link href={`/dashboard/suppliers/${inv.supplier.id}`} className="text-brand-600 hover:underline">{inv.supplier.name}</Link></> : 'No party'}
+              {inv.customer ? <>Customer: <Link href={`/dashboard/customers/${inv.customer.id}`} className="text-brand-700 hover:text-brand-800 hover:underline underline-offset-2">{inv.customer.name}</Link></> :
+               inv.supplier ? <>Supplier: <Link href={`/dashboard/suppliers/${inv.supplier.id}`} className="text-brand-700 hover:text-brand-800 hover:underline underline-offset-2">{inv.supplier.name}</Link></> : 'No party'}
             </p>
             {inv.orderId && (
               <p className="text-sm text-slate-500 mt-1">
-                Linked to <Link href={`/dashboard/orders/${inv.orderId}`} className="text-brand-600 hover:underline">order</Link>
+                Linked to <Link href={`/dashboard/orders/${inv.orderId}`} className="text-brand-700 hover:text-brand-800 hover:underline underline-offset-2">order</Link>
               </p>
             )}
           </div>
           <div className="text-right">
             <p className="text-xs text-slate-500">Grand Total</p>
-            <p className="text-2xl font-bold text-slate-900">{formatCurrency(inv.grandTotal ?? inv.total ?? 0)}</p>
+            <p className="text-2xl font-semibold text-slate-900">{formatCurrency(inv.grandTotal ?? inv.total ?? 0)}</p>
             <p className={cn('text-xs mt-1', balance > 0 ? 'text-amber-600 font-medium' : 'text-green-600')}>
               {balance > 0 ? `${formatCurrency(balance)} due` : 'Fully paid'}
             </p>
@@ -177,7 +177,7 @@ export default function InvoiceDetailPage() {
           <div className="mt-4 pt-4 border-t bg-amber-50 rounded-lg p-3 -mx-2">
             <p className="text-sm">
               <strong>Credit note</strong> against original invoice.{' '}
-              <Link href={`/dashboard/invoices/${inv.originalInvoiceId}`} className="text-brand-600 hover:underline">View original →</Link>
+              <Link href={`/dashboard/invoices/${inv.originalInvoiceId}`} className="text-brand-700 hover:text-brand-800 hover:underline underline-offset-2">View original →</Link>
             </p>
           </div>
         )}
@@ -187,7 +187,7 @@ export default function InvoiceDetailPage() {
         <div className="card-header"><h3 className="font-semibold text-slate-900">Line items</h3></div>
         <div className="overflow-x-auto"><table className="w-full text-sm">
           <thead>
-            <tr className="bg-slate-50 text-xs uppercase text-slate-500">
+            <tr className="bg-surface-50 text-xs text-surface-500 border-b border-surface-200">
               <th className="text-left px-3 py-2">Item</th>
               <th className="text-left px-3 py-2">Batch</th>
               <th className="text-left px-3 py-2">Exp</th>
@@ -218,14 +218,14 @@ export default function InvoiceDetailPage() {
             ))}
             {inv.otherCharges > 0 && <tr><td colSpan={footSpan} className="px-3 py-2 text-right text-slate-600">Transport / other charges</td><td className="px-3 py-2 text-right">{formatCurrency(inv.otherCharges)}</td></tr>}
             {Math.abs(inv.roundOff ?? 0) >= 0.01 && <tr><td colSpan={footSpan} className="px-3 py-2 text-right text-slate-600">Round off</td><td className="px-3 py-2 text-right">{formatCurrency(inv.roundOff)}</td></tr>}
-            <tr className="border-t"><td colSpan={footSpan} className="px-3 py-2 text-right font-bold">Grand Total</td><td className="px-3 py-2 text-right font-bold">{formatCurrency(inv.grandTotal)}</td></tr>
+            <tr className="border-t"><td colSpan={footSpan} className="px-3 py-2 text-right font-semibold">Grand Total</td><td className="px-3 py-2 text-right font-semibold">{formatCurrency(inv.grandTotal)}</td></tr>
           </tfoot>
         </table></div>
       </div>
 
       <div className="card overflow-hidden">
         <div className="card-header flex items-center justify-between">
-          <h3 className="font-semibold text-slate-900 flex items-center gap-2"><ReceiptIcon className="w-4 h-4" /> Payments</h3>
+          <h3 className="text-[13px] font-semibold text-surface-900">Payments</h3>
           <div className="text-sm">
             <span className="text-slate-500">Paid: </span>
             <span className="font-semibold">{formatCurrency(totalPaid)}</span>
@@ -239,7 +239,7 @@ export default function InvoiceDetailPage() {
         ) : (
           <div className="overflow-x-auto"><table className="w-full text-sm">
             <thead>
-              <tr className="bg-slate-50 text-xs uppercase text-slate-500">
+              <tr className="bg-surface-50 text-xs text-surface-500 border-b border-surface-200">
                 <th className="text-left px-3 py-2">Date</th>
                 <th className="text-left px-3 py-2">Method</th>
                 <th className="text-left px-3 py-2">Reference</th>
@@ -263,14 +263,14 @@ export default function InvoiceDetailPage() {
       {(creditNotesData?.data?.length ?? 0) > 0 && (
         <div className="card overflow-hidden">
           <div className="card-header flex items-center justify-between">
-            <h3 className="font-semibold text-slate-900 flex items-center gap-2"><RotateCcw className="w-4 h-4 text-amber-600" /> Credit Notes Issued</h3>
+            <h3 className="text-[13px] font-semibold text-surface-900">Credit Notes Issued</h3>
             <span className="text-xs text-slate-500">{creditNotesData.data.length} note(s)</span>
           </div>
           <div className="divide-y divide-slate-100">
             {creditNotesData.data.map((cn: any) => (
               <div key={cn.id} className="p-4 flex items-center justify-between">
                 <div>
-                  <Link href={`/dashboard/invoices/${cn.id}`} className="font-medium text-brand-600 hover:underline">
+                  <Link href={`/dashboard/invoices/${cn.id}`} className="font-medium text-brand-700 hover:text-brand-800 hover:underline underline-offset-2">
                     {cn.invoiceNumber}
                   </Link>
                   <p className="text-xs text-slate-500 mt-0.5">
@@ -287,7 +287,7 @@ export default function InvoiceDetailPage() {
       {(purchaseReturnsData?.data?.length ?? 0) > 0 && (
         <div className="card overflow-hidden">
           <div className="card-header flex items-center justify-between">
-            <h3 className="font-semibold text-slate-900 flex items-center gap-2"><RotateCcw className="w-4 h-4 text-amber-600" /> Returns to Supplier</h3>
+            <h3 className="text-[13px] font-semibold text-surface-900">Returns to Supplier</h3>
             <span className="text-xs text-slate-500">{purchaseReturnsData.data.length} return(s)</span>
           </div>
           <div className="divide-y divide-slate-100">
@@ -379,14 +379,14 @@ function CreditNoteModal({ invoice, onClose, onCreated }: { invoice: any; onClos
   const anyLines = lines.some((l) => l.quantity > 0)
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-5 py-4 border-b sticky top-0 bg-white z-10">
+    <div className="modal-overlay">
+      <div className="modal-panel w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="modal-header sticky top-0 z-10">
           <div>
             <h2 className="font-semibold text-slate-900">Issue Credit Note</h2>
             <p className="text-xs text-slate-500">Against {invoice.invoiceNumber}</p>
           </div>
-          <button onClick={onClose}><X className="w-4 h-4 text-slate-400" /></button>
+          <button type="button" onClick={onClose} aria-label="Close" className="modal-close"><X className="w-4 h-4" /></button>
         </div>
 
         <div className="p-5 space-y-4">
@@ -399,7 +399,7 @@ function CreditNoteModal({ invoice, onClose, onCreated }: { invoice: any; onClos
             <label className="label">Select items to return</label>
             <div className="overflow-x-auto"><table className="w-full text-sm border rounded-lg overflow-hidden">
               <thead className="bg-slate-50">
-                <tr className="text-xs uppercase text-slate-500">
+                <tr className="text-xs font-medium text-surface-500">
                   <th className="text-left px-3 py-2">Item</th>
                   <th className="text-right px-3 py-2">Sold</th>
                   <th className="text-center px-3 py-2">Return Qty</th>
@@ -459,7 +459,7 @@ function CreditNoteModal({ invoice, onClose, onCreated }: { invoice: any; onClos
               <tfoot className="bg-slate-50">
                 <tr>
                   <td colSpan={4} className="px-3 py-2 text-right font-semibold">Total refund</td>
-                  <td className="px-3 py-2 text-right font-bold text-amber-700">{formatCurrency(totalReturning)}</td>
+                  <td className="px-3 py-2 text-right font-semibold text-amber-700">{formatCurrency(totalReturning)}</td>
                 </tr>
               </tfoot>
             </table></div>
@@ -508,14 +508,14 @@ function PurchaseReturnModal({ invoice, onClose, onCreated }: { invoice: any; on
   const anyLines = lines.some((l) => l.quantity > 0)
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-elevated w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-5 py-4 border-b sticky top-0 bg-white z-10">
+    <div className="modal-overlay">
+      <div className="modal-panel w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="modal-header sticky top-0 z-10">
           <div>
             <h2 className="font-semibold text-surface-900">Return to Supplier</h2>
             <p className="text-xs text-surface-500">Against {invoice.invoiceNumber} · {invoice.supplier?.name ?? invoice.supplier?.companyName ?? ''}</p>
           </div>
-          <button onClick={onClose}><X className="w-4 h-4 text-surface-400" /></button>
+          <button type="button" onClick={onClose} aria-label="Close" className="modal-close"><X className="w-4 h-4" /></button>
         </div>
 
         <div className="p-5 space-y-4">
@@ -526,7 +526,7 @@ function PurchaseReturnModal({ invoice, onClose, onCreated }: { invoice: any; on
 
           <div className="overflow-x-auto"><table className="w-full text-sm border rounded-lg overflow-hidden">
             <thead className="bg-surface-50">
-              <tr className="text-xs uppercase text-surface-500">
+              <tr className="text-xs font-medium text-surface-500">
                 <th className="text-left px-3 py-2">Item</th>
                 <th className="text-right px-3 py-2">Purchased</th>
                 <th className="text-center px-3 py-2">Return Qty</th>
@@ -563,7 +563,7 @@ function PurchaseReturnModal({ invoice, onClose, onCreated }: { invoice: any; on
             <tfoot className="bg-surface-50">
               <tr>
                 <td colSpan={3} className="px-3 py-2 text-right font-semibold">Total return value</td>
-                <td className="px-3 py-2 text-right font-bold text-amber-700">{formatCurrency(totalReturning)}</td>
+                <td className="px-3 py-2 text-right font-semibold text-amber-700">{formatCurrency(totalReturning)}</td>
               </tr>
             </tfoot>
           </table></div>
@@ -607,11 +607,11 @@ function RecordPaymentModal({
   })
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-        <div className="flex items-center justify-between px-5 py-4 border-b">
+    <div className="modal-overlay">
+      <div className="modal-panel w-full max-w-md">
+        <div className="modal-header">
           <h2 className="font-semibold text-slate-900">Record Payment</h2>
-          <button onClick={onClose}><X className="w-4 h-4 text-slate-400" /></button>
+          <button type="button" onClick={onClose} aria-label="Close" className="modal-close"><X className="w-4 h-4" /></button>
         </div>
         <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="p-5 space-y-3">
           <div>

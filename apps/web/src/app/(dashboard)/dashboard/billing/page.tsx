@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { Search, Trash2, Plus, Minus, ShoppingCart, Receipt, UserCheck, Pause, Play, X } from 'lucide-react'
+import { Search, Trash2, Plus, Minus, ShoppingCart, Receipt, Pause, Play, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { authService } from '@/lib/auth'
@@ -358,13 +358,13 @@ function BillingPageInner() {
   })
 
   return (
-    <div className="grid grid-cols-3 gap-5 h-full">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 lg:gap-6 items-start">
       {/* Left: search + results */}
-      <div className="col-span-2 space-y-4">
-        <div className="page-header">
+      <div className="lg:col-span-2 space-y-4 min-w-0">
+        <div className="page-header mb-0!">
           <div>
             <h1 className="page-title">Billing / POS</h1>
-            <p className="text-sm text-slate-500">Quick sale checkout</p>
+            <p className="text-[13px] leading-5 text-surface-500 mt-1">Quick sale checkout</p>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -374,7 +374,7 @@ function BillingPageInner() {
             >
               <Play className="w-4 h-4" /> Parked
               {parkedOrders.length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-brand-600 text-white text-[10px] font-semibold rounded-full min-w-[16px] h-4 px-1 flex items-center justify-center">
+                <span className="ml-0.5 bg-ink text-paper text-[10px] font-semibold rounded-full min-w-[18px] h-[18px] px-1 inline-flex items-center justify-center tabular-nums">
                   {parkedOrders.length}
                 </span>
               )}
@@ -390,30 +390,30 @@ function BillingPageInner() {
           </div>
         </div>
 
-        <div className="card p-3">
-          <div className="flex items-center gap-2">
-            <Search className="w-4 h-4 text-slate-400 ml-1" />
-            <input
-              autoFocus
-              className="flex-1 text-sm outline-hidden"
-              placeholder="Scan barcode or search medicine..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
+        <div className="search-field">
+          <Search className="left-3! w-4! h-4!" />
+          <input
+            autoFocus
+            type="search"
+            aria-label="Scan barcode or search medicine"
+            className="input min-h-11 pl-10! text-[15px]"
+            placeholder="Scan barcode or search medicine…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
 
         {debouncedSearch.length >= 2 && (
           <div className="card overflow-hidden">
             {inventoryResults.length === 0 ? (
-              <div className="p-6 text-center text-slate-400 text-sm">No matches</div>
+              <div className="px-4 py-6 text-center text-surface-500 text-[13px]">No matches for &ldquo;{debouncedSearch}&rdquo;</div>
             ) : (
               <ul className="divide-y divide-slate-100">
                 {inventoryResults.map((item) => (
                   <li
                     key={item.id}
                     onClick={() => addToCart(item)}
-                    className="p-3 hover:bg-brand-50 cursor-pointer flex items-center justify-between"
+                    className="px-4 py-2.5 hover:bg-surface-50 cursor-pointer flex items-center justify-between gap-4"
                   >
                     <div>
                       <p className="font-medium text-slate-900">{item.medicine.name}</p>
@@ -438,26 +438,27 @@ function BillingPageInner() {
         {/* Cart table */}
         <div className="card overflow-hidden">
           <div className="card-header flex items-center justify-between">
-            <h3 className="font-semibold text-slate-900 flex items-center gap-2">
-              <ShoppingCart className="w-4 h-4" /> Cart ({cart.length})
-            </h3>
+            <h2 className="text-[13px] font-semibold text-surface-900">
+              Cart <span className="ml-1 text-surface-400 font-normal tabular-nums">{cart.length}</span>
+            </h2>
             {cart.length > 0 && (
-              <button onClick={() => setCart([])} className="text-xs text-slate-500 hover:text-red-600">Clear all</button>
+              <button onClick={() => setCart([])} className="text-xs font-medium text-surface-500 hover:text-danger-600">Clear all</button>
             )}
           </div>
           {cart.length === 0 ? (
-            <div className="p-12 text-center text-slate-400 text-sm">
-              <ShoppingCart className="w-8 h-8 mx-auto mb-2 opacity-40" />
-              Add medicines to begin
+            <div className="px-6 py-14 text-center">
+              <ShoppingCart aria-hidden="true" className="w-5 h-5 mx-auto mb-3 text-surface-400" strokeWidth={1.75} />
+              <p className="text-[13px] font-semibold text-surface-800">Cart is empty</p>
+              <p className="text-[13px] text-surface-500 mt-1">Scan a barcode or search above to add medicines.</p>
             </div>
           ) : (
             <div className="overflow-x-auto"><table className="w-full text-sm">
               <thead>
-                <tr className="bg-slate-50 text-xs uppercase text-slate-500">
-                  <th className="text-left px-4 py-2">Item</th>
-                  <th className="text-center px-4 py-2">Qty</th>
-                  <th className="text-right px-4 py-2">Price ({moneySymbol()})</th>
-                  <th className="text-right px-4 py-2">Total</th>
+                <tr className="bg-surface-50 text-xs text-surface-500 border-b border-surface-200">
+                  <th className="text-left px-4 h-9 font-medium">Item</th>
+                  <th className="text-center px-4 h-9 font-medium">Qty</th>
+                  <th className="text-right px-4 h-9 font-medium">Price ({moneySymbol()})</th>
+                  <th className="text-right px-4 h-9 font-medium">Total</th>
                   <th className="px-2 py-2" />
                 </tr>
               </thead>
@@ -470,16 +471,16 @@ function BillingPageInner() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-2">
-                        <button onClick={() => updateQty(l.medicineId, -1)} className="w-6 h-6 rounded border border-slate-200 hover:bg-slate-50 flex items-center justify-center"><Minus className="w-3 h-3" /></button>
-                        <span className="font-medium w-8 text-center">{l.quantity}</span>
-                        <button onClick={() => updateQty(l.medicineId, 1)} className="w-6 h-6 rounded border border-slate-200 hover:bg-slate-50 flex items-center justify-center"><Plus className="w-3 h-3" /></button>
+                        <button onClick={() => updateQty(l.medicineId, -1)} aria-label="Decrease quantity" className="w-7 h-7 rounded-md border border-surface-300 text-surface-600 hover:bg-surface-100 flex items-center justify-center"><Minus className="w-3 h-3" /></button>
+                        <span className="font-medium w-8 text-center tabular-nums">{l.quantity}</span>
+                        <button onClick={() => updateQty(l.medicineId, 1)} aria-label="Increase quantity" className="w-7 h-7 rounded-md border border-surface-300 text-surface-600 hover:bg-surface-100 flex items-center justify-center"><Plus className="w-3 h-3" /></button>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-right">
                       <input
                         type="number"
                         step="0.01"
-                        className="w-24 text-right border border-slate-200 rounded px-2 py-1 text-sm focus:outline-hidden focus:ring-1 focus:ring-brand-500"
+                        className="input w-24 text-right"
                         value={l.unitPrice}
                         onChange={(e) => updatePrice(l.medicineId, parseFloat(e.target.value) || 0)}
                       />
@@ -487,10 +488,10 @@ function BillingPageInner() {
                         <input
                           type="number" min="0" max="100" step="0.5"
                           className={cn(
-                            'w-16 text-right border rounded px-2 py-0.5 text-xs focus:outline-hidden focus:ring-1',
+                            'w-16 text-right border rounded-md px-2 py-0.5 text-xs focus:outline-hidden focus:ring-2',
                             l.discountPercent > l.batchPurchaseDiscount
                               ? 'border-accent-400 text-accent-700 focus:ring-accent-500 bg-accent-50'
-                              : 'border-slate-200 focus:ring-brand-500'
+                              : 'border-surface-300 focus:ring-brand-600/15 focus:border-brand-600'
                           )}
                           value={l.discountPercent}
                           onChange={(e) => updateDiscount(l.medicineId, parseFloat(e.target.value) || 0)}
@@ -504,7 +505,7 @@ function BillingPageInner() {
                     </td>
                     <td className="px-4 py-3 text-right font-medium">{formatCurrency(lineNet(l))}</td>
                     <td className="px-2 py-3 text-right">
-                      <button onClick={() => removeFromCart(l.medicineId)} className="text-slate-400 hover:text-red-600"><Trash2 className="w-4 h-4" /></button>
+                      <button onClick={() => removeFromCart(l.medicineId)} aria-label={`Remove ${l.name}`} className="p-1.5 rounded-md text-surface-400 hover:text-danger-600 hover:bg-danger-50"><Trash2 className="w-4 h-4" /></button>
                     </td>
                   </tr>
                 ))}
@@ -515,18 +516,18 @@ function BillingPageInner() {
       </div>
 
       {/* Right: checkout panel */}
-      <div className="card p-5 space-y-4 h-fit sticky top-0">
-        <h3 className="font-semibold text-slate-900">Checkout</h3>
+      <div className="card p-5 space-y-5 lg:sticky lg:top-0">
+        <h2 className="text-[15px] font-semibold text-surface-950">Checkout</h2>
 
         <div>
           <label className="label">Customer (optional)</label>
           {customer ? (
-            <div className="flex items-center justify-between p-2 bg-brand-50 rounded-lg">
+            <div className="flex items-center justify-between px-3 py-2 bg-surface-50 border border-surface-200 rounded-md">
               <div>
                 <p className="font-medium text-sm">{customer.name}</p>
                 <p className="text-xs text-slate-500">{customer.phone}</p>
               </div>
-              <button onClick={() => setCustomer(null)} className="text-xs text-slate-500 hover:text-red-600">Remove</button>
+              <button onClick={() => setCustomer(null)} className="text-xs font-medium text-surface-500 hover:text-danger-600">Remove</button>
             </div>
           ) : (
             <>
@@ -537,7 +538,7 @@ function BillingPageInner() {
                 onChange={(e) => setCustomerSearch(e.target.value)}
               />
               {customerSearch.length >= 2 && customerResults.length > 0 && (
-                <ul className="mt-1 border border-slate-200 rounded-lg overflow-hidden">
+                <ul className="mt-1 bg-paper rounded-md shadow-dropdown overflow-hidden p-1">
                   {customerResults.map((c) => (
                     <li key={c.id} onClick={() => {
                       setCustomer(c)
@@ -547,7 +548,7 @@ function BillingPageInner() {
                         const rep = salesReps.find((s) => s.id === c.salesRepId)
                         if (rep) { setSalesRep(rep); setCommissionPercent(rep.defaultCommissionPercent ?? 0); toast.info(`Sales rep ${rep.name} auto-selected for ${c.name}`) }
                       }
-                    }} className="p-2 text-sm hover:bg-slate-50 cursor-pointer">
+                    }} className="px-2 py-1.5 rounded text-[13px] hover:bg-surface-100 cursor-pointer">
                       <p className="font-medium">{c.name}</p>
                       <p className="text-xs text-slate-500">{c.phone}</p>
                     </li>
@@ -559,7 +560,7 @@ function BillingPageInner() {
         </div>
 
         <div>
-          <label className="label flex items-center gap-1.5"><UserCheck className="w-3.5 h-3.5" /> Sales Rep (commission)</label>
+          <label className="label">Sales rep <span className="font-normal text-surface-400">· commission</span></label>
           <div className="flex gap-2">
             <select
               className="input flex-1"
@@ -594,16 +595,15 @@ function BillingPageInner() {
         </div>
 
         <div>
-          <label className="label">Payment Method</label>
-          <div className="grid grid-cols-2 gap-2">
+          <label className="label">Payment method</label>
+          <div className="segmented grid! grid-cols-2 w-full">
             {quickPayMethods.map((m) => (
               <button
                 key={m}
                 onClick={() => setPaymentMethod(m)}
-                className={cn(
-                  'px-3 py-2 rounded-lg text-sm font-medium border',
-                  paymentMethod === m ? 'bg-brand-600 text-white border-brand-600' : 'border-slate-200 hover:bg-slate-50'
-                )}
+                type="button"
+                aria-pressed={paymentMethod === m}
+                className="segment justify-center h-8!"
               >
                 {paymentMethodLabel(region, m)}
               </button>
@@ -611,29 +611,29 @@ function BillingPageInner() {
           </div>
         </div>
 
-        <div className="border-t pt-4 space-y-2 text-sm">
+        <div className="border-t border-surface-200 pt-4 space-y-2 text-[13px] tabular-nums">
           <div className="flex items-center justify-between gap-2">
-            <span className="text-slate-600">Special discount</span>
+            <span className="text-surface-500">Special discount</span>
             <div className="flex items-center gap-1">
-              <select className="border border-surface-300 rounded-sm text-xs px-1 py-0.5 bg-paper" value={specialDiscType} onChange={(e) => setSpecialDiscType(e.target.value as 'PERCENT' | 'AMOUNT')} aria-label="Special discount type">
+              <select className="border border-surface-300 rounded-md text-xs px-1 py-1 bg-paper" value={specialDiscType} onChange={(e) => setSpecialDiscType(e.target.value as 'PERCENT' | 'AMOUNT')} aria-label="Special discount type">
                 <option value="PERCENT">%</option>
                 <option value="AMOUNT">{moneySymbol()}</option>
               </select>
-              <input type="number" min="0" step="0.5" className="w-16 text-right border border-surface-300 rounded-sm px-1.5 py-0.5 text-xs bg-paper" value={specialDiscValue} onChange={(e) => setSpecialDiscValue(Math.max(0, parseFloat(e.target.value) || 0))} aria-label="Special discount value" />
+              <input type="number" min="0" step="0.5" className="w-16 text-right border border-surface-300 rounded-md px-1.5 py-1 text-xs bg-paper" value={specialDiscValue} onChange={(e) => setSpecialDiscValue(Math.max(0, parseFloat(e.target.value) || 0))} aria-label="Special discount value" />
             </div>
           </div>
           {specialDiscAmount > 0 && (
             <div className="flex justify-between text-danger-600"><span>Discount applied</span><span>−{formatCurrency(specialDiscAmount)}</span></div>
           )}
-          <div className="flex justify-between"><span className="text-slate-600">Subtotal</span><span>{formatCurrency(subtotal)}</span></div>
-          <div className="flex justify-between"><span className="text-slate-600">Tax</span><span>{formatCurrency(tax)}</span></div>
-          <div className="flex justify-between text-base font-bold pt-2 border-t"><span>Total</span><span>{formatCurrency(total)}</span></div>
+          <div className="flex justify-between"><span className="text-surface-500">Subtotal</span><span>{formatCurrency(subtotal)}</span></div>
+          <div className="flex justify-between"><span className="text-surface-500">Tax</span><span>{formatCurrency(tax)}</span></div>
+          <div className="flex items-baseline justify-between pt-3 mt-1 border-t border-surface-200"><span className="font-medium text-surface-900">Total</span><span className="font-display text-2xl font-semibold tracking-[-0.02em] text-surface-950">{formatCurrency(total)}</span></div>
         </div>
 
         <button
           onClick={() => checkoutMutation.mutate()}
           disabled={cart.length === 0 || !storeId || checkoutMutation.isPending}
-          className="btn-primary w-full"
+          className="btn-primary w-full min-h-10 text-[14px]"
         >
           <Receipt className="w-4 h-4" />
           {checkoutMutation.isPending ? 'Processing...' : `Complete Sale (${formatCurrency(total)})`}
@@ -643,23 +643,22 @@ function BillingPageInner() {
       </div>
 
       {showParkedList && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setShowParkedList(false)}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between px-5 py-4 border-b">
+        <div className="modal-overlay" onClick={() => setShowParkedList(false)}>
+          <div className="modal-panel w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
               <h2 className="font-semibold">Parked sales</h2>
-              <button onClick={() => setShowParkedList(false)}><X className="w-4 h-4 text-slate-400" /></button>
+              <button type="button" onClick={() => setShowParkedList(false)} aria-label="Close" className="modal-close"><X className="w-4 h-4" /></button>
             </div>
             <div className="flex-1 overflow-y-auto">
               {parkedOrders.length === 0 ? (
-                <div className="p-12 text-center text-slate-400">
-                  <Pause className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                  <p className="text-sm">No parked sales</p>
-                  <p className="text-xs mt-1">Use &ldquo;Park sale&rdquo; to save a cart for later</p>
+                <div className="px-6 py-12 text-center">
+                  <p className="text-[13px] font-semibold text-surface-800">No parked sales</p>
+                  <p className="text-[13px] text-surface-500 mt-1">Use &ldquo;Park sale&rdquo; to save a cart for later</p>
                 </div>
               ) : (
                 <ul className="divide-y divide-slate-100">
                   {parkedOrders.map((o) => (
-                    <li key={o.id} className="p-3 hover:bg-slate-50 flex items-start justify-between gap-2">
+                    <li key={o.id} className="px-5 py-3 flex items-center justify-between gap-3">
                       <div className="min-w-0 flex-1">
                         <p className="font-medium text-sm truncate">{o.parkedLabel ?? o.orderNumber}</p>
                         <p className="text-xs text-slate-500">
@@ -667,8 +666,8 @@ function BillingPageInner() {
                         </p>
                         <p className="text-[10px] text-slate-400 mt-0.5">Parked {new Date(o.parkedAt).toLocaleString('en-IN')}</p>
                       </div>
-                      <div className="flex flex-col gap-1 shrink-0">
-                        <button onClick={() => recallParked(o)} className="text-xs bg-brand-600 text-white px-2 py-1 rounded hover:bg-brand-700">
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button onClick={() => recallParked(o)} className="btn-primary min-h-7 py-1 px-2.5 text-xs">
                           Recall
                         </button>
                         <button
@@ -677,7 +676,7 @@ function BillingPageInner() {
                               api.delete(`/orders/${o.id}/parked`).then(() => { refetchParked(); toast.success('Discarded') })
                             }
                           }}
-                          className="text-xs text-red-600 hover:underline px-2 py-1"
+                          className="btn-ghost min-h-7 py-1 px-2 text-xs text-danger-600 hover:text-danger-700 hover:bg-danger-50"
                         >
                           Discard
                         </button>

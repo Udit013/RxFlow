@@ -1,9 +1,9 @@
 'use client'
 
 import { useQuery } from '@tanstack/react-query'
-import { BarChart3, TrendingUp } from 'lucide-react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { api } from '@/lib/api'
+import { MetricCard, StatGrid } from '@/components/ui'
 import { formatCurrency, formatDate } from '@/lib/utils'
 
 export default function AnalyticsPage() {
@@ -24,44 +24,35 @@ export default function AnalyticsPage() {
   const avgOrderValue = summary?.avgOrderValue ?? 0
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <div className="page-header">
         <div>
-          <h1 className="page-title flex items-center gap-2"><BarChart3 className="w-5 h-5" /> Analytics</h1>
-          <p className="text-sm text-slate-500">Last 30 days</p>
+          <h1 className="page-title">Analytics</h1>
+          <p className="text-[13px] leading-5 text-surface-500 mt-1">Last 30 days</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
-        <div className="metric-card">
-          <p className="text-xs text-slate-500 uppercase">Revenue (30d)</p>
-          <p className="text-2xl font-bold text-slate-900">{formatCurrency(totalRevenue)}</p>
-        </div>
-        <div className="metric-card">
-          <p className="text-xs text-slate-500 uppercase">Orders</p>
-          <p className="text-2xl font-bold text-slate-900">{totalOrders}</p>
-        </div>
-        <div className="metric-card">
-          <p className="text-xs text-slate-500 uppercase">Avg Order Value</p>
-          <p className="text-2xl font-bold text-slate-900">{formatCurrency(avgOrderValue)}</p>
-        </div>
-      </div>
+      <StatGrid className="grid-cols-1 sm:grid-cols-3">
+        <MetricCard label="Revenue (30 days)" value={formatCurrency(totalRevenue)} loading={isLoading} />
+        <MetricCard label="Orders" value={String(totalOrders)} loading={isLoading} />
+        <MetricCard label="Average order value" value={formatCurrency(avgOrderValue)} loading={isLoading} />
+      </StatGrid>
 
       <div className="card p-5">
-        <div className="flex items-center gap-2 mb-4">
-          <TrendingUp className="w-4 h-4 text-brand-600" />
-          <h3 className="font-semibold text-slate-900">Daily Revenue</h3>
+        <div className="flex items-baseline justify-between mb-4">
+          <h2 className="text-[13px] font-semibold text-surface-900">Daily revenue</h2>
+          <span className="text-xs text-surface-500">Last 30 days</span>
         </div>
         {isLoading ? (
-          <div className="h-72 animate-pulse bg-slate-50 rounded-lg" />
+          <div className="h-[300px] skeleton rounded-md" />
         ) : (
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={series}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip formatter={(v) => formatCurrency(Number(v ?? 0))} />
-              <Line type="monotone" dataKey="revenue" stroke="#077ace" strokeWidth={2} dot={false} />
+              <CartesianGrid stroke="#eceae3" vertical={false} />
+              <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#77756b' }} axisLine={{ stroke: '#e5e2d8' }} tickLine={false} minTickGap={24} />
+              <YAxis tick={{ fontSize: 11, fill: '#77756b' }} axisLine={false} tickLine={false} width={56} />
+              <Tooltip cursor={{ stroke: '#cfcbbe' }} contentStyle={{ borderRadius: 6, border: '1px solid #e5e2d8', boxShadow: '0 8px 24px -8px rgb(19 19 17 / 0.2)', fontSize: 12, padding: '6px 10px' }} formatter={(v) => formatCurrency(Number(v ?? 0))} />
+              <Line type="monotone" dataKey="revenue" stroke="#0e5f52" strokeWidth={1.75} dot={false} activeDot={{ r: 3.5, fill: '#0e5f52', stroke: '#fefefc', strokeWidth: 2 }} />
             </LineChart>
           </ResponsiveContainer>
         )}

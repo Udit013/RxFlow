@@ -161,9 +161,9 @@ export function MedicineMasterModal({ medicine, onClose, onSaved }: { medicine?:
   }
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div role="dialog" aria-modal="true" aria-label={isEdit ? 'Edit medicine' : 'New medicine'} className="bg-white rounded-xl shadow-elevated w-full max-w-3xl max-h-[92vh] flex flex-col">
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-surface-200">
+    <div className="modal-overlay">
+      <div role="dialog" aria-modal="true" aria-label={isEdit ? 'Edit medicine' : 'New medicine'} className="modal-panel w-full max-w-3xl max-h-[92vh] flex flex-col">
+        <div className="modal-header">
           <div>
             <h2 className="font-semibold text-surface-900">{isEdit ? 'Edit Medicine' : 'New Medicine'}</h2>
             <p className="text-2xs text-surface-500">Only Product Name, Manufacturer & {region.fields.productCode.label} are required · Tab through fields, auto-advances tabs</p>
@@ -173,23 +173,22 @@ export function MedicineMasterModal({ medicine, onClose, onSaved }: { medicine?:
               </p>
             )}
           </div>
-          <button type="button" onClick={onClose} aria-label="Close"><X className="w-4 h-4 text-surface-400" /></button>
+          <button type="button" onClick={onClose} aria-label="Close" className="modal-close"><X className="w-4 h-4" /></button>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 px-3 pt-3 border-b border-surface-200 overflow-x-auto">
+        <div role="tablist" className="tab-list px-5">
           {TABS.map((t) => (
             <button
               key={t.id}
               type="button"
+              role="tab"
+              aria-selected={tab === t.id}
               tabIndex={-1}
               onClick={() => setTab(t.id)}
-              className={cn(
-                'flex items-center gap-1.5 px-3 py-2 text-[13px] font-medium rounded-t-lg whitespace-nowrap border-b-2 -mb-px transition-colors',
-                tab === t.id ? 'border-brand-600 text-brand-700' : 'border-transparent text-surface-500 hover:text-surface-800'
-              )}
+              className="tab"
             >
-              <t.icon className="w-4 h-4" /> {t.label}
+              {t.label}
             </button>
           ))}
         </div>

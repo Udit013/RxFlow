@@ -3,12 +3,12 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useQuery } from '@tanstack/react-query'
-import { Receipt, Download, Search } from 'lucide-react'
+import { Receipt, Download, Search, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { authService, buildTenantHeader } from '@/lib/auth'
 import { downloadInvoicePdf } from '@/lib/pdf-invoice'
-import { cn, debounce, formatCurrency, formatDate } from '@/lib/utils'
+import { debounce, formatCurrency, formatDate } from '@/lib/utils'
 
 const STATUS_STYLES: Record<string, string> = {
   PENDING: 'badge-warning',
@@ -79,47 +79,44 @@ export default function InvoicesPage() {
     <div className="space-y-5">
       <div className="page-header">
         <div>
-          <h1 className="page-title flex items-center gap-2"><Receipt className="w-5 h-5" /> Invoices</h1>
-          <p className="text-sm text-slate-500">{data?.meta?.total ?? 0} invoices</p>
+          <h1 className="page-title">Invoices</h1>
+          <p className="text-[13px] leading-5 text-surface-500 mt-1">{data?.meta?.total ?? 0} invoices</p>
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
-        {['', 'PENDING', 'PARTIAL', 'PAID', 'OVERDUE'].map((s) => (
-          <button
-            key={s || 'all'}
-            onClick={() => setPaymentStatus(s)}
-            className={cn(
-              'px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors',
-              paymentStatus === s ? 'bg-brand-600 text-white border-brand-600' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-            )}
-          >
-            {s || 'All'}
-          </button>
-        ))}
-        <div className="card p-2! ml-auto flex items-center gap-2 min-w-[260px]">
-          <Search className="w-4 h-4 text-slate-400" />
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+        <div className="segmented self-start">
+          {['', 'PENDING', 'PARTIAL', 'PAID', 'OVERDUE'].map((s) => (
+            <button key={s || 'all'} type="button" aria-pressed={paymentStatus === s} onClick={() => setPaymentStatus(s)} className="segment">
+              {s ? s.charAt(0) + s.slice(1).toLowerCase() : 'All'}
+            </button>
+          ))}
+        </div>
+        <div className="search-field sm:ml-auto sm:w-72">
+          <Search />
           <input
-            className="flex-1 text-sm outline-hidden"
-            placeholder="Find by invoice #, customer..."
+            type="search"
+            aria-label="Find invoices"
+            className="input pr-8"
+            placeholder="Find by invoice #, customer…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          {search && <button onClick={() => setSearch('')} className="text-slate-400 hover:text-slate-600 text-xs">✕</button>}
+          {search && <button type="button" aria-label="Clear search" onClick={() => setSearch('')} className="absolute right-1.5 p-1 rounded text-surface-400 hover:text-surface-700"><X className="w-3.5 h-3.5" /></button>}
         </div>
       </div>
 
-      <div className="card overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="card overflow-x-auto">
+        <table className="w-full text-[13px] min-w-[720px]">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Invoice #</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Type</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Date</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Order</th>
-              <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Tax</th>
-              <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Total</th>
-              <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Status</th>
+              <th className="text-left px-4 h-9 text-xs font-medium text-surface-500 whitespace-nowrap">Invoice #</th>
+              <th className="text-left px-4 h-9 text-xs font-medium text-surface-500 whitespace-nowrap">Type</th>
+              <th className="text-left px-4 h-9 text-xs font-medium text-surface-500 whitespace-nowrap">Date</th>
+              <th className="text-left px-4 h-9 text-xs font-medium text-surface-500 whitespace-nowrap">Order</th>
+              <th className="text-right px-4 h-9 text-xs font-medium text-surface-500 whitespace-nowrap">Tax</th>
+              <th className="text-right px-4 h-9 text-xs font-medium text-surface-500 whitespace-nowrap">Total</th>
+              <th className="text-center px-4 h-9 text-xs font-medium text-surface-500 whitespace-nowrap">Status</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>
@@ -135,7 +132,7 @@ export default function InvoicesPage() {
             ) : invoices.length === 0 ? (
               <tr>
                 <td colSpan={8} className="text-center py-12 text-slate-400">
-                  <Receipt className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                  <Receipt className="w-5 h-5 mx-auto mb-3 text-surface-400" strokeWidth={1.75} aria-hidden="true" />
                   No invoices yet
                 </td>
               </tr>
@@ -143,7 +140,7 @@ export default function InvoicesPage() {
               invoices.map((inv) => (
                 <tr key={inv.id} className="hover:bg-slate-50">
                   <td className="px-4 py-3">
-                    <Link href={`/dashboard/invoices/${inv.id}`} className="font-medium text-brand-600 hover:underline">
+                    <Link href={`/dashboard/invoices/${inv.id}`} className="font-medium text-brand-700 hover:text-brand-800 hover:underline underline-offset-2">
                       {inv.invoiceNumber}
                     </Link>
                   </td>
@@ -155,7 +152,7 @@ export default function InvoicesPage() {
                   <td className="px-4 py-3 text-slate-600">{formatDate(inv.createdAt)}</td>
                   <td className="px-4 py-3">
                     {inv.orderId ? (
-                      <Link href={`/dashboard/orders/${inv.orderId}`} className="text-xs text-brand-600 hover:underline">View order</Link>
+                      <Link href={`/dashboard/orders/${inv.orderId}`} className="text-xs text-brand-700 hover:text-brand-800 hover:underline underline-offset-2">View order</Link>
                     ) : <span className="text-slate-400 text-xs">—</span>}
                   </td>
                   <td className="px-4 py-3 text-right text-slate-700">{formatCurrency(inv.totalTax ?? 0)}</td>

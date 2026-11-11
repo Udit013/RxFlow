@@ -9,21 +9,21 @@ import { formatDate, formatRelativeTime } from '@/lib/utils'
 import { AnimatedSection, PageHeader } from '@/components/ui'
 
 const ACTION_COLORS: Record<string, string> = {
-  'order.sale.create': 'bg-green-100 text-green-700',
-  'order.purchase.create': 'bg-blue-100 text-blue-700',
+  'order.sale.create': 'bg-success-50 text-success-800',
+  'order.purchase.create': 'bg-brand-50 text-brand-800',
   'order.status.update': 'bg-slate-100 text-slate-700',
-  'invoice.sale.create': 'bg-green-100 text-green-700',
-  'invoice.purchase.create': 'bg-blue-100 text-blue-700',
-  'invoice.payment.record': 'bg-emerald-100 text-emerald-700',
-  'invoice.credit-note.create': 'bg-amber-100 text-amber-700',
-  'inventory.batch.add': 'bg-blue-100 text-blue-700',
-  'inventory.batch.write-off': 'bg-red-100 text-red-700',
-  'stock-take.create': 'bg-indigo-100 text-indigo-700',
-  'stock-take.complete': 'bg-purple-100 text-purple-700',
-  'customer.create': 'bg-cyan-100 text-cyan-700',
+  'invoice.sale.create': 'bg-success-50 text-success-800',
+  'invoice.purchase.create': 'bg-brand-50 text-brand-800',
+  'invoice.payment.record': 'bg-success-50 text-success-800',
+  'invoice.credit-note.create': 'bg-warning-50 text-warning-800',
+  'inventory.batch.add': 'bg-brand-50 text-brand-800',
+  'inventory.batch.write-off': 'bg-danger-50 text-danger-700',
+  'stock-take.create': 'bg-brand-50 text-brand-800',
+  'stock-take.complete': 'bg-success-50 text-success-800',
+  'customer.create': 'bg-surface-100 text-surface-700',
   'customer.update': 'bg-slate-100 text-slate-700',
-  'customer.delete': 'bg-red-100 text-red-700',
-  'supplier.create': 'bg-cyan-100 text-cyan-700',
+  'customer.delete': 'bg-danger-50 text-danger-700',
+  'supplier.create': 'bg-surface-100 text-surface-700',
   'supplier.update': 'bg-slate-100 text-slate-700',
 }
 
@@ -115,7 +115,7 @@ export default function AuditPage() {
         <div className="overflow-x-auto max-h-[700px]">
           <table className="w-full text-sm">
             <thead className="sticky top-0 bg-slate-50">
-              <tr className="text-xs uppercase text-slate-500">
+              <tr className="text-xs font-medium text-surface-500">
                 <th className="text-left px-3 py-2">When</th>
                 <th className="text-left px-3 py-2">User</th>
                 <th className="text-left px-3 py-2">Action</th>
@@ -134,8 +134,8 @@ export default function AuditPage() {
                   </tr>
                 ))
               ) : logs.length === 0 ? (
-                <tr><td colSpan={6} className="p-12 text-center text-slate-400 text-sm">
-                  <History className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                <tr><td colSpan={6} className="px-6 py-12 text-center text-[13px] text-surface-500">
+                  <History className="w-5 h-5 mx-auto mb-3 text-surface-400" strokeWidth={1.75} aria-hidden="true" />
                   No audit entries yet
                 </td></tr>
               ) : (
@@ -162,7 +162,7 @@ export default function AuditPage() {
                       </td>
                       <td className="px-3 py-2 align-top">
                         {href ? (
-                          <Link href={href} className="text-xs text-brand-600 hover:underline">
+                          <Link href={href} className="text-xs text-brand-700 hover:text-brand-800 hover:underline underline-offset-2">
                             {log.entityType}
                           </Link>
                         ) : <span className="text-xs text-slate-500">{log.entityType}</span>}

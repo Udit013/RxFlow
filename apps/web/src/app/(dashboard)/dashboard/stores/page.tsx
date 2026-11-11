@@ -64,8 +64,8 @@ export default function StoresPage() {
     <div className="space-y-5">
       <div className="page-header">
         <div>
-          <h1 className="page-title flex items-center gap-2"><Store className="w-5 h-5" /> Stores</h1>
-          <p className="text-sm text-slate-500">Manage your pharmacy branches and outlets</p>
+          <h1 className="page-title">Stores</h1>
+          <p className="text-[13px] leading-5 text-surface-500 mt-1">Manage your pharmacy branches and outlets</p>
         </div>
         {isAdmin && (
           <button onClick={() => setShowModal('new')} className="btn-primary">
@@ -76,8 +76,8 @@ export default function StoresPage() {
 
       <div className="grid grid-cols-2 gap-4">
         {stores.length === 0 ? (
-          <div className="col-span-2 card p-12 text-center text-slate-400">
-            <Store className="w-8 h-8 mx-auto mb-2 opacity-40" />
+          <div className="col-span-2 card px-6 py-12 text-center text-[13px] text-surface-500">
+            <Store className="w-5 h-5 mx-auto mb-3 text-surface-400" strokeWidth={1.75} aria-hidden="true" />
             No stores yet
           </div>
         ) : (
@@ -170,11 +170,11 @@ function StoreModal({ existing, onClose, onSaved }: { existing?: StoreRow; onClo
   })
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-5 py-4 border-b sticky top-0 bg-white">
+    <div className="modal-overlay">
+      <div className="modal-panel w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="modal-header sticky top-0 z-10">
           <h2 className="font-semibold text-slate-900">{isEdit ? 'Edit Store' : 'Add Store'}</h2>
-          <button onClick={onClose}><X className="w-4 h-4 text-slate-400" /></button>
+          <button type="button" onClick={onClose} aria-label="Close" className="modal-close"><X className="w-4 h-4" /></button>
         </div>
         <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="p-5 space-y-3">
           <div className="grid grid-cols-2 gap-3">

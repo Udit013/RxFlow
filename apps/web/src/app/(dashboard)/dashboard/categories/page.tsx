@@ -9,7 +9,7 @@ import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { AnimatedSection, PageHeader, SectionCard, EmptyState } from '@/components/ui'
 
-const SWATCHES = ['#0c83d0', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16', '#64748b']
+const SWATCHES = ['#0e5f52', '#d47f16', '#4a6fa5', '#c03b2d', '#74aa50', '#7d5a8c', '#3f8f9a', '#b4640a', '#77756b']
 
 interface CategoryForm { name: string; description?: string; color?: string }
 
@@ -43,35 +43,28 @@ export default function CategoriesPage() {
 
       <AnimatedSection stagger=".cat-card">
         {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Array.from({ length: 6 }).map((_, i) => <div key={i} className="card p-5"><div className="h-5 w-32 skeleton mb-2" /><div className="h-3 w-20 skeleton" /></div>)}
+          <div className="card divide-y divide-surface-100">
+            {Array.from({ length: 5 }).map((_, i) => <div key={i} className="px-4 py-3.5 flex items-center gap-3"><div className="w-2.5 h-2.5 rounded-full skeleton" /><div className="h-3.5 w-40 skeleton" /></div>)}
           </div>
         ) : categories.length === 0 ? (
           <SectionCard><EmptyState icon={Tags} title="No categories yet" description="Create categories like Antibiotics, Painkillers, Vitamins to organize your catalog." action={<button onClick={() => setEdit('new')} className="btn-primary"><Plus className="w-4 h-4" /> Add Category</button>} /></SectionCard>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <ul className="card divide-y divide-surface-100 overflow-hidden">
             {categories.map((c) => (
-              <div key={c.id} className="cat-card card-hover p-5 group relative overflow-hidden">
-                <div className="absolute left-0 top-0 bottom-0 w-1" style={{ background: c.color ?? '#64748b' }} />
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <span className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ background: `${c.color ?? '#64748b'}18`, color: c.color ?? '#64748b' }}>
-                      <Tags className="w-4 h-4" />
-                    </span>
-                    <div>
-                      <p className="font-semibold text-surface-900">{c.name}</p>
-                      <p className="text-xs text-surface-500">{c.medicineCount} medicine{c.medicineCount === 1 ? '' : 's'}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => setEdit(c)} className="text-surface-400 hover:text-brand-600 p-1"><Pencil className="w-4 h-4" /></button>
-                    <button onClick={() => window.confirm(`Delete "${c.name}"? Medicines keep their data but lose this category.`) && del.mutate(c.id)} className="text-surface-400 hover:text-danger-600 p-1"><Trash2 className="w-4 h-4" /></button>
-                  </div>
+              <li key={c.id} className="group flex items-center gap-3 px-4 py-3 hover:bg-surface-50 transition-colors">
+                <span aria-hidden="true" className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: c.color ?? '#77756b' }} />
+                <div className="min-w-0 flex-1 sm:flex sm:items-baseline sm:gap-3">
+                  <p className="text-[13px] font-medium text-surface-900 truncate">{c.name}</p>
+                  {c.description && <p className="text-xs text-surface-500 truncate">{c.description}</p>}
                 </div>
-                {c.description && <p className="text-xs text-surface-500 mt-3">{c.description}</p>}
-              </div>
+                <span className="text-xs text-surface-500 tabular-nums shrink-0">{c.medicineCount} medicine{c.medicineCount === 1 ? '' : 's'}</span>
+                <div className="flex items-center gap-0.5 shrink-0 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100 transition-opacity">
+                  <button type="button" aria-label={`Edit ${c.name}`} onClick={() => setEdit(c)} className="p-1.5 rounded-md text-surface-400 hover:text-surface-900 hover:bg-surface-100"><Pencil className="w-3.5 h-3.5" /></button>
+                  <button type="button" aria-label={`Delete ${c.name}`} onClick={() => window.confirm(`Delete "${c.name}"? Medicines keep their data but lose this category.`) && del.mutate(c.id)} className="p-1.5 rounded-md text-surface-400 hover:text-danger-600 hover:bg-danger-50"><Trash2 className="w-3.5 h-3.5" /></button>
+                </div>
+              </li>
             ))}
-          </div>
+          </ul>
         )}
       </AnimatedSection>
 
@@ -94,11 +87,11 @@ function CategoryModal({ existing, onClose, onSaved }: { existing?: any; onClose
   })
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-elevated w-full max-w-md">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-surface-100">
+    <div className="modal-overlay">
+      <div className="modal-panel w-full max-w-md">
+        <div className="modal-header">
           <h2 className="font-semibold">{isEdit ? 'Edit Category' : 'New Category'}</h2>
-          <button onClick={onClose}><X className="w-4 h-4 text-surface-400" /></button>
+          <button type="button" onClick={onClose} aria-label="Close" className="modal-close"><X className="w-4 h-4" /></button>
         </div>
         <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="p-5 space-y-3">
           <div>
@@ -114,7 +107,7 @@ function CategoryModal({ existing, onClose, onSaved }: { existing?: any; onClose
             <label className="label">Color</label>
             <div className="flex flex-wrap gap-2">
               {SWATCHES.map((s) => (
-                <button key={s} type="button" onClick={() => setValue('color', s)} className={cn('w-7 h-7 rounded-lg transition-transform', color === s ? 'ring-2 ring-offset-2 ring-surface-400 scale-110' : '')} style={{ background: s }} />
+                <button key={s} type="button" onClick={() => setValue('color', s)} aria-label={`Colour ${s}`} aria-pressed={color === s} className={cn('w-6 h-6 rounded-full transition-shadow', color === s ? 'ring-2 ring-offset-2 ring-surface-900' : 'hover:ring-2 hover:ring-offset-2 hover:ring-surface-300')} style={{ background: s }} />
               ))}
             </div>
           </div>

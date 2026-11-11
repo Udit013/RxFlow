@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import Link from 'next/link'
-import { AlertTriangle, Clock, Package, Bell, Trash2, X } from 'lucide-react'
+import { Bell, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { cn, formatCurrency, formatDate, getDaysUntilExpiry } from '@/lib/utils'
@@ -42,10 +42,10 @@ export default function AlertsPage() {
       </AnimatedSection>
 
       <AnimatedSection stagger=".alert-stat">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="alert-stat"><MetricCard icon={AlertTriangle} tone="warning" label="Low Stock" countUp={lowStockItems.length} value={String(lowStockItems.length)} sub="Below reorder level" /></div>
-          <div className="alert-stat"><MetricCard icon={Clock} tone="warning" label="Expiring Soon" countUp={expiringCount} value={String(expiringCount)} sub="Within 90 days" /></div>
-          <div className="alert-stat"><MetricCard icon={Package} tone="danger" label="Expired" countUp={expiredCount} value={String(expiredCount)} sub="Needs write-off" /></div>
+        <div className="stat-strip grid-cols-1 sm:grid-cols-3">
+          <MetricCard tone={lowStockItems.length > 0 ? 'warning' : 'neutral'} label="Low stock" value={String(lowStockItems.length)} sub="Below reorder level" />
+          <MetricCard tone={expiringCount > 0 ? 'warning' : 'neutral'} label="Expiring soon" value={String(expiringCount)} sub="Within 90 days" />
+          <MetricCard tone={expiredCount > 0 ? 'danger' : 'neutral'} label="Expired" value={String(expiredCount)} sub="Needs write-off" />
         </div>
       </AnimatedSection>
 
@@ -53,10 +53,9 @@ export default function AlertsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <div className="card overflow-hidden">
           <div className="card-header flex items-center justify-between">
-            <h3 className="font-semibold text-slate-900 flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-warning-500" /> Low Stock
+            <h3 className="text-[13px] font-semibold text-surface-900">Low Stock
             </h3>
-            <Link href="/dashboard/inventory" className="text-xs text-brand-600 hover:underline">View inventory →</Link>
+            <Link href="/dashboard/inventory" className="text-xs text-brand-700 hover:text-brand-800 hover:underline underline-offset-2">View inventory →</Link>
           </div>
           <div className="divide-y divide-slate-100 max-h-112 overflow-y-auto">
             {lowStockItems.length === 0 ? (
@@ -81,8 +80,7 @@ export default function AlertsPage() {
 
         <div className="card overflow-hidden">
           <div className="card-header">
-            <h3 className="font-semibold text-slate-900 flex items-center gap-2">
-              <Clock className="w-4 h-4 text-orange-500" /> Expiring / Expired
+            <h3 className="text-[13px] font-semibold text-surface-900">Expiring / Expired
             </h3>
           </div>
           <div className="divide-y divide-slate-100 max-h-112 overflow-y-auto">
@@ -167,14 +165,14 @@ function WriteOffModal({ batch, onClose, onDone }: { batch: any; onClose: () => 
   })
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-        <div className="flex items-center justify-between px-5 py-4 border-b">
+    <div className="modal-overlay">
+      <div className="modal-panel w-full max-w-md">
+        <div className="modal-header">
           <div>
             <h2 className="font-semibold text-slate-900">Write off batch</h2>
             <p className="text-xs text-slate-500 mt-0.5">{medName} · Batch {batch.batchNumber}</p>
           </div>
-          <button onClick={onClose}><X className="w-4 h-4 text-slate-400" /></button>
+          <button type="button" onClick={onClose} aria-label="Close" className="modal-close"><X className="w-4 h-4" /></button>
         </div>
         <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="p-5 space-y-3">
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs">
@@ -218,7 +216,7 @@ function WriteOffModal({ batch, onClose, onDone }: { batch: any; onClose: () => 
 
           <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm flex justify-between">
             <span className="text-slate-700">Estimated loss</span>
-            <span className="font-bold text-red-700">{formatCurrency(lossValue)}</span>
+            <span className="font-semibold text-red-700">{formatCurrency(lossValue)}</span>
           </div>
 
           <div className="flex justify-end gap-2 pt-2">

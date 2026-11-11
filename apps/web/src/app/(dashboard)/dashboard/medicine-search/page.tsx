@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Search, Pill, Zap, Barcode, CheckCircle } from 'lucide-react'
+import { Search, CheckCircle } from 'lucide-react'
 import { api } from '@/lib/api'
 import { formatCurrency, cn, debounce } from '@/lib/utils'
 
@@ -35,12 +35,12 @@ interface NormalizedResult {
 }
 
 const MATCH_TYPE_STYLES: Record<string, string> = {
-  EXACT: 'bg-green-100 text-green-700',
-  ALIAS: 'bg-blue-100 text-blue-700',
-  BARCODE: 'bg-purple-100 text-purple-700',
-  FUZZY: 'bg-amber-100 text-amber-700',
-  COMPOSITION: 'bg-cyan-100 text-cyan-700',
-  TOKEN: 'bg-slate-100 text-slate-600',
+  EXACT: 'bg-brand-50 text-brand-800',
+  BARCODE: 'bg-brand-50 text-brand-800',
+  ALIAS: 'bg-surface-100 text-surface-700',
+  COMPOSITION: 'bg-surface-100 text-surface-700',
+  TOKEN: 'bg-surface-100 text-surface-600',
+  FUZZY: 'bg-warning-50 text-warning-800',
 }
 
 const SCHEDULE_STYLES: Record<string, string> = {
@@ -96,28 +96,27 @@ export default function MedicineSearchPage() {
   return (
     <div className="space-y-6 max-w-4xl">
       <div>
-        <h1 className="page-title">Medicine Intelligence Search</h1>
-        <p className="text-sm text-slate-500 mt-1">
+        <h1 className="page-title">Medicine search</h1>
+        <p className="text-[13px] leading-5 text-surface-500 mt-1">
           AI-powered medicine lookup — handles misspellings, brand/generic names, short forms, and barcodes.
         </p>
       </div>
 
       {/* Search box */}
-      <div className="card p-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-brand-50 rounded-xl flex items-center justify-center">
-            <Search className="w-5 h-5 text-brand-600" />
-          </div>
+      <div>
+        <div className="search-field">
+          <Search className="left-3! w-4! h-4!" />
           <input
-            type="text"
-            className="flex-1 text-lg text-slate-900 placeholder:text-slate-400 outline-hidden"
-            placeholder="Type medicine name, generic, barcode... (e.g. Dolo650, Pan 40, 8901234567890)"
+            type="search"
+            aria-label="Search medicines"
+            className="input min-h-11 pl-10! pr-10 text-[15px]"
+            placeholder="Medicine name, generic, barcode… (e.g. Dolo650, Pan 40, 8901234567890)"
             value={query}
             onChange={(e) => handleQueryChange(e.target.value)}
             autoFocus
           />
           {loading && (
-            <svg className="animate-spin h-5 w-5 text-brand-500" fill="none" viewBox="0 0 24 24">
+            <svg className="absolute right-3 animate-spin h-4 w-4 text-surface-400" fill="none" viewBox="0 0 24 24" aria-label="Searching">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
             </svg>
@@ -126,13 +125,14 @@ export default function MedicineSearchPage() {
 
         {/* Examples */}
         {!hasSearched && (
-          <div className="mt-3 flex flex-wrap gap-2">
-            <span className="text-xs text-slate-400">Try:</span>
+          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+            <span className="text-xs text-surface-500 mr-1">Try</span>
             {exampleSearches.map((ex) => (
               <button
                 key={ex}
+                type="button"
                 onClick={() => { setQuery(ex); handleQueryChange(ex) }}
-                className="text-xs px-2.5 py-1 bg-slate-100 hover:bg-brand-50 hover:text-brand-700 text-slate-600 rounded-full transition-colors"
+                className="text-xs h-6 px-2 rounded-md border border-surface-200 bg-paper text-surface-700 hover:border-surface-300 hover:text-surface-950 transition-colors"
               >
                 {ex}
               </button>
@@ -143,19 +143,18 @@ export default function MedicineSearchPage() {
 
       {/* Normalization result */}
       {normalized && (
-        <div className="card p-4 border-brand-100 bg-brand-50/30">
-          <div className="flex items-start gap-3">
-            <Zap className="w-4.5 h-4.5 text-brand-500 mt-0.5 shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-brand-700 mb-2">Normalized input</p>
+        <div className="card px-4 py-3">
+          <div>
+            <div className="min-w-0">
+              <p className="text-xs font-medium text-surface-500 mb-2">Normalized input</p>
               <div className="flex flex-wrap gap-3 text-sm">
                 <div className="flex items-center gap-1.5">
                   <span className="text-slate-500 text-xs">Input:</span>
-                  <code className="bg-white px-2 py-0.5 rounded text-slate-700 text-xs">{normalized.raw}</code>
+                  <code className="bg-surface-100 px-1.5 py-0.5 rounded text-surface-700 text-xs">{normalized.raw}</code>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className="text-slate-500 text-xs">→</span>
-                  <code className="bg-white px-2 py-0.5 rounded text-brand-700 text-xs font-medium">{normalized.normalized}</code>
+                  <code className="bg-brand-50 px-1.5 py-0.5 rounded text-brand-800 text-xs font-medium">{normalized.normalized}</code>
                 </div>
                 {normalized.strength && (
                   <div className="flex items-center gap-1">
@@ -185,33 +184,32 @@ export default function MedicineSearchPage() {
       {hasSearched && (
         <div>
           <div className="flex items-center justify-between mb-3">
-            <p className="text-sm text-slate-600">
-              {results.length > 0 ? `${results.length} results found` : 'No medicines found'}
+            <p className="text-[13px] text-surface-500">
+              {results.length > 0 ? `${results.length} results` : 'No medicines found'}
             </p>
           </div>
 
           {results.length === 0 ? (
-            <div className="card p-10 text-center">
-              <Pill className="w-10 h-10 mx-auto text-slate-300 mb-3" />
-              <p className="text-slate-500">No medicines matched &quot;{query}&quot;</p>
-              <p className="text-xs text-slate-400 mt-1">Try a different name, generic, or barcode</p>
+            <div className="card px-6 py-12 text-center">
+              <p className="text-[13px] font-semibold text-surface-800">No medicines matched &ldquo;{query}&rdquo;</p>
+              <p className="text-[13px] text-surface-500 mt-1">Try a different name, generic, or barcode.</p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="card divide-y divide-surface-100 overflow-hidden">
               {results.map((result, index) => (
                 <div
                   key={result.id}
                   className={cn(
-                    'card p-4 flex items-center gap-4 cursor-pointer hover:border-brand-200 transition-colors',
-                    index === 0 && 'border-brand-300 bg-brand-50/30'
+                    'px-4 py-3.5 flex items-center gap-4 cursor-pointer hover:bg-surface-50 transition-colors',
+                    index === 0 && 'bg-brand-50/40'
                   )}
                 >
                   {/* Rank */}
                   <div className={cn(
-                    'w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0',
-                    index === 0 ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-500'
-                  )}>
-                    {index === 0 ? <CheckCircle className="w-4 h-4" /> : index + 1}
+                    'w-5 text-xs font-medium tabular-nums shrink-0 text-center',
+                    index === 0 ? 'text-brand-700' : 'text-surface-400'
+                  )} title={index === 0 ? 'Best match' : undefined}>
+                    {index === 0 ? <CheckCircle className="w-4 h-4 mx-auto" aria-label="Best match" /> : index + 1}
                   </div>
 
                   {/* Medicine info */}
@@ -230,7 +228,7 @@ export default function MedicineSearchPage() {
                       {result.genericName} • {result.strength} • {result.dosageForm} • {result.packSize}
                     </p>
                     <div className="flex items-center gap-2 mt-1.5">
-                      <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium', MATCH_TYPE_STYLES[result.matchType])}>
+                      <span className={cn('text-[10.5px] px-1.5 h-5 inline-flex items-center rounded-sm font-medium', MATCH_TYPE_STYLES[result.matchType])}>
                         {result.matchType}
                       </span>
                       <span className="text-xs text-slate-400">
@@ -241,12 +239,12 @@ export default function MedicineSearchPage() {
 
                   {/* Price + score */}
                   <div className="text-right shrink-0">
-                    <p className="font-bold text-slate-900">{formatCurrency(result.mrp)}</p>
+                    <p className="font-semibold text-slate-900">{formatCurrency(result.mrp)}</p>
                     <p className="text-xs text-slate-400">MRP</p>
                     <div className="mt-1 flex items-center gap-1 justify-end">
-                      <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="w-14 h-1 bg-surface-200 rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-brand-500 rounded-full"
+                          className="h-full bg-brand-600 rounded-full"
                           style={{ width: `${Math.round(result.matchScore * 100)}%` }}
                         />
                       </div>
@@ -254,7 +252,7 @@ export default function MedicineSearchPage() {
                     </div>
                   </div>
 
-                  <button className="btn-secondary text-xs px-3 py-1.5 shrink-0">Add to Bill</button>
+                  <button className="btn-secondary shrink-0">Add to bill</button>
                 </div>
               ))}
             </div>
@@ -264,32 +262,25 @@ export default function MedicineSearchPage() {
 
       {/* Instructions when empty */}
       {!hasSearched && !loading && (
-        <div className="card p-8 text-center">
-          <div className="flex items-center justify-center gap-4 mb-6">
-            <div className="text-center">
-              <Pill className="w-8 h-8 text-brand-400 mx-auto mb-2" />
-              <p className="text-xs text-slate-500">Brand name</p>
-            </div>
-            <div className="text-slate-300">→</div>
-            <div className="text-center">
-              <Zap className="w-8 h-8 text-amber-400 mx-auto mb-2" />
-              <p className="text-xs text-slate-500">Normalize</p>
-            </div>
-            <div className="text-slate-300">→</div>
-            <div className="text-center">
-              <Search className="w-8 h-8 text-green-400 mx-auto mb-2" />
-              <p className="text-xs text-slate-500">Match</p>
-            </div>
-            <div className="text-slate-300">→</div>
-            <div className="text-center">
-              <Barcode className="w-8 h-8 text-purple-400 mx-auto mb-2" />
-              <p className="text-xs text-slate-500">Results</p>
-            </div>
-          </div>
-          <p className="text-slate-600 font-medium">Intelligent Medicine Lookup</p>
-          <p className="text-sm text-slate-400 mt-1 max-w-sm mx-auto">
+        <div className="border-t border-surface-200 pt-6">
+          <p className="text-[13px] font-semibold text-surface-900">Intelligent medicine lookup</p>
+          <p className="text-[13px] text-surface-500 mt-1 max-w-lg">
             Works with brand names, generic names, short forms, misspellings, compositions, and barcodes.
           </p>
+          <ol className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-px bg-surface-200 border border-surface-200 rounded-lg overflow-hidden text-[13px]">
+            {[
+              ['Brand name', 'Whatever is typed or scanned'],
+              ['Normalize', 'Spelling, strength and form'],
+              ['Match', 'Brand, generic and barcode'],
+              ['Results', 'Ranked by confidence'],
+            ].map(([title, hint], i) => (
+              <li key={title} className="bg-paper px-4 py-3">
+                <span className="text-xs text-surface-400 tabular-nums">{i + 1}</span>
+                <p className="font-medium text-surface-900 mt-0.5">{title}</p>
+                <p className="text-xs text-surface-500">{hint}</p>
+              </li>
+            ))}
+          </ol>
         </div>
       )}
     </div>

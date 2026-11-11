@@ -3,11 +3,10 @@
 import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import Papa from 'papaparse'
-import { Download, Upload, FileJson, Database, FileSpreadsheet, AlertTriangle, Check, Lock } from 'lucide-react'
+import { Download, Upload, FileJson, FileSpreadsheet, AlertTriangle, Check, Lock } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { authService } from '@/lib/auth'
-import { cn } from '@/lib/utils'
 import { encryptJson, decryptJson, isEncryptedEnvelope } from '@/lib/crypto-backup'
 
 export default function BackupPage() {
@@ -17,26 +16,25 @@ export default function BackupPage() {
     <div className="space-y-5">
       <div className="page-header">
         <div>
-          <h1 className="page-title flex items-center gap-2"><Database className="w-5 h-5" /> Backup & Import</h1>
-          <p className="text-sm text-slate-500">Export your full database · Import from CSV (Marg, Pharmarack, custom)</p>
+          <h1 className="page-title">Backup & Import</h1>
+          <p className="text-[13px] leading-5 text-surface-500 mt-1">Export your full database · Import from CSV (Marg, Pharmarack, custom)</p>
         </div>
       </div>
 
-      <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 w-fit">
+      <div role="tablist" className="tab-list">
         {([
           ['backup', 'Backup & Restore', FileJson],
           ['customers', 'Import Customers', FileSpreadsheet],
           ['suppliers', 'Import Suppliers', FileSpreadsheet],
-        ] as const).map(([k, label, Icon]) => (
+        ] as const).map(([k, label]) => (
           <button
             key={k}
             onClick={() => setTab(k)}
-            className={cn(
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
-              tab === k ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-50'
-            )}
+            role="tab"
+              aria-selected={tab === k}
+              className="tab"
           >
-            <Icon className="w-3.5 h-3.5" /> {label}
+            {label}
           </button>
         ))}
       </div>
@@ -377,13 +375,13 @@ function CsvImportTab({ entity }: CsvImportTabProps) {
           <div className="card overflow-hidden border-red-200">
             <div className="card-header bg-red-50 flex items-center justify-between">
               <h3 className="font-semibold text-red-900">Failed rows ({errors.length})</h3>
-              <button onClick={() => downloadErrorCsv(errors)} className="text-xs text-brand-600 hover:underline">
+              <button onClick={() => downloadErrorCsv(errors)} className="text-xs text-brand-700 hover:text-brand-800 hover:underline underline-offset-2">
                 Download errors as CSV
               </button>
             </div>
             <div className="overflow-x-auto"><table className="w-full text-sm">
               <thead>
-                <tr className="bg-slate-50 text-xs uppercase text-slate-500">
+                <tr className="bg-surface-50 text-xs text-surface-500 border-b border-surface-200">
                   <th className="text-left px-3 py-2">Row #</th>
                   <th className="text-left px-3 py-2">Name</th>
                   <th className="text-left px-3 py-2">Phone</th>

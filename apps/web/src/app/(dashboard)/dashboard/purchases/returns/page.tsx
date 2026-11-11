@@ -58,7 +58,7 @@ export default function PurchaseReturnsPage() {
                 </td></tr>
               ) : returns.map((r) => (
                 <tr key={r.id}>
-                  <td><Link href={`/dashboard/invoices/${r.id}`} className="font-mono text-brand-600 hover:underline">{r.invoiceNumber}</Link></td>
+                  <td><Link href={`/dashboard/invoices/${r.id}`} className="font-mono text-brand-700 hover:text-brand-800 hover:underline underline-offset-2">{r.invoiceNumber}</Link></td>
                   <td className="font-mono text-2xs text-surface-500">{r.originalInvoice?.invoiceNumber ?? '—'}</td>
                   <td>{r.supplier?.name ?? r.supplier?.companyName ?? '—'}</td>
                   <td className="text-surface-600">{formatDate(r.createdAt)}</td>
@@ -133,24 +133,24 @@ function NewReturnFlow({ onClose, onCreated }: { onClose: () => void; onCreated:
   const anyLines = lines.some((l) => l.quantity > 0)
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-elevated w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-surface-200 sticky top-0 bg-white z-10">
+    <div className="modal-overlay">
+      <div className="modal-panel w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="modal-header sticky top-0 z-10">
           <div>
             <h2 className="font-semibold text-surface-900">New Purchase Return</h2>
             <p className="text-2xs text-surface-500">
               {step === 1 ? 'Step 1 · Choose supplier' : step === 2 ? `Step 2 · Choose invoice — ${supplier?.name}` : `Step 3 · Select items — ${invoice?.invoiceNumber}`}
             </p>
           </div>
-          <button onClick={onClose}><X className="w-4 h-4 text-surface-400" /></button>
+          <button type="button" onClick={onClose} aria-label="Close" className="modal-close"><X className="w-4 h-4" /></button>
         </div>
 
         <div className="p-5">
           {step === 1 && (
             <div className="space-y-3">
-              <div className="card p-2! flex items-center gap-2">
-                <Search className="w-4 h-4 text-surface-400 ml-1" />
-                <input className="flex-1 text-sm bg-transparent outline-hidden" placeholder="Search supplier…" value={supplierSearch} onChange={(e) => setSupplierSearch(e.target.value)} autoFocus />
+              <div className="search-field">
+                <Search />
+                <input type="search" aria-label="Search supplier" className="input" placeholder="Search supplier…" value={supplierSearch} onChange={(e) => setSupplierSearch(e.target.value)} autoFocus />
               </div>
               <ul className="divide-y divide-surface-100 border border-surface-200 rounded-lg overflow-hidden">
                 {(supRes.data?.data ?? []).map((s: any) => (
@@ -197,7 +197,7 @@ function NewReturnFlow({ onClose, onCreated }: { onClose: () => void; onCreated:
               </div>
               {detailRes.isLoading ? <p className="text-sm text-surface-400 py-6 text-center">Loading items…</p> : (
                 <div className="overflow-x-auto"><table className="w-full text-sm border border-surface-200 rounded-lg overflow-hidden">
-                  <thead className="bg-surface-50 text-2xs uppercase text-surface-500">
+                  <thead className="bg-surface-50 text-xs text-surface-500 border-b border-surface-200">
                     <tr><th className="text-left px-3 py-2">Item</th><th className="text-right px-3 py-2">Bought</th><th className="text-center px-3 py-2">Return</th><th className="text-right px-3 py-2">Value</th></tr>
                   </thead>
                   <tbody className="divide-y divide-surface-100">
@@ -228,7 +228,7 @@ function NewReturnFlow({ onClose, onCreated }: { onClose: () => void; onCreated:
                     })}
                   </tbody>
                   <tfoot className="bg-surface-50">
-                    <tr><td colSpan={3} className="px-3 py-2 text-right font-semibold">Total return</td><td className="px-3 py-2 text-right font-bold text-amber-700">{formatCurrency(totalReturn)}</td></tr>
+                    <tr><td colSpan={3} className="px-3 py-2 text-right font-semibold">Total return</td><td className="px-3 py-2 text-right font-semibold text-amber-700">{formatCurrency(totalReturn)}</td></tr>
                   </tfoot>
                 </table></div>
               )}

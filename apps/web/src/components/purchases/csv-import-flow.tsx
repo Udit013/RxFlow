@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import Papa from 'papaparse'
-import { Upload, FileSpreadsheet, ArrowRight, CheckCircle2, AlertTriangle, X, Sparkles, Save, Trash2 } from 'lucide-react'
+import { Upload, ArrowRight, CheckCircle2, AlertTriangle, X, Sparkles, Save, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { authService } from '@/lib/auth'
@@ -287,8 +287,8 @@ export function CsvImportFlow() {
     <div className="space-y-5">
       <div className="page-header">
         <div>
-          <h1 className="page-title flex items-center gap-2"><FileSpreadsheet className="w-5 h-5" /> Import Purchase from CSV</h1>
-          <p className="text-sm text-slate-500">Bulk-add stock from a supplier's invoice CSV/Excel</p>
+          <h1 className="page-title">Import Purchase from CSV</h1>
+          <p className="text-[13px] leading-5 text-surface-500 mt-1">Bulk-add stock from a supplier's invoice CSV/Excel</p>
         </div>
       </div>
 
@@ -462,22 +462,22 @@ export function CsvImportFlow() {
       {/* Step 3 — verify + import */}
       {step === 3 && (
         <div className="space-y-4">
-          <div className="grid grid-cols-4 gap-3">
+          <div className="stat-strip grid-cols-2 lg:grid-cols-4">
             <div className="metric-card">
-              <p className="text-xs text-slate-500 uppercase">Total</p>
-              <p className="text-lg font-bold">{resolved.length}</p>
+              <p className="text-xs font-medium text-surface-500">Total</p>
+              <p className="font-display text-lg font-semibold tracking-[-0.01em]">{resolved.length}</p>
             </div>
             <div className="metric-card">
-              <p className="text-xs text-slate-500 uppercase">Ready to import</p>
-              <p className="text-lg font-bold text-green-600">{validCount}</p>
+              <p className="text-xs font-medium text-surface-500">Ready to import</p>
+              <p className="font-display text-lg font-semibold tracking-[-0.01em] text-green-600">{validCount}</p>
             </div>
             <div className="metric-card">
-              <p className="text-xs text-slate-500 uppercase">Needs medicine match</p>
-              <p className="text-lg font-bold text-amber-600">{unmatchedCount}</p>
+              <p className="text-xs font-medium text-surface-500">Needs medicine match</p>
+              <p className="font-display text-lg font-semibold tracking-[-0.01em] text-amber-600">{unmatchedCount}</p>
             </div>
             <div className="metric-card">
-              <p className="text-xs text-slate-500 uppercase">Errors</p>
-              <p className="text-lg font-bold text-red-600">{errorCount}</p>
+              <p className="text-xs font-medium text-surface-500">Errors</p>
+              <p className="font-display text-lg font-semibold tracking-[-0.01em] text-red-600">{errorCount}</p>
             </div>
           </div>
 
@@ -485,7 +485,7 @@ export function CsvImportFlow() {
             <div className="overflow-x-auto max-h-[500px]">
               <table className="w-full text-sm">
                 <thead className="sticky top-0 bg-slate-50">
-                  <tr className="text-xs uppercase text-slate-500">
+                  <tr className="text-xs font-medium text-surface-500">
                     <th className="px-3 py-2 text-left">CSV Name → Match</th>
                     <th className="px-3 py-2 text-left">Batch / Exp</th>
                     <th className="px-3 py-2 text-center">Qty</th>

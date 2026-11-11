@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { ArrowLeftRight, Plus, Trash2, Search } from 'lucide-react'
+import { ArrowLeftRight, Plus, Trash2, Search, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { authService } from '@/lib/auth'
@@ -34,8 +34,8 @@ export default function StockTransfersPage() {
     <div className="space-y-5">
       <div className="page-header">
         <div>
-          <h1 className="page-title flex items-center gap-2"><ArrowLeftRight className="w-5 h-5" /> Stock Transfers</h1>
-          <p className="text-sm text-slate-500">Move stock between your stores with a full audit trail</p>
+          <h1 className="page-title">Stock Transfers</h1>
+          <p className="text-[13px] leading-5 text-surface-500 mt-1">Move stock between your stores with a full audit trail</p>
         </div>
         <button
           onClick={() => canTransfer ? setShowNew(true) : toast.error('Need at least 2 stores to transfer')}
@@ -63,7 +63,7 @@ export default function StockTransfersPage() {
               <li>Consolidating near-expiry stock to a high-traffic store to sell it faster.</li>
               <li>Rebalancing after a bulk purchase delivered to one location.</li>
             </ul>
-            <p className="mt-1 text-2xs text-surface-500">Not for: receiving new stock from a supplier (use <Link href="/dashboard/purchases/new" className="text-brand-600 hover:underline">New Purchase</Link>) or writing off damaged stock (use Inventory → write-off).</p>
+            <p className="mt-1 text-2xs text-surface-500">Not for: receiving new stock from a supplier (use <Link href="/dashboard/purchases/new" className="text-brand-700 hover:text-brand-800 hover:underline underline-offset-2">New Purchase</Link>) or writing off damaged stock (use Inventory → write-off).</p>
           </div>
           <div>
             <strong className="text-surface-800">Steps</strong>
@@ -89,12 +89,12 @@ export default function StockTransfersPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Code</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">From → To</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Date</th>
-              <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Lines</th>
-              <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Units</th>
-              <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Status</th>
+              <th className="text-left px-4 h-9 text-xs font-medium text-surface-500 whitespace-nowrap">Code</th>
+              <th className="text-left px-4 h-9 text-xs font-medium text-surface-500 whitespace-nowrap">From → To</th>
+              <th className="text-left px-4 h-9 text-xs font-medium text-surface-500 whitespace-nowrap">Date</th>
+              <th className="text-center px-4 h-9 text-xs font-medium text-surface-500 whitespace-nowrap">Lines</th>
+              <th className="text-center px-4 h-9 text-xs font-medium text-surface-500 whitespace-nowrap">Units</th>
+              <th className="text-center px-4 h-9 text-xs font-medium text-surface-500 whitespace-nowrap">Status</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>
@@ -109,7 +109,7 @@ export default function StockTransfersPage() {
               ))
             ) : transfers.length === 0 ? (
               <tr><td colSpan={7} className="text-center py-12 text-slate-400">
-                <ArrowLeftRight className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                <ArrowLeftRight className="w-5 h-5 mx-auto mb-3 text-surface-400" strokeWidth={1.75} aria-hidden="true" />
                 No transfers yet
               </td></tr>
             ) : (
@@ -126,7 +126,7 @@ export default function StockTransfersPage() {
                     <span className={STATUS_STYLES[t.status] ?? 'badge-neutral'}>{t.status.replace('_', ' ')}</span>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <Link href={`/dashboard/stock-transfers/${t.id}`} className="text-xs text-brand-600 hover:underline">View</Link>
+                    <Link href={`/dashboard/stock-transfers/${t.id}`} className="text-xs text-brand-700 hover:text-brand-800 hover:underline underline-offset-2">View</Link>
                   </td>
                 </tr>
               ))
@@ -206,11 +206,11 @@ function NewTransferModal({ onClose, onCreated }: { onClose: () => void; onCreat
   const canSubmit = fromStoreId && toStoreId && fromStoreId !== toStoreId && lines.length > 0 && lines.every((l) => l.quantity > 0 && l.quantity <= l.available)
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-5 py-4 border-b sticky top-0 bg-white z-10">
+    <div className="modal-overlay">
+      <div className="modal-panel w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+        <div className="modal-header sticky top-0 z-10">
           <h2 className="font-semibold">New Stock Transfer</h2>
-          <button onClick={onClose} className="text-slate-400">✕</button>
+          <button type="button" onClick={onClose} aria-label="Close" className="modal-close"><X className="w-4 h-4" /></button>
         </div>
         <div className="p-5 space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -263,7 +263,7 @@ function NewTransferModal({ onClose, onCreated }: { onClose: () => void; onCreat
 
           {lines.length > 0 && (
             <div className="overflow-x-auto"><table className="w-full text-sm border rounded-lg">
-              <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+              <thead className="bg-surface-50 text-xs text-surface-500 border-b border-surface-200">
                 <tr>
                   <th className="text-left px-3 py-2">Medicine</th>
                   <th className="text-left px-3 py-2">Batch</th>

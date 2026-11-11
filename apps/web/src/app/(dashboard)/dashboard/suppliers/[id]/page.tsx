@@ -78,7 +78,7 @@ export default function SupplierDetailPage() {
       <div className="card p-6">
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">{s.name}</h1>
+            <h1 className="font-display text-[22px] leading-7 font-semibold tracking-[-0.02em] text-slate-900">{s.name}</h1>
             <p className="text-sm text-slate-600 mt-1">{s.companyName}</p>
             <div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-slate-600">
               {s.phone && <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> {s.phone}</span>}
@@ -89,25 +89,25 @@ export default function SupplierDetailPage() {
           </div>
           <div className="text-right">
             <p className="text-xs text-slate-500">Outstanding (Payable)</p>
-            <p className={`text-xl font-bold ${(s.outstandingBalance ?? 0) > 0 ? 'text-red-600' : 'text-slate-900'}`}>
+            <p className={`font-display text-xl font-semibold tracking-[-0.015em] ${(s.outstandingBalance ?? 0) > 0 ? 'text-red-600' : 'text-slate-900'}`}>
               {formatCurrency(s.outstandingBalance ?? 0)}
             </p>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="stat-strip grid-cols-1 sm:grid-cols-3">
         <div className="metric-card">
-          <p className="text-xs text-slate-500 uppercase">Credit Days</p>
-          <p className="text-lg font-bold text-slate-900">{s.creditDays}d</p>
+          <p className="text-xs font-medium text-surface-500">Credit Days</p>
+          <p className="font-display text-lg font-semibold tracking-[-0.01em] text-slate-900">{s.creditDays}d</p>
         </div>
         <div className="metric-card">
-          <p className="text-xs text-slate-500 uppercase">Credit Limit</p>
-          <p className="text-lg font-bold text-slate-900">{formatCurrency(s.creditLimit ?? 0)}</p>
+          <p className="text-xs font-medium text-surface-500">Credit Limit</p>
+          <p className="font-display text-lg font-semibold tracking-[-0.01em] text-slate-900">{formatCurrency(s.creditLimit ?? 0)}</p>
         </div>
         <div className="metric-card">
-          <p className="text-xs text-slate-500 uppercase">Total Purchases</p>
-          <p className="text-lg font-bold text-slate-900">{formatCurrency(s.totalPurchases ?? 0)}</p>
+          <p className="text-xs font-medium text-surface-500">Total Purchases</p>
+          <p className="font-display text-lg font-semibold tracking-[-0.01em] text-slate-900">{formatCurrency(s.totalPurchases ?? 0)}</p>
         </div>
       </div>
 
@@ -217,11 +217,11 @@ function EditSupplierModal({ supplier, onClose, onSaved }: { supplier: any; onCl
   })
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-5 py-4 border-b sticky top-0 bg-white">
+    <div className="modal-overlay">
+      <div className="modal-panel w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="modal-header sticky top-0 z-10">
           <h2 className="font-semibold text-slate-900">Edit Supplier</h2>
-          <button onClick={onClose}><X className="w-4 h-4 text-slate-400" /></button>
+          <button type="button" onClick={onClose} aria-label="Close" className="modal-close"><X className="w-4 h-4" /></button>
         </div>
         <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="p-5 space-y-3">
           <div>
@@ -292,8 +292,8 @@ function ConfirmDialog({ title, message, confirmLabel, danger, onConfirm, onCanc
   title: string; message: string; confirmLabel: string; danger?: boolean; onConfirm: () => void; onCancel: () => void
 }) {
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-5">
+    <div className="modal-overlay">
+      <div className="modal-panel w-full max-w-sm p-5">
         <h2 className="font-semibold text-slate-900 mb-2">{title}</h2>
         <p className="text-sm text-slate-600 mb-5">{message}</p>
         <div className="flex justify-end gap-2">

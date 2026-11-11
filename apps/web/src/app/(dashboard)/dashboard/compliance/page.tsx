@@ -46,20 +46,19 @@ export default function CompliancePage() {
       </AnimatedSection>
 
       <AnimatedSection>
-        <div className="flex items-center gap-1 bg-white border border-surface-200/70 rounded-xl p-1 w-fit shadow-xs">
+        <div role="tablist" className="tab-list">
           {([
             ['h1', region.register.name, FileText],
             ['licenses', 'License Expiry', Calendar],
-          ] as const).map(([k, label, Icon]) => (
+          ] as const).map(([k, label]) => (
             <button
               key={k}
               onClick={() => setTab(k)}
-              className={cn(
-                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all',
-                tab === k ? 'bg-brand-600 text-white shadow-sm' : 'text-surface-600 hover:bg-surface-50'
-              )}
+              role="tab"
+              aria-selected={tab === k}
+              className="tab"
             >
-              <Icon className="w-3.5 h-3.5" /> {label}
+              {label}
             </button>
           ))}
         </div>
@@ -128,7 +127,7 @@ function ScheduleH1Tab() {
         <div className="overflow-x-auto max-h-[600px]">
           <table className="w-full text-sm">
             <thead className="sticky top-0 bg-slate-50">
-              <tr className="text-xs uppercase text-slate-500">
+              <tr className="text-xs font-medium text-surface-500">
                 <th className="text-left px-3 py-2">Date</th>
                 <th className="text-left px-3 py-2">Invoice</th>
                 <th className="text-left px-3 py-2">Medicine</th>
@@ -142,10 +141,10 @@ function ScheduleH1Tab() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {isLoading ? (
-                <tr><td colSpan={9} className="p-12 text-center text-slate-400">Loading...</td></tr>
+                <tr><td colSpan={9} className="px-6 py-12 text-center text-[13px] text-surface-500">Loading...</td></tr>
               ) : rows.length === 0 ? (
-                <tr><td colSpan={9} className="p-12 text-center text-slate-400">
-                  <FileText className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                <tr><td colSpan={9} className="px-6 py-12 text-center text-[13px] text-surface-500">
+                  <FileText className="w-5 h-5 mx-auto mb-3 text-surface-400" strokeWidth={1.75} aria-hidden="true" />
                   No scheduled-drug sales in this period
                 </td></tr>
               ) : (
@@ -192,10 +191,10 @@ function LicenseTab() {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <MetricCard icon={AlertTriangle} tone="danger"  label="Expired" countUp={stats.expired}  value={String(stats.expired)}  sub="Renew immediately" />
-        <MetricCard icon={Calendar}      tone="warning" label="Expiring (180d)" countUp={stats.expiring} value={String(stats.expiring)} sub="Plan renewal" />
-        <MetricCard icon={CheckCircle2}  tone="neutral" label="Missing data" countUp={stats.missing}  value={String(stats.missing)}  sub="Update expiry dates" />
+      <div className="stat-strip grid-cols-1 sm:grid-cols-3">
+        <MetricCard icon={AlertTriangle} tone={stats.expired > 0 ? 'danger' : 'neutral'} label="Expired" value={String(stats.expired)}  sub="Renew immediately" />
+        <MetricCard icon={Calendar}      tone={stats.expiring > 0 ? 'warning' : 'neutral'} label="Expiring (180 days)" value={String(stats.expiring)} sub="Plan renewal" />
+        <MetricCard icon={CheckCircle2}  tone="neutral" label="Missing data" value={String(stats.missing)}  sub="Update expiry dates" />
       </div>
 
       <div className="card overflow-hidden">
@@ -204,7 +203,7 @@ function LicenseTab() {
         </div>
         <div className="overflow-x-auto"><table className="w-full text-sm">
           <thead>
-            <tr className="bg-slate-50 text-xs uppercase text-slate-500">
+            <tr className="bg-surface-50 text-xs text-surface-500 border-b border-surface-200">
               <th className="text-left px-3 py-2">Owner</th>
               <th className="text-left px-3 py-2">License #</th>
               <th className="text-left px-3 py-2">Expires</th>
@@ -215,9 +214,9 @@ function LicenseTab() {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {isLoading ? (
-              <tr><td colSpan={6} className="p-12 text-center text-slate-400">Loading...</td></tr>
+              <tr><td colSpan={6} className="px-6 py-12 text-center text-[13px] text-surface-500">Loading...</td></tr>
             ) : items.length === 0 ? (
-              <tr><td colSpan={6} className="p-12 text-center text-slate-400">No license data — set drug license expiry dates in Settings + Suppliers</td></tr>
+              <tr><td colSpan={6} className="px-6 py-12 text-center text-[13px] text-surface-500">No license data — set drug license expiry dates in Settings + Suppliers</td></tr>
             ) : (
               items.map((it) => (
                 <tr key={`${it.kind}-${it.id}`} className="hover:bg-slate-50">
@@ -240,9 +239,9 @@ function LicenseTab() {
                   </td>
                   <td className="px-3 py-2 text-right">
                     {it.kind === 'TENANT' ? (
-                      <Link href="/dashboard/settings" className="text-xs text-brand-600 hover:underline">Update</Link>
+                      <Link href="/dashboard/settings" className="text-xs text-brand-700 hover:text-brand-800 hover:underline underline-offset-2">Update</Link>
                     ) : (
-                      <Link href={`/dashboard/suppliers/${it.id}`} className="text-xs text-brand-600 hover:underline">View</Link>
+                      <Link href={`/dashboard/suppliers/${it.id}`} className="text-xs text-brand-700 hover:text-brand-800 hover:underline underline-offset-2">View</Link>
                     )}
                   </td>
                 </tr>

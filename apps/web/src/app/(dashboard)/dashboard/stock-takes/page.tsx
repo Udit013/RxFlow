@@ -30,8 +30,8 @@ export default function StockTakesPage() {
     <div className="space-y-5">
       <div className="page-header">
         <div>
-          <h1 className="page-title flex items-center gap-2"><ClipboardList className="w-5 h-5" /> Stock Takes</h1>
-          <p className="text-sm text-slate-500">Physical stock counts and inventory reconciliation</p>
+          <h1 className="page-title">Stock Takes</h1>
+          <p className="text-[13px] leading-5 text-surface-500 mt-1">Physical stock counts and inventory reconciliation</p>
         </div>
         <button onClick={() => setShowNew(true)} className="btn-primary">
           <Plus className="w-4 h-4" /> Start New Count
@@ -47,12 +47,12 @@ export default function StockTakesPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Code</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Started</th>
-              <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Lines</th>
-              <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Counted</th>
-              <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase">+ / −</th>
-              <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Status</th>
+              <th className="text-left px-4 h-9 text-xs font-medium text-surface-500 whitespace-nowrap">Code</th>
+              <th className="text-left px-4 h-9 text-xs font-medium text-surface-500 whitespace-nowrap">Started</th>
+              <th className="text-center px-4 h-9 text-xs font-medium text-surface-500 whitespace-nowrap">Lines</th>
+              <th className="text-center px-4 h-9 text-xs font-medium text-surface-500 whitespace-nowrap">Counted</th>
+              <th className="text-center px-4 h-9 text-xs font-medium text-surface-500 whitespace-nowrap">+ / −</th>
+              <th className="text-center px-4 h-9 text-xs font-medium text-surface-500 whitespace-nowrap">Status</th>
               <th className="px-4 py-3" />
             </tr>
           </thead>
@@ -68,7 +68,7 @@ export default function StockTakesPage() {
             ) : takes.length === 0 ? (
               <tr>
                 <td colSpan={7} className="text-center py-12 text-slate-400">
-                  <ClipboardList className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                  <ClipboardList className="w-5 h-5 mx-auto mb-3 text-surface-400" strokeWidth={1.75} aria-hidden="true" />
                   No stock takes yet. Start one to begin counting.
                 </td>
               </tr>
@@ -76,7 +76,7 @@ export default function StockTakesPage() {
               takes.map((t) => (
                 <tr key={t.id} className="hover:bg-slate-50">
                   <td className="px-4 py-3">
-                    <Link href={`/dashboard/stock-takes/${t.id}`} className="font-medium text-brand-600 hover:underline font-mono text-xs">
+                    <Link href={`/dashboard/stock-takes/${t.id}`} className="font-medium text-brand-700 hover:text-brand-800 hover:underline underline-offset-2 font-mono text-xs">
                       {t.code}
                     </Link>
                     {t.notes && <p className="text-xs text-slate-500 mt-0.5">{t.notes}</p>}
@@ -96,7 +96,7 @@ export default function StockTakesPage() {
                     <span className={STATUS_STYLES[t.status] ?? 'badge-neutral'}>{t.status.replace('_', ' ')}</span>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <Link href={`/dashboard/stock-takes/${t.id}`} className="text-xs text-brand-600 hover:underline">
+                    <Link href={`/dashboard/stock-takes/${t.id}`} className="text-xs text-brand-700 hover:text-brand-800 hover:underline underline-offset-2">
                       {t.status === 'IN_PROGRESS' ? 'Continue →' : 'View'}
                     </Link>
                   </td>
@@ -135,11 +135,11 @@ function NewStockTakeModal({ onClose, onCreated }: { onClose: () => void; onCrea
   })
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-        <div className="flex items-center justify-between px-5 py-4 border-b">
+    <div className="modal-overlay">
+      <div className="modal-panel w-full max-w-md">
+        <div className="modal-header">
           <h2 className="font-semibold text-slate-900">New Stock Count</h2>
-          <button onClick={onClose}><X className="w-4 h-4 text-slate-400" /></button>
+          <button type="button" onClick={onClose} aria-label="Close" className="modal-close"><X className="w-4 h-4" /></button>
         </div>
         <div className="p-5 space-y-4">
           <div>

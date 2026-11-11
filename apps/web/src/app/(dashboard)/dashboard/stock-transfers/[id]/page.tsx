@@ -37,7 +37,7 @@ export default function StockTransferDetailPage() {
         <div className="flex items-start justify-between">
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold font-mono">{t.code}</h1>
+              <h1 className="text-2xl font-semibold font-mono">{t.code}</h1>
               <span className={STATUS_STYLES[t.status] ?? 'badge-neutral'}>{t.status.replace('_', ' ')}</span>
             </div>
             <p className="text-sm text-slate-500 mt-1">
@@ -70,7 +70,7 @@ export default function StockTransferDetailPage() {
         </div>
         <div className="overflow-x-auto"><table className="w-full text-sm">
           <thead>
-            <tr className="bg-slate-50 text-xs uppercase text-slate-500">
+            <tr className="bg-surface-50 text-xs text-surface-500 border-b border-surface-200">
               <th className="text-left px-4 py-2">Medicine</th>
               <th className="text-left px-4 py-2">Batch</th>
               <th className="text-center px-4 py-2">Quantity</th>

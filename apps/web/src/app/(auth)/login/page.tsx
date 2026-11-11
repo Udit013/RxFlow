@@ -3,11 +3,13 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { AuthAside } from '@/components/auth/auth-aside'
+import { BrandMark } from '@/components/brand-mark'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { Eye, EyeOff, Pill } from 'lucide-react'
+import { Eye, EyeOff } from 'lucide-react'
 import { authService } from '@/lib/auth'
 
 const loginSchema = z.object({
@@ -81,83 +83,52 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex bg-surface-100">
-      {/* Left panel — the ledger cover */}
-      <div className="hidden lg:flex lg:w-[44%] bg-brand-950 text-paper flex-col justify-between p-12">
-        <div>
-          <div className="flex items-baseline gap-2">
-            <Pill className="w-5 h-5 text-brand-300 self-center" />
-            <span className="font-display text-2xl font-bold tracking-tight">RxFlow</span>
-          </div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-brand-300/70 mt-1.5">Pharmacy OS</p>
-        </div>
-
-        <div>
-          <h1 className="font-display text-[40px] font-semibold leading-[1.08] tracking-tight">
-            The pharmacy&rsquo;s<br />book of record.
-          </h1>
-          <p className="text-brand-200/80 text-[15px] mt-4 max-w-sm leading-relaxed">
-            Stock, batches, expiries, tax, dues — every entry accounted for, on every device, in real time.
-          </p>
-
-          <div className="mt-12 max-w-sm">
-            {[
-              'Batch & expiry-true inventory across stores',
-              'Tax-compliant billing — GST, VAT, sales tax',
-              'Distributor CSV import, any format',
-              'Payroll, commissions and ledgers',
-            ].map((text, i) => (
-              <div key={i} className="flex items-baseline gap-4 py-3 border-t border-white/10 last:border-b">
-                <span className="font-mono text-[11px] text-brand-300/80 tabular-nums">{String(i + 1).padStart(2, '0')}</span>
-                <span className="text-[13px] text-brand-100/90">{text}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <p className="font-mono text-[11px] text-brand-300/50 tracking-wide">
-          © 2026 RxFlow · made in India, for pharmacies everywhere
-        </p>
-      </div>
+    <div className="min-h-screen min-h-dvh flex bg-paper">
+      <AuthAside
+        title={<>The pharmacy&rsquo;s<br />book of record.</>}
+        lede="Stock, batches, expiries, tax, dues — every entry accounted for, on every device, in real time."
+        points={[
+          'Batch & expiry-true inventory across stores',
+          'Tax-compliant billing — GST, VAT, sales tax',
+          'Distributor CSV import, any format',
+          'Payroll, commissions and ledgers',
+        ]}
+      />
 
       {/* Right panel — login form */}
-      <div className="flex-1 flex items-center justify-center p-8">
-        <div className="w-full max-w-md">
+      <main className="flex-1 flex items-center justify-center px-5 py-10 sm:p-8">
+        <div className="w-full max-w-[22rem]">
           {/* Mobile logo */}
-          <div className="flex items-baseline gap-2 mb-8 lg:hidden">
-            <Pill className="w-4 h-4 text-brand-600 self-center" />
-            <span className="font-display text-xl font-bold text-surface-900 tracking-tight">RxFlow</span>
-          </div>
+          <BrandMark className="mb-10 lg:hidden" />
 
-          <div className="mb-8">
-            <p className="microlabel text-brand-600 mb-1.5">Sign in</p>
-            <h2 className="font-display text-2xl font-semibold text-surface-900 tracking-tight">Open the counter</h2>
-            <p className="text-surface-500 text-sm mt-1.5">Enter your credentials to continue.</p>
+          <div className="mb-7">
+            <h2 className="font-display text-[22px] leading-7 font-semibold text-surface-950 tracking-[-0.015em]">Sign in to RxFlow</h2>
+            <p className="text-surface-500 text-[13px] mt-1">Open the counter with your pharmacy account.</p>
           </div>
 
           {mode === 'password' ? (
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div>
-                <label className="label" htmlFor="email">Email address *</label>
+                <label className="label" htmlFor="email">Email address</label>
                 <input id="email" type="email" className="input" placeholder="you@pharmacy.com" autoComplete="email" {...register('email')} />
-                {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
+                {errors.email && <p className="text-danger-600 text-xs mt-1.5">{errors.email.message}</p>}
               </div>
 
               <div>
                 <div className="flex items-center justify-between">
-                  <label className="label" htmlFor="password">Password *</label>
-                  <Link href="/forgot-password" className="text-xs text-brand-600 hover:underline mb-1">Forgot password?</Link>
+                  <label className="label" htmlFor="password">Password</label>
+                  <Link href="/forgot-password" className="text-xs font-medium text-surface-500 hover:text-surface-900 mb-1.5">Forgot password?</Link>
                 </div>
                 <div className="relative">
                   <input id="password" type={showPassword ? 'text' : 'password'} className="input pr-10" placeholder="••••••••" autoComplete="current-password" {...register('password')} />
-                  <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600" onClick={() => setShowPassword(!showPassword)}>
+                  <button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 rounded text-surface-400 hover:text-surface-700" onClick={() => setShowPassword(!showPassword)}>
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
-                {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}
+                {errors.password && <p className="text-danger-600 text-xs mt-1.5">{errors.password.message}</p>}
               </div>
 
-              <button type="submit" disabled={loading} className="btn-primary w-full py-2.5">
+              <button type="submit" disabled={loading} className="btn-primary w-full py-2 mt-2">
                 {loading ? 'Signing in…' : 'Sign in'}
               </button>
             </form>
@@ -168,7 +139,7 @@ export default function LoginPage() {
                 <input className="input" value={identifier} onChange={(e) => setIdentifier(e.target.value)} placeholder="you@pharmacy.com or 9876543210" autoFocus />
                 <p className="help-text">We&apos;ll email a 6-digit code to your registered address.</p>
               </div>
-              <button type="submit" disabled={loading} className="btn-primary w-full py-2.5">{loading ? 'Sending…' : 'Send login code'}</button>
+              <button type="submit" disabled={loading} className="btn-primary w-full py-2">{loading ? 'Sending…' : 'Send login code'}</button>
             </form>
           ) : (
             <form onSubmit={verifyOtp} className="space-y-5">
@@ -176,24 +147,28 @@ export default function LoginPage() {
                 <label className="label">Enter the code sent to {maskedEmail}</label>
                 <input className="input tracking-[0.4em] font-mono" inputMode="numeric" maxLength={6} value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))} placeholder="000000" autoFocus />
               </div>
-              <button type="submit" disabled={loading} className="btn-primary w-full py-2.5">{loading ? 'Verifying…' : 'Sign in'}</button>
+              <button type="submit" disabled={loading} className="btn-primary w-full py-2">{loading ? 'Verifying…' : 'Sign in'}</button>
               <button type="button" onClick={() => setOtpStep('request')} className="text-xs text-surface-500 hover:text-surface-700 w-full text-center">Use a different account</button>
             </form>
           )}
 
+          <div className="flex items-center gap-3 my-5 text-xs text-surface-400" aria-hidden="true">
+            <span className="h-px flex-1 bg-surface-200" />or<span className="h-px flex-1 bg-surface-200" />
+          </div>
           <button
+            type="button"
             onClick={() => { setMode(mode === 'password' ? 'otp' : 'password'); setOtpStep('request') }}
-            className="text-sm text-brand-600 hover:underline w-full text-center mt-4"
+            className="btn-secondary w-full py-2"
           >
             {mode === 'password' ? 'Sign in with a code instead' : 'Sign in with password instead'}
           </button>
 
-          <p className="text-center text-sm text-slate-500 mt-5">
+          <p className="text-center text-[13px] text-surface-500 mt-8">
             New to RxFlow?{' '}
-            <Link href="/register" className="text-brand-600 font-medium hover:underline">Create your pharmacy account</Link>
+            <Link href="/register" className="text-surface-950 font-medium underline decoration-surface-300 underline-offset-[3px] hover:decoration-surface-950">Create your pharmacy account</Link>
           </p>
         </div>
-      </div>
+      </main>
     </div>
   )
 }

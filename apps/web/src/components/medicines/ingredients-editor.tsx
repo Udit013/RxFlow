@@ -76,7 +76,7 @@ export function IngredientsEditor({ rows, onChange }: { rows: IngredientRow[]; o
         </div>
       )}
       <div className="flex items-center justify-between">
-        <button type="button" onClick={() => onChange([...rows, { name: '', strength: '', unit: 'mg' }])} className="text-xs text-brand-600 hover:underline inline-flex items-center gap-1">
+        <button type="button" onClick={() => onChange([...rows, { name: '', strength: '', unit: 'mg' }])} className="text-xs text-brand-700 hover:text-brand-800 hover:underline underline-offset-2 inline-flex items-center gap-1">
           <Plus className="w-3 h-3" /> Add ingredient
         </button>
         <p className="text-2xs text-surface-400">Strength per tablet, capsule, mL or dose. Regional names (acetaminophen) are matched automatically.</p>

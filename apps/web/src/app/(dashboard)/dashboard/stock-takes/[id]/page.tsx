@@ -102,7 +102,7 @@ export default function StockTakeDetailPage() {
         <div className="flex items-start justify-between">
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-slate-900 font-mono">{take.code}</h1>
+              <h1 className="font-display text-[22px] leading-7 font-semibold tracking-[-0.02em] text-slate-900 font-mono">{take.code}</h1>
               <span className={STATUS_STYLES[take.status] ?? 'badge-neutral'}>{take.status.replace('_', ' ')}</span>
             </div>
             <p className="text-sm text-slate-500 mt-1">Started {formatDate(take.createdAt)}</p>
@@ -126,56 +126,55 @@ export default function StockTakeDetailPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-5 gap-3">
+      <div className="stat-strip grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
         <div className="metric-card">
-          <p className="text-xs text-slate-500 uppercase">Total Lines</p>
-          <p className="text-lg font-bold">{stats.total}</p>
+          <p className="text-xs font-medium text-surface-500">Total Lines</p>
+          <p className="font-display text-lg font-semibold tracking-[-0.01em]">{stats.total}</p>
         </div>
         <div className="metric-card">
-          <p className="text-xs text-slate-500 uppercase">Counted</p>
-          <p className="text-lg font-bold text-blue-700">{stats.counted}</p>
+          <p className="text-xs font-medium text-surface-500">Counted</p>
+          <p className="font-display text-lg font-semibold tracking-[-0.01em] text-brand-700">{stats.counted}</p>
           <p className="text-xs text-slate-500">{stats.total > 0 ? Math.round((stats.counted / stats.total) * 100) : 0}%</p>
         </div>
         <div className="metric-card">
-          <p className="text-xs text-slate-500 uppercase flex items-center gap-1"><TrendingUp className="w-3 h-3 text-green-600" /> Overage</p>
-          <p className="text-lg font-bold text-green-700">+{stats.positive}</p>
+          <p className="text-xs font-medium text-surface-500 flex items-center gap-1"><TrendingUp className="w-3 h-3 text-green-600" /> Overage</p>
+          <p className="font-display text-lg font-semibold tracking-[-0.01em] text-green-700">+{stats.positive}</p>
           <p className="text-xs text-green-600">{formatCurrency(stats.gainValue)} value</p>
         </div>
         <div className="metric-card">
-          <p className="text-xs text-slate-500 uppercase flex items-center gap-1"><TrendingDown className="w-3 h-3 text-red-600" /> Shortage</p>
-          <p className="text-lg font-bold text-red-700">-{stats.negative}</p>
+          <p className="text-xs font-medium text-surface-500 flex items-center gap-1"><TrendingDown className="w-3 h-3 text-red-600" /> Shortage</p>
+          <p className="font-display text-lg font-semibold tracking-[-0.01em] text-red-700">-{stats.negative}</p>
           <p className="text-xs text-red-600">{formatCurrency(stats.lossValue)} loss</p>
         </div>
         <div className="metric-card">
-          <p className="text-xs text-slate-500 uppercase">Net Impact</p>
-          <p className={cn('text-lg font-bold', stats.gainValue - stats.lossValue >= 0 ? 'text-green-700' : 'text-red-700')}>
+          <p className="text-xs font-medium text-surface-500">Net Impact</p>
+          <p className={cn('font-display text-lg font-semibold tracking-[-0.01em]', stats.gainValue - stats.lossValue >= 0 ? 'text-green-700' : 'text-red-700')}>
             {formatCurrency(stats.gainValue - stats.lossValue)}
           </p>
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
-        <div className="card p-2 flex-1 max-w-md">
-          <div className="flex items-center gap-2">
-            <Search className="w-4 h-4 text-slate-400 ml-1" />
-            <input
-              className="flex-1 text-sm outline-hidden"
-              placeholder="Search medicine / batch..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              autoFocus
-            />
-          </div>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+        <div className="search-field flex-1 sm:max-w-md">
+          <Search />
+          <input
+            type="search"
+            aria-label="Search medicine or batch"
+            className="input"
+            placeholder="Search medicine / batch…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            autoFocus
+          />
         </div>
-        <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1">
+        <div className="segmented self-start">
           {(['all', 'uncounted', 'counted', 'variance'] as const).map((f) => (
             <button
               key={f}
+              type="button"
+              aria-pressed={filter === f}
               onClick={() => setFilter(f)}
-              className={cn(
-                'px-3 py-1.5 rounded-lg text-xs font-medium',
-                filter === f ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-slate-50'
-              )}
+              className="segment"
             >
               {f === 'all' ? 'All' : f === 'uncounted' ? 'Not yet counted' : f === 'counted' ? 'Counted' : 'With variance'}
             </button>
@@ -187,7 +186,7 @@ export default function StockTakeDetailPage() {
         <div className="overflow-x-auto max-h-[600px]">
           <table className="w-full text-sm">
             <thead className="sticky top-0 bg-slate-50">
-              <tr className="text-xs uppercase text-slate-500">
+              <tr className="text-xs font-medium text-surface-500">
                 <th className="text-left px-3 py-2">Medicine</th>
                 <th className="text-left px-3 py-2">Batch</th>
                 <th className="text-center px-3 py-2">System Qty</th>
@@ -241,7 +240,7 @@ function LineRow({ line, takeId, editable }: { line: any; takeId: string; editab
 
   return (
     <tr className={cn(
-      line.actualQty != null ? 'bg-blue-50/30' : '',
+      line.actualQty != null ? 'bg-brand-50/30' : '',
       variance && variance > 0 ? 'bg-green-50!' : '',
       variance && variance < 0 ? 'bg-red-50!' : '',
     )}>

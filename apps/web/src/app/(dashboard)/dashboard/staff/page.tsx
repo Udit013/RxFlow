@@ -37,22 +37,21 @@ export default function StaffPage() {
       </AnimatedSection>
 
       <AnimatedSection>
-        <div className="flex items-center gap-1 bg-white border border-surface-200/70 rounded-xl p-1 w-fit shadow-xs overflow-x-auto max-w-full">
+        <div role="tablist" className="tab-list">
           {([
             ['employees', 'Employees', Briefcase],
             ['attendance', 'Attendance', CalendarCheck],
             ['payroll', 'Payroll', Wallet],
             ['performance', 'Performance', TrendingUp],
-          ] as const).map(([k, label, Icon]) => (
+          ] as const).map(([k, label]) => (
             <button
               key={k}
               onClick={() => setTab(k)}
-              className={cn(
-                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap',
-                tab === k ? 'bg-brand-600 text-white shadow-sm' : 'text-surface-600 hover:bg-surface-50'
-              )}
+              role="tab"
+              aria-selected={tab === k}
+              className="tab"
             >
-              <Icon className="w-3.5 h-3.5" /> {label}
+              {label}
             </button>
           ))}
         </div>
@@ -92,16 +91,16 @@ function EmployeesTab() {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+      <div className="stat-strip grid-cols-2 sm:grid-cols-3">
         <MetricCard icon={Users2} tone="brand" label="Active Staff" value={String(employees.filter(e => e.isActive).length)} />
-        {canSeeSalary && <MetricCard icon={IndianRupee} tone="warning" label="Monthly Salary Bill" value={formatCurrency(totalMonthly)} sub="Monthly-paid staff" />}
+        {canSeeSalary && <MetricCard icon={IndianRupee} tone="neutral" label="Monthly Salary Bill" value={formatCurrency(totalMonthly)} sub="Monthly-paid staff" />}
         <MetricCard icon={Briefcase} tone="neutral" label="Total Records" value={String(employees.length)} />
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
-        <div className="card p-2! flex-1 flex items-center gap-2">
-          <Search className="w-4 h-4 text-surface-400 ml-1" />
-          <input className="flex-1 text-sm bg-transparent outline-hidden" placeholder="Search by name, phone, designation..." value={search} onChange={(e) => setSearch(e.target.value)} />
+        <div className="search-field flex-1">
+          <Search />
+          <input type="search" aria-label="Search employees" className="input" placeholder="Search by name, phone, designation…" value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
         <button onClick={() => setEdit('new')} className="btn-primary"><Plus className="w-4 h-4" /> Add Employee</button>
       </div>
@@ -109,7 +108,7 @@ function EmployeesTab() {
       <SectionCard flush>
         <div className="overflow-x-auto"><table className="w-full text-sm">
           <thead>
-            <tr className="bg-surface-50/60 text-[10px] uppercase tracking-widest text-surface-500">
+            <tr className="bg-surface-50 text-xs text-surface-500 border-b border-surface-200">
               <th className="text-left px-4 py-2.5">Name</th>
               <th className="text-left px-4 py-2.5">Designation</th>
               <th className="text-left px-4 py-2.5">Contact</th>
@@ -135,7 +134,7 @@ function EmployeesTab() {
                   </td>
                 )}
                 <td className="px-4 py-2.5 text-center">{e.isActive ? <span className="badge-success">Active</span> : <span className="badge-neutral">Inactive</span>}</td>
-                <td className="px-4 py-2.5 text-right"><button onClick={() => setEdit(e)} className="text-xs text-brand-600 hover:underline">Edit</button></td>
+                <td className="px-4 py-2.5 text-right"><button onClick={() => setEdit(e)} className="text-xs text-brand-700 hover:text-brand-800 hover:underline underline-offset-2">Edit</button></td>
               </tr>
             ))}
           </tbody>
@@ -177,11 +176,11 @@ function EmployeeModal({ existing, onClose, onSaved }: { existing?: any; onClose
   })
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-elevated w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-surface-100 sticky top-0 bg-white">
+    <div className="modal-overlay">
+      <div className="modal-panel w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="modal-header sticky top-0 z-10">
           <h2 className="font-semibold">{isEdit ? 'Edit Employee' : 'Add Employee'}</h2>
-          <button onClick={onClose}><X className="w-4 h-4 text-surface-400" /></button>
+          <button type="button" onClick={onClose} aria-label="Close" className="modal-close"><X className="w-4 h-4" /></button>
         </div>
         <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="p-5 space-y-3">
           <div className="grid grid-cols-2 gap-3">
@@ -295,7 +294,7 @@ function AttendanceTab() {
 
       <div className="flex flex-wrap gap-2 text-xs">
         {ATT_OPTIONS.map((o) => (
-          <span key={o.v} className="flex items-center gap-1"><span className={cn('w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold', o.color)}>{o.label}</span>{o.full}</span>
+          <span key={o.v} className="flex items-center gap-1"><span className={cn('w-5 h-5 rounded flex items-center justify-center text-[10px] font-semibold', o.color)}>{o.label}</span>{o.full}</span>
         ))}
         <span className="text-surface-400">· click a cell to cycle status</span>
       </div>
@@ -310,11 +309,11 @@ function AttendanceTab() {
             <table className="text-sm border-collapse">
               <thead>
                 <tr className="bg-surface-50/60">
-                  <th className="sticky left-0 bg-surface-50 text-left px-3 py-2 text-[10px] uppercase tracking-wide text-surface-500 min-w-[140px] z-10">Employee</th>
+                  <th className="sticky left-0 bg-surface-50 text-left px-3 py-2 text-xs font-medium text-surface-500 min-w-[140px] z-10">Employee</th>
                   {days.map((day) => (
                     <th key={day} className="px-1 py-2 text-[10px] text-surface-500 font-medium w-8 text-center">{day}</th>
                   ))}
-                  <th className="px-2 py-2 text-[10px] uppercase text-surface-500 text-center">P/A</th>
+                  <th className="px-2 py-2 text-xs font-medium text-surface-500 text-center">P/A</th>
                 </tr>
               </thead>
               <tbody>
@@ -332,7 +331,7 @@ function AttendanceTab() {
                         <td key={day} className="px-0.5 py-1 text-center">
                           <button
                             onClick={() => cycle(e.employee.id, day, rec?.status)}
-                            className={cn('w-6 h-6 rounded text-[10px] font-bold transition-colors', opt ? opt.color : 'bg-surface-50 text-surface-300 hover:bg-surface-100')}
+                            className={cn('w-6 h-6 rounded text-[10px] font-semibold transition-colors', opt ? opt.color : 'bg-surface-50 text-surface-300 hover:bg-surface-100')}
                             title={opt?.full ?? 'Not marked'}
                           >
                             {opt?.label ?? '·'}
@@ -387,7 +386,7 @@ function PayrollTab() {
       <SectionCard flush>
         <div className="overflow-x-auto"><table className="w-full text-sm">
           <thead>
-            <tr className="bg-surface-50/60 text-[10px] uppercase tracking-widest text-surface-500">
+            <tr className="bg-surface-50 text-xs text-surface-500 border-b border-surface-200">
               <th className="text-left px-4 py-2.5">Period</th>
               <th className="text-center px-4 py-2.5">Payslips</th>
               <th className="text-center px-4 py-2.5">Paid</th>
@@ -406,7 +405,7 @@ function PayrollTab() {
                 <td className="px-4 py-2.5 text-center">{r.paidCount}/{r.payslipCount}</td>
                 <td className="px-4 py-2.5 text-right font-semibold">{formatCurrency(r.totalNet)}</td>
                 <td className="px-4 py-2.5 text-center"><span className={r.status === 'PAID' ? 'badge-success' : r.status === 'FINALIZED' ? 'badge-info' : 'badge-neutral'}>{r.status}</span></td>
-                <td className="px-4 py-2.5 text-right"><button onClick={() => setOpenRun(r.id)} className="text-xs text-brand-600 hover:underline">Open →</button></td>
+                <td className="px-4 py-2.5 text-right"><button onClick={() => setOpenRun(r.id)} className="text-xs text-brand-700 hover:text-brand-800 hover:underline underline-offset-2">Open →</button></td>
               </tr>
             ))}
           </tbody>
@@ -441,10 +440,10 @@ function PayrollRunDetail({ runId, onBack }: { runId: string; onBack: () => void
     <div className="space-y-4">
       <button onClick={onBack} className="text-sm text-surface-500 hover:text-surface-900">← Back to payroll runs</button>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="stat-strip grid-cols-2 sm:grid-cols-4">
         <MetricCard icon={Wallet} tone="brand" label="Period" value={run.period} sub={`${run.payslips.length} employees`} />
         <MetricCard icon={IndianRupee} tone="neutral" label="Gross" value={formatCurrency(run.totalGross)} />
-        <MetricCard icon={IndianRupee} tone="warning" label="Deductions" value={formatCurrency(run.totalDeductions)} />
+        <MetricCard icon={IndianRupee} tone="neutral" label="Deductions" value={formatCurrency(run.totalDeductions)} />
         <MetricCard icon={IndianRupee} tone="success" label="Net Payable" value={formatCurrency(run.totalNet)} />
       </div>
 
@@ -452,7 +451,7 @@ function PayrollRunDetail({ runId, onBack }: { runId: string; onBack: () => void
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-surface-50/60 text-[10px] uppercase tracking-widest text-surface-500">
+              <tr className="bg-surface-50 text-xs text-surface-500 border-b border-surface-200">
                 <th className="text-left px-4 py-2.5">Employee</th>
                 <th className="text-center px-4 py-2.5">Days (P / LOP)</th>
                 <th className="text-right px-4 py-2.5">Earned</th>
@@ -515,7 +514,7 @@ function PerformanceTab() {
       <SectionCard flush title="Staff Performance" description="Attendance rate + sales attributed to each staff member (requires login link for sales)">
         <div className="overflow-x-auto"><table className="w-full text-sm">
           <thead>
-            <tr className="bg-surface-50/60 text-[10px] uppercase tracking-widest text-surface-500">
+            <tr className="bg-surface-50 text-xs text-surface-500 border-b border-surface-200">
               <th className="text-left px-4 py-2.5">Employee</th>
               <th className="text-center px-4 py-2.5">Days Marked</th>
               <th className="text-left px-4 py-2.5">Attendance</th>

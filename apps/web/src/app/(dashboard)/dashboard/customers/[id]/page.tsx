@@ -86,7 +86,7 @@ export default function CustomerDetailPage() {
         <div className="flex items-start justify-between">
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold text-slate-900">{c.name}</h1>
+              <h1 className="font-display text-[22px] leading-7 font-semibold tracking-[-0.02em] text-slate-900">{c.name}</h1>
               {c.gstin && <span className="badge-info">B2B</span>}
             </div>
             <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-slate-600">
@@ -98,33 +98,32 @@ export default function CustomerDetailPage() {
           </div>
           <div className="text-right">
             <p className="text-xs text-slate-500">Outstanding</p>
-            <p className={`text-xl font-bold ${(c.outstandingBalance ?? 0) > 0 ? 'text-amber-600' : 'text-slate-900'}`}>
+            <p className={`font-display text-xl font-semibold tracking-[-0.015em] ${(c.outstandingBalance ?? 0) > 0 ? 'text-amber-600' : 'text-slate-900'}`}>
               {formatCurrency(c.outstandingBalance ?? 0)}
             </p>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="stat-strip grid-cols-1 sm:grid-cols-3">
         <div className="metric-card">
-          <p className="text-xs text-slate-500 uppercase">Credit Limit</p>
-          <p className="text-lg font-bold text-slate-900">{formatCurrency(c.creditLimit ?? 0)}</p>
+          <p className="text-xs font-medium text-surface-500">Credit Limit</p>
+          <p className="font-display text-lg font-semibold tracking-[-0.01em] text-slate-900">{formatCurrency(c.creditLimit ?? 0)}</p>
         </div>
         <div className="metric-card">
-          <p className="text-xs text-slate-500 uppercase">Total Purchases</p>
-          <p className="text-lg font-bold text-slate-900">{formatCurrency(c.totalPurchases ?? 0)}</p>
+          <p className="text-xs font-medium text-surface-500">Total Purchases</p>
+          <p className="font-display text-lg font-semibold tracking-[-0.01em] text-slate-900">{formatCurrency(c.totalPurchases ?? 0)}</p>
         </div>
         <div className="metric-card">
-          <p className="text-xs text-slate-500 uppercase">Orders</p>
-          <p className="text-lg font-bold text-slate-900">{orders.length}</p>
+          <p className="text-xs font-medium text-surface-500">Orders</p>
+          <p className="font-display text-lg font-semibold tracking-[-0.01em] text-slate-900">{orders.length}</p>
         </div>
       </div>
 
       {refills.length > 0 && (
         <div className="card overflow-hidden">
           <div className="card-header flex items-center justify-between">
-            <h3 className="font-semibold text-slate-900 flex items-center gap-2">
-              <Repeat className="w-4 h-4 text-brand-600" /> Refill Suggestions
+            <h3 className="text-[13px] font-semibold text-surface-900">Refill Suggestions
             </h3>
             <div className="text-xs">
               <span className="text-red-600 font-medium">{refills.filter((r) => r.status === 'OVERDUE').length} overdue</span>
@@ -162,7 +161,7 @@ export default function CustomerDetailPage() {
                     <p className="text-xs text-slate-500">MRP {formatCurrency(r.mrp)}</p>
                     <Link
                       href={`/dashboard/billing?customerId=${c.id}&items=${r.medicineId}:${r.typicalQuantity}`}
-                      className="inline-flex items-center gap-1 mt-1 text-xs text-brand-600 hover:underline"
+                      className="inline-flex items-center gap-1 mt-1 text-xs text-brand-700 hover:text-brand-800 hover:underline underline-offset-2"
                     >
                       <ShoppingCart className="w-3 h-3" /> Reorder {r.typicalQuantity}
                     </Link>
@@ -301,11 +300,11 @@ function EditCustomerModal({ customer, onClose, onSaved }: { customer: any; onCl
   })
 
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md">
-        <div className="flex items-center justify-between px-5 py-4 border-b">
+    <div className="modal-overlay">
+      <div className="modal-panel w-full max-w-md">
+        <div className="modal-header">
           <h2 className="font-semibold text-slate-900">Edit Customer</h2>
-          <button onClick={onClose}><X className="w-4 h-4 text-slate-400" /></button>
+          <button type="button" onClick={onClose} aria-label="Close" className="modal-close"><X className="w-4 h-4" /></button>
         </div>
         <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="p-5 space-y-3">
           <div>
@@ -356,8 +355,8 @@ function ConfirmDialog({ title, message, confirmLabel, danger, onConfirm, onCanc
   title: string; message: string; confirmLabel: string; danger?: boolean; onConfirm: () => void; onCancel: () => void
 }) {
   return (
-    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-5">
+    <div className="modal-overlay">
+      <div className="modal-panel w-full max-w-sm p-5">
         <h2 className="font-semibold text-slate-900 mb-2">{title}</h2>
         <p className="text-sm text-slate-600 mb-5">{message}</p>
         <div className="flex justify-end gap-2">

@@ -4,9 +4,9 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useQuery } from '@tanstack/react-query'
-import { ShoppingCart, ArrowDownToLine, ArrowUpFromLine, ListOrdered, PackageSearch, Plus } from 'lucide-react'
+import { ShoppingCart, PackageSearch, Plus } from 'lucide-react'
 import { api } from '@/lib/api'
-import { cn, formatCurrency, formatDate } from '@/lib/utils'
+import { formatCurrency, formatDate } from '@/lib/utils'
 import { DataTable, type DataTableColumn } from '@/components/ui'
 
 interface Order {
@@ -37,12 +37,12 @@ const orderColumns: DataTableColumn<Order>[] = [
   {
     key: 'orderNumber', header: 'Order #', pinned: true, accessor: (o) => o.orderNumber,
     render: (o) => (
-      <Link href={`/dashboard/orders/${o.id}`} onClick={(e) => e.stopPropagation()} className="font-medium text-brand-600 hover:underline">
+      <Link href={`/dashboard/orders/${o.id}`} onClick={(e) => e.stopPropagation()} className="font-medium text-brand-700 hover:text-brand-800 hover:underline underline-offset-2">
         {o.orderNumber}
       </Link>
     ),
   },
-  { key: 'type', header: 'Type', accessor: (o) => o.type, render: (o) => <span className={o.type === 'SALE' ? 'badge-info' : 'badge-neutral'}>{o.type}</span> },
+  { key: 'type', header: 'Type', accessor: (o) => o.type, render: (o) => <span className="text-surface-600">{o.type === 'SALE' ? 'Sale' : o.type === 'PURCHASE' ? 'Purchase' : o.type}</span> },
   { key: 'party', header: 'Party', accessor: (o) => o.type === 'SALE' ? (o.customer?.name ?? 'Walk-in') : (o.supplier?.name ?? '—'), render: (o) => <span className="text-surface-700">{o.type === 'SALE' ? (o.customer?.name ?? 'Walk-in') : (o.supplier?.name ?? '—')}</span> },
   { key: 'items', header: 'Items', align: 'center', accessor: (o) => o.items?.length ?? 0 },
   { key: 'createdAt', header: 'Date', accessor: (o) => o.createdAt, render: (o) => <span className="text-surface-600">{formatDate(o.createdAt)}</span> },
@@ -75,7 +75,7 @@ export default function OrdersPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Orders &amp; Reorder</h1>
-          <p className="text-sm text-surface-500">Track sales &amp; purchases, and plan what to restock</p>
+          <p className="text-[13px] leading-5 text-surface-500 mt-1">Track sales &amp; purchases, and plan what to restock</p>
         </div>
         <Link href="/dashboard/billing" className="btn-primary">
           <ShoppingCart className="w-4 h-4" />
@@ -84,32 +84,19 @@ export default function OrdersPage() {
       </div>
 
       {/* View toggle */}
-      <div className="flex items-center gap-1 bg-white border border-surface-200 rounded-xl p-1 w-fit">
-        <button onClick={() => setView('orders')} className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors', view === 'orders' ? 'bg-brand-600 text-white shadow-sm' : 'text-surface-600 hover:bg-surface-50')}>
-          <ListOrdered className="w-3.5 h-3.5" /> Order History
-        </button>
-        <button onClick={() => setView('reorder')} className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors', view === 'reorder' ? 'bg-brand-600 text-white shadow-sm' : 'text-surface-600 hover:bg-surface-50')}>
-          <PackageSearch className="w-3.5 h-3.5" /> Reorder Suggestions
-        </button>
+      <div role="tablist" className="tab-list">
+        <button role="tab" aria-selected={view === 'orders'} onClick={() => setView('orders')} className="tab">Order history</button>
+        <button role="tab" aria-selected={view === 'reorder'} onClick={() => setView('reorder')} className="tab">Reorder suggestions</button>
       </div>
 
       {view === 'reorder' ? (
         <ReorderView />
       ) : (
         <>
-          <div className="flex items-center gap-2">
+          <div className="segmented">
             {(['ALL', 'SALE', 'PURCHASE'] as const).map((t) => (
-              <button
-                key={t}
-                onClick={() => setType(t)}
-                className={cn(
-                  'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
-                  type === t ? 'bg-brand-600 text-white shadow-sm' : 'bg-white border border-surface-200 text-surface-600 hover:bg-surface-50'
-                )}
-              >
-                {t === 'SALE' && <ArrowUpFromLine className="w-3.5 h-3.5" />}
-                {t === 'PURCHASE' && <ArrowDownToLine className="w-3.5 h-3.5" />}
-                {t === 'ALL' ? 'All Orders' : t === 'SALE' ? 'Sales' : 'Purchases'}
+              <button key={t} type="button" aria-pressed={type === t} onClick={() => setType(t)} className="segment">
+                {t === 'ALL' ? 'All orders' : t === 'SALE' ? 'Sales' : 'Purchases'}
               </button>
             ))}
           </div>

@@ -44,18 +44,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (!authed) return <AppLoader />
 
   return (
-    <div className="flex h-screen h-dvh overflow-hidden bg-surface-100">
+    <div className="flex h-screen h-dvh overflow-hidden bg-surface-50">
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-60 focus:px-3 focus:py-2 focus:rounded-sm focus:bg-ink focus:text-paper focus:text-sm"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-60 focus:px-3 focus:py-2 focus:rounded-md focus:bg-ink focus:text-paper focus:text-sm"
       >
         {t('Skip to content')}
       </a>
       <Sidebar />
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <TopBar />
-        <main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto p-4 sm:p-6 focus:outline-hidden">
-          {children}
+        <main id="main-content" tabIndex={-1} className="flex-1 overflow-y-auto focus:outline-hidden">
+          <div className="mx-auto w-full max-w-[1480px] px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
+            {children}
+          </div>
         </main>
       </div>
       <CommandPalette />

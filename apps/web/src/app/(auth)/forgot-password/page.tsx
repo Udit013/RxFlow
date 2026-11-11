@@ -3,8 +3,9 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { BrandMark } from '@/components/brand-mark'
 import { toast } from 'sonner'
-import { Pill, Mail, Lock, KeyRound, ArrowLeft, Eye, EyeOff } from 'lucide-react'
+import { Mail, Lock, KeyRound, ArrowLeft, Eye, EyeOff } from 'lucide-react'
 import { authService } from '@/lib/auth'
 
 export default function ForgotPasswordPage() {
@@ -48,16 +49,13 @@ export default function ForgotPasswordPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-surface-100">
       <div className="w-full max-w-sm">
-        <div className="flex items-baseline gap-2 mb-8 justify-center">
-          <Pill className="w-4 h-4 text-brand-600 self-center" />
-          <span className="font-display text-xl font-bold text-surface-900 tracking-tight">RxFlow</span>
-        </div>
+        <div className="flex justify-center mb-8"><BrandMark /></div>
 
         <div className="card p-6">
-          <h1 className="font-display text-lg font-semibold text-surface-900">
+          <h1 className="font-display text-lg font-semibold text-surface-950 tracking-[-0.01em]">
             {step === 'request' ? 'Forgot your password?' : 'Enter your reset code'}
           </h1>
-          <p className="text-sm text-surface-500 mt-1 mb-5">
+          <p className="text-[13px] text-surface-500 mt-1 mb-5">
             {step === 'request'
               ? 'Enter your account email and we’ll send a 6-digit code.'
               : `We sent a code to ${email}. It expires in 10 minutes.`}
@@ -72,7 +70,7 @@ export default function ForgotPasswordPage() {
                   <input className="input pl-8" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@pharmacy.com" autoFocus />
                 </div>
               </div>
-              <button type="submit" disabled={loading} className="btn-primary w-full py-2">
+              <button type="submit" disabled={loading} className="btn-primary w-full">
                 {loading ? 'Sending…' : 'Send reset code'}
               </button>
             </form>
@@ -90,12 +88,12 @@ export default function ForgotPasswordPage() {
                 <div className="relative">
                   <Lock className="w-4 h-4 text-surface-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                   <input className="input pl-8 pr-9" type={showPw ? 'text' : 'password'} required value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="At least 8 characters" />
-                  <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600">
+                  <button type="button" aria-label={showPw ? 'Hide password' : 'Show password'} onClick={() => setShowPw(!showPw)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600">
                     {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
-              <button type="submit" disabled={loading} className="btn-primary w-full py-2">
+              <button type="submit" disabled={loading} className="btn-primary w-full">
                 {loading ? 'Updating…' : 'Reset password'}
               </button>
               <button type="button" onClick={() => setStep('request')} className="text-xs text-surface-500 hover:text-surface-700 w-full text-center">

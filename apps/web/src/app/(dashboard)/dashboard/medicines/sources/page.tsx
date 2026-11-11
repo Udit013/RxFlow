@@ -40,7 +40,7 @@ export default function MedicineSourcesPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Medicine data sources</h1>
-          <p className="text-sm text-slate-500">Where the shared catalog comes from, under which licence, and how it is checked.</p>
+          <p className="text-[13px] leading-5 text-surface-500 mt-1">Where the shared catalog comes from, under which licence, and how it is checked.</p>
         </div>
       </div>
 
@@ -48,7 +48,7 @@ export default function MedicineSourcesPage() {
         {[...byCountry.entries()].sort((a, b) => b[1] - a[1]).map(([country, count]) => (
           <div key={country || 'intl'} className="metric-card">
             <p className="text-xs text-slate-500"><CountryTag code={country || null} /></p>
-            <p className="text-lg font-bold text-slate-900">{count.toLocaleString()}</p>
+            <p className="font-display text-lg font-semibold tracking-[-0.01em] text-slate-900">{count.toLocaleString()}</p>
             <p className="text-xs text-slate-500">shared products</p>
           </div>
         ))}
@@ -77,10 +77,10 @@ export default function MedicineSourcesPage() {
               <p className="text-slate-600">{s.attribution}</p>
               {s.notes && <p className="text-xs text-slate-500">{s.notes}</p>}
               <p className="text-xs text-slate-500">
-                Licence: {s.licenseUrl ? <a href={s.licenseUrl} target="_blank" rel="noopener noreferrer" className="text-brand-600 hover:underline">{s.license}</a> : s.license}
+                Licence: {s.licenseUrl ? <a href={s.licenseUrl} target="_blank" rel="noopener noreferrer" className="text-brand-700 hover:text-brand-800 hover:underline underline-offset-2">{s.license}</a> : s.license}
                 {s.retrievedAt && <> · snapshot {formatDate(s.retrievedAt)}</>}
               </p>
-              <a href={s.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-brand-600 hover:underline text-xs">
+              <a href={s.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-brand-700 hover:text-brand-800 hover:underline underline-offset-2 text-xs">
                 <ExternalLink className="w-3 h-3" /> {s.url.replace(/^https?:\/\//, '').split('/')[0]}
               </a>
             </div>

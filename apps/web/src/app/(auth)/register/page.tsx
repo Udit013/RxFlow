@@ -3,11 +3,13 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { AuthAside } from '@/components/auth/auth-aside'
+import { BrandMark } from '@/components/brand-mark'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
-import { Eye, EyeOff, Pill, Building2, User, Mail, Phone, Lock } from 'lucide-react'
+import { Eye, EyeOff, Building2, User, Mail, Phone, Lock } from 'lucide-react'
 import { authService } from '@/lib/auth'
 import { getRegionProfile, listRegionProfiles, isPlausiblePhone, phoneHint } from '@rxflow/regional'
 
@@ -60,65 +62,36 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen flex bg-surface-100">
-      {/* Left panel — the ledger cover */}
-      <div className="hidden lg:flex lg:w-[44%] bg-brand-950 text-paper flex-col justify-between p-12">
-        <div>
-          <div className="flex items-baseline gap-2">
-            <Pill className="w-5 h-5 text-brand-300 self-center" />
-            <span className="font-display text-2xl font-bold tracking-tight">RxFlow</span>
-          </div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.24em] text-brand-300/70 mt-1.5">Pharmacy OS</p>
-        </div>
-
-        <div>
-          <h1 className="font-display text-[40px] font-semibold leading-[1.08] tracking-tight">
-            Open your own<br />book of record.
-          </h1>
-          <p className="text-brand-200/80 text-[15px] mt-4 max-w-sm leading-relaxed">
-            A private workspace for your pharmacy — inventory, billing, tax and payroll, from the first entry.
-          </p>
-
-          <div className="mt-12 max-w-sm">
-            {[
-              'Set up in under a minute, no card needed',
-              'Your own private pharmacy workspace',
-              'Invite staff with role-based access',
-              'Your data stays yours — export anytime',
-            ].map((text, i) => (
-              <div key={i} className="flex items-baseline gap-4 py-3 border-t border-white/10 last:border-b">
-                <span className="font-mono text-[11px] text-brand-300/80 tabular-nums">{String(i + 1).padStart(2, '0')}</span>
-                <span className="text-[13px] text-brand-100/90">{text}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <p className="font-mono text-[11px] text-brand-300/50 tracking-wide">© 2026 RxFlow · made in India, for pharmacies everywhere</p>
-      </div>
+    <div className="min-h-screen min-h-dvh flex bg-paper">
+      <AuthAside
+        title={<>Open your own<br />book of record.</>}
+        lede="A private workspace for your pharmacy — inventory, billing, tax and payroll, from the first entry."
+        points={[
+          'Set up in under a minute, no card needed',
+          'Your own private pharmacy workspace',
+          'Invite staff with role-based access',
+          'Your data stays yours — export anytime',
+        ]}
+      />
 
       {/* Right panel — register form */}
-      <div className="flex-1 flex items-center justify-center p-8 overflow-y-auto">
-        <div className="w-full max-w-md py-6">
-          <div className="flex items-baseline gap-2 mb-8 lg:hidden">
-            <Pill className="w-4 h-4 text-brand-600 self-center" />
-            <span className="font-display text-xl font-bold text-surface-900 tracking-tight">RxFlow</span>
-          </div>
+      <main className="flex-1 flex items-center justify-center px-5 py-10 sm:p-8 overflow-y-auto">
+        <div className="w-full max-w-[24rem] py-6">
+          <BrandMark className="mb-10 lg:hidden" />
 
           <div className="mb-6">
-            <p className="microlabel text-brand-600 mb-1.5">New workspace</p>
-            <h2 className="font-display text-2xl font-semibold text-surface-900 tracking-tight">Create your account</h2>
-            <p className="text-surface-500 text-sm mt-1.5">Set up your pharmacy workspace. You&apos;ll be the admin.</p>
+            <h2 className="font-display text-[22px] leading-7 font-semibold text-surface-950 tracking-[-0.015em]">Create your pharmacy account</h2>
+            <p className="text-surface-500 text-[13px] mt-1">Set up your pharmacy workspace. You&apos;ll be the admin.</p>
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div>
               <label className="label">Pharmacy / business name *</label>
               <div className="relative">
-                <Building2 className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input className="input pl-9" placeholder="Sunrise Medical Store" {...register('pharmacyName')} />
+                <Building2 className="w-4 h-4 text-surface-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                <input className="input pl-8" placeholder="Sunrise Medical Store" {...register('pharmacyName')} />
               </div>
-              {errors.pharmacyName && <p className="text-red-500 text-xs mt-1">{errors.pharmacyName.message}</p>}
+              {errors.pharmacyName && <p className="text-danger-600 text-xs mt-1.5">{errors.pharmacyName.message}</p>}
             </div>
 
             <div>
@@ -143,29 +116,29 @@ export default function RegisterPage() {
             <div>
               <label className="label">Your name *</label>
               <div className="relative">
-                <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input className="input pl-9" placeholder="Dr. Ramesh Kumar" autoComplete="name" {...register('name')} />
+                <User className="w-4 h-4 text-surface-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                <input className="input pl-8" placeholder="Dr. Ramesh Kumar" autoComplete="name" {...register('name')} />
               </div>
-              {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>}
+              {errors.name && <p className="text-danger-600 text-xs mt-1.5">{errors.name.message}</p>}
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="label">Email *</label>
                 <div className="relative">
-                  <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input className="input pl-9" type="email" placeholder="you@store.com" autoComplete="email" {...register('email')} />
+                  <Mail className="w-4 h-4 text-surface-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                  <input className="input pl-8" type="email" placeholder="you@store.com" autoComplete="email" {...register('email')} />
                 </div>
-                {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email.message}</p>}
+                {errors.email && <p className="text-danger-600 text-xs mt-1.5">{errors.email.message}</p>}
               </div>
               <div>
                 <label className="label">Phone *</label>
                 <div className="relative">
-                  <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input className="input pl-9" placeholder={`${countryProfile.phone.dialCode} …`.trim()} autoComplete="tel" {...register('phone')} />
+                  <Phone className="w-4 h-4 text-surface-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                  <input className="input pl-8" placeholder={`${countryProfile.phone.dialCode} …`.trim()} autoComplete="tel" {...register('phone')} />
                 </div>
                 {errors.phone
-                  ? <p className="text-red-500 text-xs mt-1">{errors.phone.message}</p>
+                  ? <p className="text-danger-600 text-xs mt-1.5">{errors.phone.message}</p>
                   : phoneWarning && <p className="text-amber-600 text-xs mt-1">{phoneWarning}</p>}
               </div>
             </div>
@@ -173,7 +146,7 @@ export default function RegisterPage() {
             <div>
               <label className="label">Password *</label>
               <div className="relative">
-                <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Lock className="w-4 h-4 text-surface-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                 <input
                   className="input pl-9 pr-10"
                   type={showPassword ? 'text' : 'password'}
@@ -185,10 +158,10 @@ export default function RegisterPage() {
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
-              {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}
+              {errors.password && <p className="text-danger-600 text-xs mt-1.5">{errors.password.message}</p>}
             </div>
 
-            <button type="submit" disabled={loading} className="btn-primary w-full py-2.5">
+            <button type="submit" disabled={loading} className="btn-primary w-full py-2">
               {loading ? (
                 <span className="flex items-center gap-2">
                   <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
@@ -206,7 +179,7 @@ export default function RegisterPage() {
             <Link href="/login" className="text-brand-600 font-medium hover:underline">Sign in</Link>
           </p>
         </div>
-      </div>
+      </main>
     </div>
   )
 }
