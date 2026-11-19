@@ -7,6 +7,8 @@
     "dev": "tsx watch --env-file=.env src/server.ts",
     "build": "cd ../../packages/db && pnpm exec prisma generate",
     "start": "tsx src/server.ts",
+    "bundle": "node scripts/bundle.mjs",
+    "start:bundle": "node dist/server.mjs",
     "start:local": "tsx --env-file=.env src/server.ts",
     "deploy:migrate": "cd ../../packages/db && prisma migrate deploy",
     "deploy:seed": "cd ../../packages/db && tsx prisma/seed.ts",
@@ -23,6 +25,8 @@
     "@fastify/rate-limit": "^11.2.1",
     "@fastify/swagger": "^9.9.2",
     "@fastify/swagger-ui": "^6.1.2",
+    "@prisma/adapter-pg": "^7.10.1",
+    "@prisma/client": "^7.10.1",
     "@rxflow/db": "workspace:*",
     "@rxflow/medicine-intelligence": "workspace:*",
     "@rxflow/regional": "workspace:*",
@@ -39,6 +43,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.20.5",
+    "esbuild": "0.28.2",
     "typescript": "^6.0.3"
   }
 }

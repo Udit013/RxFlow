@@ -48,5 +48,8 @@ jobs:
 
       - name: Build (web)
         run: pnpm --filter @rxflow/web build
+
+      - name: Bundle (api) — what Render boots in production
+        run: pnpm --filter @rxflow/api bundle
         env:
           NEXT_TELEMETRY_DISABLED: '1'

@@ -32,9 +32,12 @@ services:
       npm install -g pnpm@9.1.0
       pnpm install --prod=false --frozen-lockfile=false
       bash packages/db/scripts/deploy-db.sh
-    # Start tsx directly: `pnpm --filter … start` first scans the whole workspace, which
-    # doubled boot time (≈1.75s → 0.5s locally; far more on the free plan's 0.1 CPU).
-    startCommand: cd apps/api && node_modules/.bin/tsx src/server.ts
+      cd apps/api && node scripts/bundle.mjs
+    # Boot the pre-built bundle with plain node: every wake from sleep then skips compiling
+    # TypeScript on the free plan's 0.1 CPU (about half the boot time). If the bundle is ever
+    # missing, fall back to running the sources with tsx exactly as before.
+    # (Not `pnpm --filter … start`: that scans the whole workspace first and doubled boot time.)
+    startCommand: cd apps/api && if [ -f dist/server.mjs ]; then exec node dist/server.mjs; else exec node_modules/.bin/tsx src/server.ts; fi
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
